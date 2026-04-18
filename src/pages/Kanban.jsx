@@ -6,7 +6,7 @@ import { gerarLote, gerarNumero } from '@/lib/numeracao';
 import { agoraISO, hojeData } from '@/lib/brasilia';
 import {
   Factory, Clock, CheckCircle, Package, Flag, Plus, X,
-  RefreshCw, Search, SlidersHorizontal, ArrowUpDown, Eye, EyeOff, BarChart2
+  RefreshCw, Search, SlidersHorizontal, ArrowUpDown, Eye, EyeOff, ChevronDown, BarChart2
 } from 'lucide-react';
 import KanbanCard from '@/components/kanban/KanbanCard';
 import KanbanCardModal from '@/components/kanban/KanbanCardModal';
@@ -37,6 +37,36 @@ const PROXIMOS = {
   produzido: 'em_embalagem', em_embalagem: 'finalizado',
 };
 
+const SORT_OPTIONS = [
+  { key: 'urgencia', label: 'Urgência' },
+  { key: 'created_date_asc', label: 'Mais antigas' },
+  { key: 'created_date_desc', label: 'Mais recentes' },
+  { key: 'qtd_desc', label: 'Maior qtd' },
+  { key: 'qtd_asc', label: 'Menor qtd' },
+];
+
+function sortOrdens(ordens, sortKey) {
+  return [...ordens].sort((a, b) => {
+    switch (sortKey) {
+      case 'created_date_asc': return new Date(a.created_date) - new Date(b.created_date);
+      case 'created_date_desc': return new Date(b.created_date) - new Date(a.created_date);
+      case 'qtd_desc': {
+        const qa = a.itens?.length > 0 ? a.itens.reduce((s, i) => s + (i.quantidade || 0), 0) : (a.quantidade || 0);
+        const qb = b.itens?.length > 0 ? b.itens.reduce((s, i) => s + (i.quantidade || 0), 0) : (b.quantidade || 0);
+        return qb - qa;
+      }
+      case 'qtd_asc': {
+        const qa = a.itens?.length > 0 ? a.itens.reduce((s, i) => s + (i.quantidade || 0), 0) : (a.quantidade || 0);
+        const qb = b.itens?.length > 0 ? b.itens.reduce((s, i) => s + (i.quantidade || 0), 0) : (b.quantidade || 0);
+        return qa - qb;
+      }
+      case 'urgencia':
+      default:
+        return new Date(a.data_inicio || a.created_date) - new Date(b.data_inicio || b.created_date);
+    }
+  });
+}
+
 export default function Kanban() {
   const { somenteLeitura } = usePermissoes();
   const readonly = somenteLeitura('Kanban');
@@ -44,14 +74,19 @@ export default function Kanban() {
   const [ordens, setOrdens]               = useState([]);
   const [produtos, setProdutos]           = useState([]);
   const [pedidoMap, setPedidoMap]         = useState({});
+  const [checklistConfigs, setChecklistConfigs] = useState({});
   const [checklistOk, setChecklistOk]     = useState({});
   const [loadingId, setLoadingId]         = useState(null);
   const [showNovaOP, setShowNovaOP]       = useState(false);
   const [novaOP, setNovaOP]               = useState({ produto_id: '', produto_nome: '', quantidade: 1, observacoes: '' });
   const [salvando, setSalvando]           = useState(false);
   const [variacoesOP, setVariacoesOP]     = useState([]);
+  const [filtroOrigem, setFiltroOrigem]   = useState('todas');
+  const [filtroCategoria, setFiltroCategoria] = useState('todas');
   const [busca, setBusca]                 = useState('');
   const [ordemSelecionada, setOrdemSelecionada] = useState(null);
+  const [sortKey, setSortKey]             = useState('urgencia');
+  const [showFilters, setShowFilters]     = useState(false);
   const [showTotal, setShowTotal]         = useState(false);
   const [colunasVisiveis, setColunasVisiveis] = useState(() => {
     try { return JSON.parse(localStorage.getItem('kanban_colunas')) || COLUNAS_BASE.map(c => c.key); }
@@ -64,13 +99,22 @@ export default function Kanban() {
     return () => window.removeEventListener('settings:saved', onSettings);
   }, []);
 
+  const toggleColuna = (key) => {
+    setColunasVisiveis(prev => {
+      const next = prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key];
+      localStorage.setItem('kanban_colunas', JSON.stringify(next));
+      return next;
+    });
+  };
+
   const COLUNAS = kanbanColunas.filter(c => colunasVisiveis.includes(c.key));
 
   const load = async (invalidate = false) => {
     if (invalidate) { cacheInvalidate('OrdemProducao'); cacheInvalidate('Produto'); }
-    const [ords, prods, peds] = await Promise.all([
+    const [ords, prods, checklists, peds] = await Promise.all([
       cachedFetch('OrdemProducao', () => base44.entities.OrdemProducao.list('-created_date'), 30_000),
       cachedFetch('Produto', () => base44.entities.Produto.list(), 120_000),
+      cachedFetch('ChecklistConfig', () => base44.entities.ChecklistConfig.list(), 300_000),
       base44.entities.Pedido.list(),
     ]);
     setOrdens(ords);
@@ -78,6 +122,9 @@ export default function Kanban() {
     const pm = {};
     for (const p of peds) pm[p.id] = p.cliente_nome;
     setPedidoMap(pm);
+    const map = {};
+    for (const c of checklists) map[c.etapa] = c;
+    setChecklistConfigs(map);
   };
 
   useEffect(() => { load(); }, []);
@@ -88,9 +135,14 @@ export default function Kanban() {
     setLoadingId(ordem.id);
     const agora = agoraISO();
     const updates = { status: proximo };
+    let usuarioAtual = 'sistema';
+    try { const me = await base44.auth.me(); usuarioAtual = me?.email || me?.full_name || 'sistema'; } catch {}
 
     if (proximo === 'em_producao') updates.data_inicio = agora;
-    if (proximo === 'produzido') { updates.data_fim_producao = agora; updates.lote = ordem.lote || gerarLote(ordem.produto_id); }
+    if (proximo === 'produzido') {
+      updates.data_fim_producao = agora;
+      updates.lote = ordem.lote || gerarLote(ordem.produto_id);
+    }
     if (proximo === 'em_embalagem') updates.data_embalagem = agora;
     if (proximo === 'finalizado') {
       updates.data_finalizacao = agora;
@@ -107,14 +159,19 @@ export default function Kanban() {
         const descarteItem = Array.isArray(descarte) ? descarte.find(d => d.produto_id === item.produto_id) : null;
         const qtdDescartada = descarteItem?.quantidade || 0;
         const qtdFinal = item.quantidade - qtdDescartada;
+        const sku = prod?.codigo ? String(prod.codigo) : '';
         if (prod) {
-          await base44.entities.Produto.update(prod.id, { estoque_atual: (prod.estoque_atual || 0) + qtdFinal });
-          await registrarLog('Produto', prod.id, 'ENTRADA_ESTOQUE', `Entrada de ${qtdFinal} un via OP ${ordem.numero}`);
+          const clAtual = prod.checklist_producao;
+          const clMigrado = (!clAtual || Array.isArray(clAtual))
+            ? { a_produzir: [], em_producao: Array.isArray(clAtual) ? clAtual : [], produzido: [], em_embalagem: [] }
+            : clAtual;
+          await base44.entities.Produto.update(prod.id, { estoque_atual: (prod.estoque_atual || 0) + qtdFinal, checklist_producao: clMigrado });
+          await registrarLog('Produto', prod.id, 'ENTRADA_ESTOQUE', `Entrada de ${qtdFinal} un de ${prod.nome} via OP ${ordem.numero}${qtdDescartada > 0 ? ` (${qtdDescartada} un descartadas: ${descarteItem.motivo})` : ''}`);
         }
         await base44.entities.Etiqueta.create({
           ordem_producao_id: ordem.id, produto_id: item.produto_id,
           produto_nome: item.produto_nome, quantidade: qtdFinal,
-          lote, data_producao: dataProducao, impresso: false,
+          lote, data_producao: dataProducao, codigo_barras: sku, impresso: false,
         });
       }
 
@@ -127,25 +184,32 @@ export default function Kanban() {
           const todasFin = ordens_pedido.every(o => o.id === ordem.id ? true : o.status === 'finalizado');
           if (todasFin) {
             await base44.entities.Pedido.update(ped.id, { status: 'separacao' });
+            await registrarLog('Pedido', ped.id, 'STATUS', `Pedido ${ped.numero} liberado para separação.`);
           }
         }
       }
     }
 
     await base44.entities.OrdemProducao.update(ordem.id, updates);
-    await registrarLog('OrdemProducao', ordem.id, 'AVANCO_STATUS', `OP ${ordem.numero} avançou para "${proximo}"`);
+    const labelProximo = { em_producao: 'Em Produção', produzido: 'Produzido', em_embalagem: 'Em Embalagem', finalizado: 'Finalizado' }[proximo] || proximo;
+    await registrarLog('OrdemProducao', ordem.id, 'AVANCO_STATUS', `OP ${ordem.numero} (${ordem.produto_nome || ''}) avançou para "${labelProximo}" por ${usuarioAtual}`, usuarioAtual);
     await load(true);
     setLoadingId(null);
   };
 
   const criarOPManual = async () => {
     if (!novaOP.produto_id) return alert('Selecione um produto.');
-    setSalvando(true);
     const temVariacoes = variacoesOP.length > 0;
+    if (temVariacoes && variacoesOP.some(v => !v.quantidade || v.quantidade <= 0)) return alert('Informe a quantidade de cada variação.');
+    else if (!temVariacoes && novaOP.quantidade <= 0) return alert('Informe a quantidade.');
+    setSalvando(true);
     const qtdTotal = temVariacoes ? variacoesOP.reduce((s, v) => s + (v.quantidade || 0), 0) : novaOP.quantidade;
+    const itens = temVariacoes
+      ? variacoesOP.map(v => ({ produto_id: novaOP.produto_id, produto_nome: `${novaOP.produto_nome} ${v.nome}`, quantidade: v.quantidade }))
+      : [];
     const op = await base44.entities.OrdemProducao.create({
       numero: gerarNumero('OP'), produto_id: novaOP.produto_id, produto_nome: novaOP.produto_nome,
-      quantidade: qtdTotal, variacoes: temVariacoes ? variacoesOP : [],
+      quantidade: qtdTotal, variacoes: temVariacoes ? variacoesOP : [], itens,
       observacoes: novaOP.observacoes, status: 'a_produzir', origem: 'manual',
     });
     await registrarLog('OrdemProducao', op.id, 'CRIACAO_MANUAL', `OP manual para ${novaOP.produto_nome} — qtd ${qtdTotal}`);
@@ -156,18 +220,38 @@ export default function Kanban() {
     setSalvando(false);
   };
 
-  const ordensFiltradas = ordens.filter(o => {
-    if (!busca) return true;
-    return (o.produto_nome || '').toLowerCase().includes(busca.toLowerCase()) ||
-      (o.numero || '').toLowerCase().includes(busca.toLowerCase()) ||
-      (o.pedido_numero || '').toLowerCase().includes(busca.toLowerCase());
-  });
+  // Categorias de produtos disponíveis nas OPs
+  const categoriasOP = [...new Set(
+    ordens.map(o => {
+      const p = produtos.find(pr => pr.id === o.produto_id);
+      return p?.categoria || null;
+    }).filter(Boolean)
+  )].sort();
+
+  const ordensFiltradas = sortOrdens(
+    ordens.filter(o => {
+      if (busca && !(
+        (o.produto_nome || '').toLowerCase().includes(busca.toLowerCase()) ||
+        (o.numero || '').toLowerCase().includes(busca.toLowerCase()) ||
+        (o.pedido_numero || '').toLowerCase().includes(busca.toLowerCase())
+      )) return false;
+      if (filtroOrigem !== 'todas' && o.origem !== filtroOrigem) return false;
+      if (filtroCategoria !== 'todas') {
+        const p = produtos.find(pr => pr.id === o.produto_id);
+        if ((p?.categoria || '') !== filtroCategoria) return false;
+      }
+      return true;
+    }),
+    sortKey
+  );
 
   const ativas = ordens.filter(o => o.status !== 'finalizado').length;
   const finalizadas = ordens.filter(o => o.status === 'finalizado').length;
+  const filtrosAtivos = busca || filtroOrigem !== 'todas' || filtroCategoria !== 'todas' || sortKey !== 'urgencia';
 
   return (
     <div className="flex flex-col h-full space-y-4">
+      {/* Header */}
       <div className="bg-card border border-border rounded-2xl px-5 py-4 flex-shrink-0">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
@@ -179,9 +263,13 @@ export default function Kanban() {
               <p className="text-xs text-muted-foreground">{ativas} ativa(s) · {finalizadas} finalizada(s)</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button onClick={() => load(true)} className="p-2.5 border border-border rounded-xl hover:bg-muted transition-colors">
               <RefreshCw size={15} className="text-muted-foreground" />
+            </button>
+            <button onClick={() => setShowFilters(v => !v)}
+              className={`flex items-center gap-2 border px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${filtrosAtivos ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border hover:bg-muted text-muted-foreground'}`}>
+              <SlidersHorizontal size={15} /> Filtros {filtrosAtivos && <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block" />}
             </button>
             <button onClick={() => setShowTotal(true)}
               className="flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-100 transition-colors">
@@ -196,6 +284,7 @@ export default function Kanban() {
           </div>
         </div>
 
+        {/* Progress bars */}
         <div className="mt-4 grid grid-cols-5 gap-2">
           {kanbanColunas.map(col => {
             const count = ordens.filter(o => o.status === col.key).length;
@@ -213,14 +302,93 @@ export default function Kanban() {
         </div>
       </div>
 
-      <div className="flex items-center gap-2.5 bg-card border border-border rounded-xl px-3.5 py-2.5 flex-shrink-0">
-        <Search size={14} className="text-muted-foreground flex-shrink-0" />
-        <input value={busca} onChange={e => setBusca(e.target.value)}
-          placeholder="Buscar por OP, produto ou pedido..."
-          className="bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground w-full" />
-        {busca && <button onClick={() => setBusca('')} className="text-muted-foreground hover:text-foreground"><X size={13} /></button>}
-      </div>
+      {/* Painel de filtros */}
+      {showFilters && (
+        <div className="bg-card border border-border rounded-2xl p-4 flex-shrink-0 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Filtros e Ordenação</p>
+            {filtrosAtivos && (
+              <button onClick={() => { setBusca(''); setFiltroOrigem('todas'); setFiltroCategoria('todas'); setSortKey('urgencia'); }}
+                className="text-xs text-muted-foreground hover:text-destructive">Limpar tudo</button>
+            )}
+          </div>
 
+          {/* Busca */}
+          <div className="flex items-center gap-2.5 bg-muted/30 border border-border rounded-xl px-3.5 py-2.5">
+            <Search size={14} className="text-muted-foreground flex-shrink-0" />
+            <input value={busca} onChange={e => setBusca(e.target.value)}
+              placeholder="Buscar por OP, produto ou pedido..."
+              className="bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground w-full" />
+            {busca && <button onClick={() => setBusca('')} className="text-muted-foreground hover:text-foreground"><X size={13} /></button>}
+          </div>
+
+          <div className="flex flex-wrap gap-4">
+            {/* Origem */}
+            <div>
+              <p className="text-xs text-muted-foreground mb-1.5">Origem</p>
+              <div className="flex gap-1.5 flex-wrap">
+                {[{ k: 'todas', l: 'Todas' }, { k: 'pedido', l: 'Pedido' }, { k: 'estoque_minimo', l: 'Reposição' }, { k: 'manual', l: 'Manual' }].map(f => (
+                  <button key={f.k} onClick={() => setFiltroOrigem(f.k)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${filtroOrigem === f.k ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'}`}>
+                    {f.l}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Categoria */}
+            {categoriasOP.length > 0 && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-1.5">Categoria</p>
+                <div className="flex gap-1.5 flex-wrap">
+                  <button onClick={() => setFiltroCategoria('todas')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${filtroCategoria === 'todas' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'}`}>
+                    Todas
+                  </button>
+                  {categoriasOP.map(cat => (
+                    <button key={cat} onClick={() => setFiltroCategoria(cat)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${filtroCategoria === cat ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'}`}>
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Ordenação */}
+            <div>
+              <p className="text-xs text-muted-foreground mb-1.5">Ordenar por</p>
+              <div className="flex gap-1.5 flex-wrap">
+                {SORT_OPTIONS.map(opt => (
+                  <button key={opt.key} onClick={() => setSortKey(opt.key)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${sortKey === opt.key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'}`}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Colunas visíveis */}
+            <div>
+              <p className="text-xs text-muted-foreground mb-1.5">Colunas visíveis</p>
+              <div className="flex gap-1.5 flex-wrap">
+                {kanbanColunas.map(col => {
+                  const vis = colunasVisiveis.includes(col.key);
+                  return (
+                    <button key={col.key} onClick={() => toggleColuna(col.key)}
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${vis ? 'text-white' : 'bg-muted text-muted-foreground hover:text-foreground'}`}
+                      style={vis ? { background: col.accent } : {}}>
+                      {vis ? <Eye size={10} /> : <EyeOff size={10} />} {col.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Colunas Kanban */}
       <div className="flex gap-3 overflow-x-auto pb-4 flex-1 items-start">
         {COLUNAS.map(({ key, label, icon: Icon, accent, bg, border, dot }) => {
           const colOrdens = ordensFiltradas.filter(o => o.status === key);
@@ -253,6 +421,7 @@ export default function Kanban() {
                     key={ordem.id}
                     ordem={ordem}
                     clienteNome={ordem.pedido_id ? pedidoMap[ordem.pedido_id] : null}
+                    checklistConfigs={checklistConfigs}
                     checklistOk={checklistOk}
                     setChecklistOk={setChecklistOk}
                     onAvancar={readonly ? null : avancarStatus}
@@ -266,6 +435,7 @@ export default function Kanban() {
         })}
       </div>
 
+      {/* Modal Nova OP */}
       {showNovaOP && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl">
@@ -333,11 +503,12 @@ export default function Kanban() {
         </div>
       )}
 
-      {showTotal && <ModalTotalProducao ordens={ordens} onClose={() => setShowTotal(false)} />}
+      {showTotal && <ModalTotalProducao ordens={ordens} checklistOk={checklistOk} onClose={() => setShowTotal(false)} />}
 
       {ordemSelecionada && (
         <KanbanCardModal
           ordem={ordemSelecionada}
+          checklistConfigs={checklistConfigs}
           produtos={produtos}
           onAvancar={async (ordem, descarte) => { await avancarStatus(ordem, descarte); setOrdemSelecionada(null); }}
           loading={loadingId === ordemSelecionada.id}
