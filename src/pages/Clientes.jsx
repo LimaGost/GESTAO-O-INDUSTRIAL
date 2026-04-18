@@ -112,7 +112,7 @@ export default function Clientes() {
       </div>
 
       {aba === 'crm' && (
-        <CrmDashboard clientes={clientes} pedidos={pedidos} onOpenCliente={(c) => setPerfilCliente(c)} />
+        <CrmDashboard clientes={clientes} pedidos={pedidos} onVerCliente={(c) => setPerfilCliente(c)} />
       )}
 
       {aba === 'lista' && (
