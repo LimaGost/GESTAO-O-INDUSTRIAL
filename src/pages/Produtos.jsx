@@ -503,7 +503,11 @@ export default function Produtos() {
         <ModalEditarSku
           produto={editingSku}
           onClose={() => setEditingSku(null)}
-          onSaved={() => { setEditingSku(null); load(); }}
+          onSaved={(produtoAtualizado) => {
+          setEditingSku(null);
+          setProdutos(prev => prev.map(p => p.id === produtoAtualizado.id ? { ...p, ...produtoAtualizado } : p));
+          load();
+        }}
         />
       )}
     </div>
