@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { BarChart2, TrendingUp, Package, ShoppingCart } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import ExportButtons from '@/components/ExportButtons';
 
 export default function Relatorios() {
   const [pedidos, setPedidos] = useState([]);
@@ -57,6 +58,80 @@ export default function Relatorios() {
             <p className="text-xs text-muted-foreground mt-1">{label}</p>
           </div>
         ))}
+      </div>
+
+      {/* Exportar Pedidos */}
+      <div className="bg-card border border-border rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-foreground">Pedidos</h3>
+          <ExportButtons
+            filename="pedidos"
+            title="Relatório de Pedidos — Raio do Sol"
+            columns={[
+              { header: 'Número', key: 'numero', width: 30 },
+              { header: 'Cliente', key: 'cliente_nome', width: 60 },
+              { header: 'Status', key: 'status', width: 35 },
+              { header: 'Data', key: 'data_pedido', width: 30 },
+              { header: 'Entrega Prevista', key: 'data_entrega_prevista', width: 35 },
+              { header: 'Total (R$)', key: 'valor_total_fmt', width: 30 },
+            ]}
+            rows={pedidos.map(p => ({
+              ...p,
+              valor_total_fmt: (p.valor_total || 0).toFixed(2),
+              data_entrega_prevista: p.data_entrega_prevista || '—',
+            }))}
+          />
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-border">
+                {['Número', 'Cliente', 'Status', 'Data', 'Total'].map(h => (
+                  <th key={h} className="text-left py-2 pr-4 text-muted-foreground font-semibold">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {pedidos.slice(0, 10).map(p => (
+                <tr key={p.id} className="border-b border-border/50">
+                  <td className="py-2 pr-4 font-medium text-foreground">{p.numero}</td>
+                  <td className="py-2 pr-4 text-foreground">{p.cliente_nome}</td>
+                  <td className="py-2 pr-4 text-muted-foreground capitalize">{p.status?.replace(/_/g, ' ')}</td>
+                  <td className="py-2 pr-4 text-muted-foreground">{p.data_pedido}</td>
+                  <td className="py-2 pr-4 font-semibold text-foreground">R$ {(p.valor_total || 0).toFixed(2)}</td>
+                </tr>
+              ))}
+              {pedidos.length === 0 && !loading && (
+                <tr><td colSpan={5} className="py-6 text-center text-muted-foreground">Nenhum pedido.</td></tr>
+              )}
+            </tbody>
+          </table>
+          {pedidos.length > 10 && <p className="text-xs text-muted-foreground mt-2">Mostrando 10 de {pedidos.length}. Exporte para ver todos.</p>}
+        </div>
+      </div>
+
+      {/* Exportar Produtos / Estoque */}
+      <div className="bg-card border border-border rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-foreground">Estoque de Produtos</h3>
+          <ExportButtons
+            filename="estoque"
+            title="Relatório de Estoque — Raio do Sol"
+            columns={[
+              { header: 'Produto', key: 'nome', width: 80 },
+              { header: 'Categoria', key: 'categoria', width: 50 },
+              { header: 'Estoque Atual', key: 'estoque_atual', width: 35 },
+              { header: 'Estoque Mínimo', key: 'estoque_minimo', width: 35 },
+              { header: 'Preço (R$)', key: 'preco_fmt', width: 30 },
+              { header: 'Situação', key: 'situacao', width: 35 },
+            ]}
+            rows={produtos.map(p => ({
+              ...p,
+              preco_fmt: (p.preco || 0).toFixed(2),
+              situacao: (p.estoque_atual || 0) <= (p.estoque_minimo || 0) ? 'Abaixo do mínimo' : 'OK',
+            }))}
+          />
+        </div>
       </div>
 
       <div className="bg-card border border-border rounded-2xl p-5">
