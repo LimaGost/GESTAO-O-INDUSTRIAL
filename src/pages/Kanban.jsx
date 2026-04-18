@@ -510,6 +510,7 @@ export default function Kanban() {
           ordem={ordemSelecionada}
           checklistConfigs={checklistConfigs}
           produtos={produtos}
+          clienteNome={ordemSelecionada.pedido_id ? pedidoMap[ordemSelecionada.pedido_id] : null}
           onAvancar={async (ordem, descarte) => { await avancarStatus(ordem, descarte); setOrdemSelecionada(null); }}
           loading={loadingId === ordemSelecionada.id}
           onClose={() => setOrdemSelecionada(null)}
