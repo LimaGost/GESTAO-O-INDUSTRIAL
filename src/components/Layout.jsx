@@ -5,7 +5,7 @@ import {
   LayoutDashboard, ShoppingCart, Factory, Package,
   Truck, Settings, ChevronLeft, ChevronRight, ChevronUp,
   Bell, Tag, Users, Archive, SlidersHorizontal, BarChart2,
-  Database, MoreHorizontal, RefreshCw, Trash2
+  Database, MoreHorizontal, RefreshCw, Trash2, MessageCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
@@ -33,6 +33,7 @@ const navGroups = [
     items: [
       { path: '/Etiquetas',  label: 'Etiquetas',  icon: Tag },
       { path: '/Expedicao',  label: 'Expedição',  icon: Truck },
+      { path: '/RastreamentoCliente', label: 'Rastreamento', icon: MessageCircle },
       { path: '/Clientes',   label: 'Clientes',   icon: Users },
       { path: '/Produtos',   label: 'Produtos',   icon: Settings },
     ],
@@ -59,6 +60,7 @@ const allNavItems = [
   { path: '/Estoque',        label: 'Estoque',           icon: Archive },
   { path: '/Etiquetas',      label: 'Etiquetas',         icon: Tag },
   { path: '/Expedicao',      label: 'Expedição',         icon: Truck },
+  { path: '/RastreamentoCliente', label: 'Rastreamento', icon: MessageCircle },
   { path: '/Clientes',       label: 'Clientes',          icon: Users },
   { path: '/Produtos',       label: 'Produtos',          icon: Settings },
   { path: '/Relatorios',     label: 'Relatórios',        icon: BarChart2 },
@@ -74,6 +76,7 @@ const PATH_MODULO = {
   '/Embalagem':    'Embalagem',
   '/Etiquetas':    'Etiquetas',
   '/Expedicao':    'Expedicao',
+  '/RastreamentoCliente': 'Expedicao',
   '/Clientes':     'Clientes',
   '/Produtos':     'Produtos',
   '/Relatorios':   'Relatorios',
