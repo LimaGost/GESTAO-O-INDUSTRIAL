@@ -1,9 +1,69 @@
-export function imprimirEtiquetaProduto({ produto_nome, quantidade, lote, data_producao, codigo_barras }) {
+import { getPrinterConfig } from '@/components/configuracoes/AbaEtiquetas';
+
+function getDimensoes(config) {
+  if (config.tamanho === 'custom') {
+    return { w: config.largura_custom || 100, h: config.altura_custom || 50 };
+  }
+  const TAMANHOS = {
+    '100x50': { w: 100, h: 50 },
+    '100x30': { w: 100, h: 30 },
+    '80x40':  { w: 80,  h: 40 },
+    '60x40':  { w: 60,  h: 40 },
+    '58x40':  { w: 58,  h: 40 },
+  };
+  return TAMANHOS[config.tamanho] || { w: 100, h: 50 };
+}
+
+function gerarZPL({ produto_nome, quantidade, lote, data_producao, codigo_barras, w, h, copias }) {
+  const cod = codigo_barras || '0000000';
+  return `^XA
+^PW${Math.round(w * 8)}
+^LL${Math.round(h * 8)}
+^FO20,15^ADN,18,10^FD${produto_nome}^FS
+^FO20,45^ADN,13,7^FDLote: ${lote || '—'}^FS
+^FO20,65^ADN,13,7^FDQtd: ${quantidade} un  Data: ${data_producao || '—'}^FS
+^FO20,88^BY2^BCN,55,Y,N,N^FD${cod}^FS
+^PQ${copias || 1}
+^XZ`;
+}
+
+function gerarTSPL({ produto_nome, quantidade, lote, data_producao, codigo_barras, w, h, copias }) {
+  const cod = codigo_barras || '0000000';
+  return `SIZE ${w} mm, ${h} mm
+GAP 2 mm, 0 mm
+CLS
+TEXT 10,10,"3",0,1,1,"${produto_nome}"
+TEXT 10,50,"2",0,1,1,"Lote: ${lote || '—'}"
+TEXT 10,70,"2",0,1,1,"Qtd: ${quantidade} un  Data: ${data_producao || '—'}"
+BARCODE 10,95,"128",60,1,0,2,2,"${cod}"
+PRINT ${copias || 1}`;
+}
+
+function gerarEPL({ produto_nome, quantidade, lote, data_producao, codigo_barras, w, h, copias }) {
+  const cod = codigo_barras || '0000000';
+  return `N
+q${w * 8}
+A10,10,0,3,1,1,N,"${produto_nome}"
+A10,40,0,2,1,1,N,"Lote: ${lote || '—'}"
+A10,60,0,2,1,1,N,"Qtd: ${quantidade} un  Data: ${data_producao || '—'}"
+B10,80,0,1,2,2,60,B,"${cod}"
+P${copias || 1}`;
+}
+
+function downloadPRN(conteudo, nome) {
+  const blob = new Blob([conteudo], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nome;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function imprimirHTML({ produto_nome, quantidade, lote, data_producao, codigo_barras, copias }) {
   const win = window.open('', '_blank', 'width=420,height=350');
   if (!win) return;
-
-  // Gera o código de barras via JsBarcode (SVG inline, sem dependência de URL externa)
-  const codigoBarras = codigo_barras || '0000000';
+  const cod = codigo_barras || '0000000';
 
   win.document.write(`
     <!DOCTYPE html>
@@ -20,7 +80,7 @@ export function imprimirEtiquetaProduto({ produto_nome, quantidade, lote, data_p
           border-radius: 6px;
           padding: 10px 12px;
           max-width: 340px;
-          margin: 0 auto;
+          margin: 0 auto 12px;
         }
         .header {
           display: flex;
@@ -45,6 +105,7 @@ export function imprimirEtiquetaProduto({ produto_nome, quantidade, lote, data_p
       </style>
     </head>
     <body>
+      ${Array.from({ length: copias || 1 }).map((_, i) => `
       <div class="etiqueta">
         <div class="header">
           <div>
@@ -55,29 +116,22 @@ export function imprimirEtiquetaProduto({ produto_nome, quantidade, lote, data_p
             ${data_producao ? `Fab: <strong>${data_producao}</strong>` : ''}
           </div>
         </div>
-
         <div class="produto">${produto_nome}</div>
-
         <div class="info-row"><span>Quantidade:</span><strong>${quantidade} un</strong></div>
         ${lote ? `<div class="info-row"><span>Lote:</span><strong>${lote}</strong></div>` : ''}
-
         <div class="barcode-wrap">
-          <svg id="barcode"></svg>
-          <div class="barcode-num">${codigoBarras}</div>
+          <svg id="barcode${i}"></svg>
+          <div class="barcode-num">${cod}</div>
         </div>
-      </div>
-
+      </div>`).join('')}
       <script>
         window.onload = function() {
-          JsBarcode("#barcode", "${codigoBarras}", {
-            format: "CODE128",
-            width: 2.2,
-            height: 55,
-            displayValue: false,
-            margin: 4,
-            background: "#ffffff",
-            lineColor: "#000000"
-          });
+          ${Array.from({ length: copias || 1 }).map((_, i) => `
+          JsBarcode("#barcode${i}", "${cod}", {
+            format: "CODE128", width: 2.2, height: 55,
+            displayValue: false, margin: 4,
+            background: "#ffffff", lineColor: "#000000"
+          });`).join('')}
           setTimeout(() => window.print(), 500);
         };
       <\/script>
@@ -85,4 +139,22 @@ export function imprimirEtiquetaProduto({ produto_nome, quantidade, lote, data_p
     </html>
   `);
   win.document.close();
+}
+
+export function imprimirEtiquetaProduto({ produto_nome, quantidade, lote, data_producao, codigo_barras }) {
+  const config = getPrinterConfig();
+  const { w, h } = getDimensoes(config);
+  const copias = config.copias || 1;
+  const params = { produto_nome, quantidade, lote, data_producao, codigo_barras, w, h, copias };
+
+  if (config.linguagem === 'zpl') {
+    downloadPRN(gerarZPL(params), `etiqueta_${produto_nome.replace(/\s+/g, '_')}.prn`);
+  } else if (config.linguagem === 'tspl') {
+    downloadPRN(gerarTSPL(params), `etiqueta_${produto_nome.replace(/\s+/g, '_')}.prn`);
+  } else if (config.linguagem === 'epl') {
+    downloadPRN(gerarEPL(params), `etiqueta_${produto_nome.replace(/\s+/g, '_')}.prn`);
+  } else {
+    // html (padrão)
+    imprimirHTML(params);
+  }
 }
