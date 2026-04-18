@@ -63,29 +63,27 @@ export default function Pedidos() {
       const p = produtos.find(pr => pr.id === item.produto_id);
       if (!p) continue;
       if ((p.estoque_atual || 0) >= item.quantidade) {
-        itensComEstoque.push({ ...item, produto: p, reposicao: (p.estoque_atual - item.quantidade) < (p.estoque_minimo || 0) });
+        itensComEstoque.push({ ...item, produto: p });
       } else {
         itensSemEstoque.push({ ...item, produto: p, quantidadeFalta: item.quantidade - (p.estoque_atual || 0) });
       }
     }
 
-    const precisaProducao = itensSemEstoque.length > 0;
     const numero = gerarNumero('PED');
     const valorTotal = form.itens.reduce((s, i) => s + (i.total || 0), 0);
-    const status = precisaProducao ? 'aguardando_estoque' : 'separacao';
-
-    const pedido = await base44.entities.Pedido.create({ ...form, numero, status, valor_total: valorTotal, ordens_producao_ids: [] });
+    // Pedido sempre começa em aguardando_estoque — só avança para separacao quando todas as OPs forem finalizadas
+    const pedido = await base44.entities.Pedido.create({ ...form, numero, status: 'aguardando_estoque', valor_total: valorTotal, ordens_producao_ids: [] });
     const idsOrdens = [];
 
+    // Itens com estoque: criar OP já em "a_produzir" no kanban, dar baixa no estoque agora
     if (itensComEstoque.length > 0) {
-      const lote = gerarLote(pedido.id);
       const op = await base44.entities.OrdemProducao.create({
         numero: gerarNumero('OP'),
         produto_nome: `Pedido ${numero}`,
         quantidade: itensComEstoque.reduce((s, i) => s + i.quantidade, 0),
         itens: itensComEstoque.map(i => ({ produto_id: i.produto_id, produto_nome: i.produto_nome, quantidade: i.quantidade })),
-        status: 'em_embalagem', pedido_id: pedido.id, pedido_numero: numero,
-        data_embalagem: new Date().toISOString(), lote,
+        status: 'a_produzir', pedido_id: pedido.id, pedido_numero: numero,
+        origem: 'pedido',
       });
       idsOrdens.push(op.id);
       for (const item of itensComEstoque) {
@@ -95,6 +93,7 @@ export default function Pedidos() {
       }
     }
 
+    // Itens sem estoque: criar OP para produção
     if (itensSemEstoque.length > 0) {
       const ordem = await base44.entities.OrdemProducao.create({
         numero: gerarNumero('OP'),
@@ -102,6 +101,7 @@ export default function Pedidos() {
         quantidade: itensSemEstoque.reduce((s, i) => s + i.quantidadeFalta, 0),
         itens: itensSemEstoque.map(i => ({ produto_id: i.produto_id, produto_nome: i.produto_nome, quantidade: i.quantidadeFalta })),
         status: 'a_produzir', pedido_id: pedido.id, pedido_numero: numero,
+        origem: 'pedido',
       });
       idsOrdens.push(ordem.id);
     }
@@ -115,6 +115,12 @@ export default function Pedidos() {
     await load();
     setLoading(false);
     setPedidoConfirmado({ numero, cliente: form.cliente_nome, status, itens: itensAgrupados, valorTotal, precisaProducao, itensComEstoque: itensComEstoque.length, itensSemEstoque: itensSemEstoque.length });
+  };
+
+  const marcarSeparado = async (id, numero) => {
+    await base44.entities.Pedido.update(id, { status: 'separado' });
+    await registrarLog('Pedido', id, 'STATUS', `Pedido ${numero} marcado como separado.`);
+    await load();
   };
 
   const cancelarPedido = async (id, numero) => {
@@ -243,7 +249,13 @@ export default function Pedidos() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    {!readonly && !['expedido', 'cancelado', 'separado'].includes(p.status) && (
+                    {!readonly && p.status === 'separacao' && (
+                      <button onClick={() => marcarSeparado(p.id, p.numero)}
+                        className="text-xs bg-green-600 text-white hover:bg-green-700 transition-colors px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1">
+                        <CheckCircle size={12} /> Separado
+                      </button>
+                    )}
+                    {!readonly && !['expedido', 'cancelado', 'separado', 'separacao'].includes(p.status) && (
                       <button onClick={() => cancelarPedido(p.id, p.numero)} className="text-xs text-muted-foreground hover:text-destructive transition-colors px-2 py-1.5 rounded-lg hover:bg-destructive/10">
                         Cancelar
                       </button>
@@ -265,7 +277,12 @@ export default function Pedidos() {
                 </div>
                 {p.status === 'aguardando_estoque' && (
                   <div className="mt-3 text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded-xl p-2.5 flex items-center gap-2">
-                    <AlertTriangle size={12} /> Aguardando produção para liberar estoque
+                    <AlertTriangle size={12} /> Aguardando finalização da produção no Kanban
+                  </div>
+                )}
+                {p.status === 'separacao' && (
+                  <div className="mt-3 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-xl p-2.5 flex items-center gap-2">
+                    <Package size={12} /> Produção finalizada — pronto para separação. Clique em "Separado" quando concluir.
                   </div>
                 )}
               </div>
