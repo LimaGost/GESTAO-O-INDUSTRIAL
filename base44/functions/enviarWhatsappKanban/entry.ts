@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
 
-    const { ordem, novoStatus, clienteNome, clienteTelefone } = await req.json();
+    const { ordem, novoStatus, clienteNome, clienteTelefone, notificar_interno = true } = await req.json();
 
     const etapaLabel = ETAPA_LABELS[novoStatus];
     if (!etapaLabel) {
@@ -41,8 +41,8 @@ Deno.serve(async (req) => {
 
     const resultados = [];
 
-    // Mensagem para o número interno (sempre)
-    if (NUMERO_INTERNO) {
+    // Mensagem para o número interno
+    if (NUMERO_INTERNO && notificar_interno) {
       const msgInterna = `📋 *Atualização de Produção*\n\nOP: *${ordem.numero}*\nProduto: ${ordem.produto_nome}\nEtapa: *${etapaLabel}*${clienteNome ? `\nCliente: ${clienteNome}` : ''}\nQuantidade: ${ordem.quantidade || ''}`;
       const ok = await enviarMensagem(NUMERO_INTERNO, msgInterna);
       resultados.push({ destino: 'interno', ok });

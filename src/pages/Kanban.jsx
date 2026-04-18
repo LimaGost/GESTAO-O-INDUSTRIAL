@@ -109,8 +109,20 @@ export default function Kanban() {
 
   const COLUNAS = kanbanColunas.filter(c => colunasVisiveis.includes(c.key));
 
-  // Etapas que disparam WhatsApp (configurável)
-  const ETAPAS_WHATSAPP = ['produzido', 'finalizado'];
+  // Etapas que disparam WhatsApp — lidas da config salva em Configurações
+  const ETAPAS_WHATSAPP = (() => {
+    try {
+      const cfg = JSON.parse(localStorage.getItem('whatsapp_kanban_config') || 'null');
+      if (cfg && Array.isArray(cfg.etapas_notificar)) return cfg.etapas_notificar;
+    } catch {}
+    return ['produzido', 'finalizado'];
+  })();
+  const WHATSAPP_NOTIFICAR_INTERNO = (() => {
+    try { return JSON.parse(localStorage.getItem('whatsapp_kanban_config') || '{}').notificar_interno !== false; } catch { return true; }
+  })();
+  const WHATSAPP_NOTIFICAR_CLIENTE = (() => {
+    try { return JSON.parse(localStorage.getItem('whatsapp_kanban_config') || '{}').notificar_cliente !== false; } catch { return true; }
+  })();
 
   const load = async (invalidate = false) => {
     if (invalidate) { cacheInvalidate('OrdemProducao'); cacheInvalidate('Produto'); }
@@ -211,7 +223,8 @@ export default function Kanban() {
           ordem: { numero: ordem.numero, produto_nome: ordem.produto_nome, quantidade: ordem.quantidade },
           novoStatus: proximo,
           clienteNome,
-          clienteTelefone,
+          clienteTelefone: WHATSAPP_NOTIFICAR_CLIENTE ? clienteTelefone : null,
+          notificar_interno: WHATSAPP_NOTIFICAR_INTERNO,
         }).catch(() => {}); // fire-and-forget, não bloqueia o fluxo
       } catch {}
     }
