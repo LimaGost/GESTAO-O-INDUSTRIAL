@@ -51,7 +51,7 @@ export function PermissoesProvider({ user, children }) {
 
   const getNivel = (modulo) => {
     if (!user) return 'none';
-    if (user.role === 'admin') return 'full';
+    if (user.role === 'admin' || user.role === 'user') return 'full';
     if (modulos === undefined) return 'full';
     return modulos[modulo] || 'none';
   };
