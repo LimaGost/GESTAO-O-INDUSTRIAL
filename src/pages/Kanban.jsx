@@ -1,0 +1,349 @@
+import { useEffect, useState } from 'react';
+import { cachedFetch, cacheInvalidate } from '@/lib/entityCache';
+import { base44 } from '@/api/base44Client';
+import { registrarLog } from '@/lib/audit';
+import { gerarLote, gerarNumero } from '@/lib/numeracao';
+import { agoraISO, hojeData } from '@/lib/brasilia';
+import {
+  Factory, Clock, CheckCircle, Package, Flag, Plus, X,
+  RefreshCw, Search, SlidersHorizontal, ArrowUpDown, Eye, EyeOff, BarChart2
+} from 'lucide-react';
+import KanbanCard from '@/components/kanban/KanbanCard';
+import KanbanCardModal from '@/components/kanban/KanbanCardModal';
+import ModalTotalProducao from '@/components/kanban/ModalTotalProducao';
+import { usePermissoes } from '@/lib/usePermissoes.jsx';
+
+const DEFAULTS_LABELS = {
+  a_produzir: 'A Produzir', em_producao: 'Em Produção',
+  produzido: 'Produzido', em_embalagem: 'Em Embalagem', finalizado: 'Finalizado',
+};
+
+const COLUNAS_BASE = [
+  { key: 'a_produzir',   icon: Clock,        accent: '#64748B', bg: '#F8FAFC', border: '#CBD5E1', dot: '#94A3B8' },
+  { key: 'em_producao',  icon: Factory,      accent: '#0EA5E9', bg: '#F0F9FF', border: '#7DD3FC', dot: '#0EA5E9' },
+  { key: 'produzido',    icon: CheckCircle,  accent: '#22C55E', bg: '#F0FDF4', border: '#86EFAC', dot: '#22C55E' },
+  { key: 'em_embalagem', icon: Package,      accent: '#F59E0B', bg: '#FFFBEB', border: '#FCD34D', dot: '#F59E0B' },
+  { key: 'finalizado',   icon: Flag,         accent: '#A855F7', bg: '#FAF5FF', border: '#D8B4FE', dot: '#A855F7' },
+];
+
+function buildColunas() {
+  let labels = {};
+  try { labels = JSON.parse(localStorage.getItem('kanban_labels') || '{}'); } catch {}
+  return COLUNAS_BASE.map(c => ({ ...c, label: labels[c.key] || DEFAULTS_LABELS[c.key] }));
+}
+
+const PROXIMOS = {
+  a_produzir: 'em_producao', em_producao: 'produzido',
+  produzido: 'em_embalagem', em_embalagem: 'finalizado',
+};
+
+export default function Kanban() {
+  const { somenteLeitura } = usePermissoes();
+  const readonly = somenteLeitura('Kanban');
+  const [kanbanColunas, setKanbanColunas] = useState(buildColunas);
+  const [ordens, setOrdens]               = useState([]);
+  const [produtos, setProdutos]           = useState([]);
+  const [pedidoMap, setPedidoMap]         = useState({});
+  const [checklistOk, setChecklistOk]     = useState({});
+  const [loadingId, setLoadingId]         = useState(null);
+  const [showNovaOP, setShowNovaOP]       = useState(false);
+  const [novaOP, setNovaOP]               = useState({ produto_id: '', produto_nome: '', quantidade: 1, observacoes: '' });
+  const [salvando, setSalvando]           = useState(false);
+  const [variacoesOP, setVariacoesOP]     = useState([]);
+  const [busca, setBusca]                 = useState('');
+  const [ordemSelecionada, setOrdemSelecionada] = useState(null);
+  const [showTotal, setShowTotal]         = useState(false);
+  const [colunasVisiveis, setColunasVisiveis] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('kanban_colunas')) || COLUNAS_BASE.map(c => c.key); }
+    catch { return COLUNAS_BASE.map(c => c.key); }
+  });
+
+  useEffect(() => {
+    const onSettings = () => setKanbanColunas(buildColunas());
+    window.addEventListener('settings:saved', onSettings);
+    return () => window.removeEventListener('settings:saved', onSettings);
+  }, []);
+
+  const COLUNAS = kanbanColunas.filter(c => colunasVisiveis.includes(c.key));
+
+  const load = async (invalidate = false) => {
+    if (invalidate) { cacheInvalidate('OrdemProducao'); cacheInvalidate('Produto'); }
+    const [ords, prods, peds] = await Promise.all([
+      cachedFetch('OrdemProducao', () => base44.entities.OrdemProducao.list('-created_date'), 30_000),
+      cachedFetch('Produto', () => base44.entities.Produto.list(), 120_000),
+      base44.entities.Pedido.list(),
+    ]);
+    setOrdens(ords);
+    setProdutos(prods);
+    const pm = {};
+    for (const p of peds) pm[p.id] = p.cliente_nome;
+    setPedidoMap(pm);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const avancarStatus = async (ordem, descarte = null) => {
+    const proximo = PROXIMOS[ordem.status];
+    if (!proximo) return;
+    setLoadingId(ordem.id);
+    const agora = agoraISO();
+    const updates = { status: proximo };
+
+    if (proximo === 'em_producao') updates.data_inicio = agora;
+    if (proximo === 'produzido') { updates.data_fim_producao = agora; updates.lote = ordem.lote || gerarLote(ordem.produto_id); }
+    if (proximo === 'em_embalagem') updates.data_embalagem = agora;
+    if (proximo === 'finalizado') {
+      updates.data_finalizacao = agora;
+      const lote = ordem.lote || gerarLote(ordem.id);
+      const dataProducao = hojeData();
+      cacheInvalidate('Produto');
+      const produtosFrescos = await cachedFetch('Produto', () => base44.entities.Produto.list(), 0);
+      const itensOP = (ordem.itens && ordem.itens.length > 0)
+        ? ordem.itens
+        : (ordem.produto_id ? [{ produto_id: ordem.produto_id, produto_nome: ordem.produto_nome, quantidade: ordem.quantidade }] : []);
+
+      for (const item of itensOP) {
+        const prod = produtosFrescos.find(p => p.id === item.produto_id);
+        const descarteItem = Array.isArray(descarte) ? descarte.find(d => d.produto_id === item.produto_id) : null;
+        const qtdDescartada = descarteItem?.quantidade || 0;
+        const qtdFinal = item.quantidade - qtdDescartada;
+        if (prod) {
+          await base44.entities.Produto.update(prod.id, { estoque_atual: (prod.estoque_atual || 0) + qtdFinal });
+          await registrarLog('Produto', prod.id, 'ENTRADA_ESTOQUE', `Entrada de ${qtdFinal} un via OP ${ordem.numero}`);
+        }
+        await base44.entities.Etiqueta.create({
+          ordem_producao_id: ordem.id, produto_id: item.produto_id,
+          produto_nome: item.produto_nome, quantidade: qtdFinal,
+          lote, data_producao: dataProducao, impresso: false,
+        });
+      }
+
+      if (ordem.pedido_id) {
+        const todosPedidos = await base44.entities.Pedido.list();
+        const ped = todosPedidos.find(p => p.id === ordem.pedido_id);
+        if (ped && ped.status === 'aguardando_estoque') {
+          const todasOrdens = await base44.entities.OrdemProducao.list();
+          const ordens_pedido = todasOrdens.filter(o => o.pedido_id === ordem.pedido_id);
+          const todasFin = ordens_pedido.every(o => o.id === ordem.id ? true : o.status === 'finalizado');
+          if (todasFin) {
+            await base44.entities.Pedido.update(ped.id, { status: 'separacao' });
+          }
+        }
+      }
+    }
+
+    await base44.entities.OrdemProducao.update(ordem.id, updates);
+    await registrarLog('OrdemProducao', ordem.id, 'AVANCO_STATUS', `OP ${ordem.numero} avançou para "${proximo}"`);
+    await load(true);
+    setLoadingId(null);
+  };
+
+  const criarOPManual = async () => {
+    if (!novaOP.produto_id) return alert('Selecione um produto.');
+    setSalvando(true);
+    const temVariacoes = variacoesOP.length > 0;
+    const qtdTotal = temVariacoes ? variacoesOP.reduce((s, v) => s + (v.quantidade || 0), 0) : novaOP.quantidade;
+    const op = await base44.entities.OrdemProducao.create({
+      numero: gerarNumero('OP'), produto_id: novaOP.produto_id, produto_nome: novaOP.produto_nome,
+      quantidade: qtdTotal, variacoes: temVariacoes ? variacoesOP : [],
+      observacoes: novaOP.observacoes, status: 'a_produzir', origem: 'manual',
+    });
+    await registrarLog('OrdemProducao', op.id, 'CRIACAO_MANUAL', `OP manual para ${novaOP.produto_nome} — qtd ${qtdTotal}`);
+    setShowNovaOP(false);
+    setNovaOP({ produto_id: '', produto_nome: '', quantidade: 1, observacoes: '' });
+    setVariacoesOP([]);
+    await load(true);
+    setSalvando(false);
+  };
+
+  const ordensFiltradas = ordens.filter(o => {
+    if (!busca) return true;
+    return (o.produto_nome || '').toLowerCase().includes(busca.toLowerCase()) ||
+      (o.numero || '').toLowerCase().includes(busca.toLowerCase()) ||
+      (o.pedido_numero || '').toLowerCase().includes(busca.toLowerCase());
+  });
+
+  const ativas = ordens.filter(o => o.status !== 'finalizado').length;
+  const finalizadas = ordens.filter(o => o.status === 'finalizado').length;
+
+  return (
+    <div className="flex flex-col h-full space-y-4">
+      <div className="bg-card border border-border rounded-2xl px-5 py-4 flex-shrink-0">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <Factory size={19} className="text-primary" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-foreground">Kanban de Produção</h2>
+              <p className="text-xs text-muted-foreground">{ativas} ativa(s) · {finalizadas} finalizada(s)</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => load(true)} className="p-2.5 border border-border rounded-xl hover:bg-muted transition-colors">
+              <RefreshCw size={15} className="text-muted-foreground" />
+            </button>
+            <button onClick={() => setShowTotal(true)}
+              className="flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-100 transition-colors">
+              <BarChart2 size={16} /> Total
+            </button>
+            {!readonly && (
+              <button onClick={() => setShowNovaOP(true)}
+                className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm">
+                <Plus size={16} /> Nova OP
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-5 gap-2">
+          {kanbanColunas.map(col => {
+            const count = ordens.filter(o => o.status === col.key).length;
+            const pct = ordens.length > 0 ? Math.round((count / ordens.length) * 100) : 0;
+            return (
+              <div key={col.key} className="text-center">
+                <div className="h-1.5 rounded-full mb-1.5 overflow-hidden bg-muted">
+                  <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: col.accent }} />
+                </div>
+                <p className="text-lg font-bold text-foreground">{count}</p>
+                <p className="text-[10px] text-muted-foreground leading-tight hidden sm:block">{col.label}</p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2.5 bg-card border border-border rounded-xl px-3.5 py-2.5 flex-shrink-0">
+        <Search size={14} className="text-muted-foreground flex-shrink-0" />
+        <input value={busca} onChange={e => setBusca(e.target.value)}
+          placeholder="Buscar por OP, produto ou pedido..."
+          className="bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground w-full" />
+        {busca && <button onClick={() => setBusca('')} className="text-muted-foreground hover:text-foreground"><X size={13} /></button>}
+      </div>
+
+      <div className="flex gap-3 overflow-x-auto pb-4 flex-1 items-start">
+        {COLUNAS.map(({ key, label, icon: Icon, accent, bg, border, dot }) => {
+          const colOrdens = ordensFiltradas.filter(o => o.status === key);
+          const total = ordens.filter(o => o.status === key).length;
+
+          return (
+            <div key={key} className="flex-shrink-0 w-72 rounded-2xl flex flex-col overflow-hidden"
+              style={{ minHeight: '60vh', background: bg, border: `1.5px solid ${border}` }}>
+              <div className="px-4 py-3 flex items-center justify-between sticky top-0 z-10"
+                style={{ background: bg, borderBottom: `1px solid ${border}` }}>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full" style={{ background: dot }} />
+                  <Icon size={13} style={{ color: accent }} />
+                  <span className="text-xs font-bold tracking-wide" style={{ color: accent }}>{label.toUpperCase()}</span>
+                </div>
+                <span className="text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full text-white"
+                  style={{ background: accent, opacity: total === 0 ? 0.4 : 1 }}>{total}</span>
+              </div>
+
+              <div className="flex-1 p-3 overflow-y-auto space-y-2.5">
+                {colOrdens.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 opacity-30">
+                    <div className="w-10 h-10 rounded-full border-2 border-dashed flex items-center justify-center mb-2" style={{ borderColor: accent }}>
+                      <Icon size={16} style={{ color: accent }} />
+                    </div>
+                    <p className="text-xs text-muted-foreground">Sem ordens</p>
+                  </div>
+                ) : colOrdens.map(ordem => (
+                  <KanbanCard
+                    key={ordem.id}
+                    ordem={ordem}
+                    clienteNome={ordem.pedido_id ? pedidoMap[ordem.pedido_id] : null}
+                    checklistOk={checklistOk}
+                    setChecklistOk={setChecklistOk}
+                    onAvancar={readonly ? null : avancarStatus}
+                    loading={loadingId === ordem.id}
+                    onOpenModal={readonly ? null : () => setOrdemSelecionada(ordem)}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {showNovaOP && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h3 className="font-bold text-foreground">Nova Ordem de Produção</h3>
+              <button onClick={() => setShowNovaOP(false)} className="p-1.5 hover:bg-muted rounded-lg">
+                <X size={16} className="text-muted-foreground" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Produto *</label>
+                <select value={novaOP.produto_id}
+                  onChange={e => {
+                    const p = produtos.find(p => p.id === e.target.value);
+                    setNovaOP(n => ({ ...n, produto_id: e.target.value, produto_nome: p ? p.nome : '' }));
+                    if (p?.variacoes?.length > 0) setVariacoesOP(p.variacoes.map(v => ({ nome: v, quantidade: 0 })));
+                    else setVariacoesOP([]);
+                  }}
+                  className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
+                  <option value="">Selecione um produto...</option>
+                  {produtos.map(p => <option key={p.id} value={p.id}>{p.nome} — Est: {p.estoque_atual || 0}</option>)}
+                </select>
+              </div>
+              {variacoesOP.length > 0 ? (
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Quantidade por variação *</label>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {variacoesOP.map((v, i) => (
+                      <div key={i} className="flex items-center gap-3 bg-muted/40 rounded-xl px-3 py-2.5">
+                        <span className="text-sm font-medium text-foreground flex-1">{v.nome}</span>
+                        <input type="number" min="0" value={v.quantidade}
+                          onChange={e => setVariacoesOP(prev => prev.map((x, j) => j === i ? { ...x, quantidade: Number(e.target.value) } : x))}
+                          className="w-20 border border-border rounded-lg px-2 py-1.5 text-sm bg-background text-center focus:outline-none focus:ring-2 focus:ring-primary" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Quantidade *</label>
+                  <input type="number" min="1" value={novaOP.quantidade}
+                    onChange={e => setNovaOP(n => ({ ...n, quantidade: Number(e.target.value) }))}
+                    className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+              )}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Observações</label>
+                <textarea rows={2} value={novaOP.observacoes}
+                  onChange={e => setNovaOP(n => ({ ...n, observacoes: e.target.value }))}
+                  className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none" />
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button onClick={criarOPManual} disabled={salvando}
+                  className="flex-1 bg-primary text-primary-foreground py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50">
+                  {salvando ? 'Criando...' : 'Criar Ordem de Produção'}
+                </button>
+                <button onClick={() => { setShowNovaOP(false); setVariacoesOP([]); }}
+                  className="px-4 border border-border rounded-xl text-sm text-muted-foreground hover:bg-muted transition-colors">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTotal && <ModalTotalProducao ordens={ordens} onClose={() => setShowTotal(false)} />}
+
+      {ordemSelecionada && (
+        <KanbanCardModal
+          ordem={ordemSelecionada}
+          produtos={produtos}
+          onAvancar={async (ordem, descarte) => { await avancarStatus(ordem, descarte); setOrdemSelecionada(null); }}
+          loading={loadingId === ordemSelecionada.id}
+          onClose={() => setOrdemSelecionada(null)}
+        />
+      )}
+    </div>
+  );
+}
