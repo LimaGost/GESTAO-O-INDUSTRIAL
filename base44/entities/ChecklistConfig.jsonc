@@ -1,0 +1,25 @@
+{
+  "name": "ChecklistConfig",
+  "type": "object",
+  "properties": {
+    "etapa": {
+      "type": "string",
+      "enum": [
+        "a_produzir",
+        "em_producao",
+        "produzido",
+        "em_embalagem"
+      ]
+    },
+    "itens": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    }
+  },
+  "required": [
+    "etapa"
+  ]
+}

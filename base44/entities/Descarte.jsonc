@@ -1,0 +1,50 @@
+{
+  "name": "Descarte",
+  "type": "object",
+  "properties": {
+    "ordem_producao_id": {
+      "type": "string"
+    },
+    "ordem_producao_numero": {
+      "type": "string"
+    },
+    "produto_id": {
+      "type": "string"
+    },
+    "produto_nome": {
+      "type": "string"
+    },
+    "quantidade": {
+      "type": "number",
+      "default": 0
+    },
+    "custo_unitario": {
+      "type": "number",
+      "default": 0
+    },
+    "custo_total": {
+      "type": "number",
+      "default": 0
+    },
+    "motivo": {
+      "type": "string"
+    },
+    "descricao": {
+      "type": "string"
+    },
+    "etapa_producao": {
+      "type": "string"
+    },
+    "registrado_por": {
+      "type": "string"
+    },
+    "data_descarte": {
+      "type": "string",
+      "format": "date"
+    }
+  },
+  "required": [
+    "produto_nome",
+    "motivo"
+  ]
+}
