@@ -1,17 +1,5 @@
 import { useState, useRef } from 'react';
-import { Save, Check, Factory, Building2 } from 'lucide-react';
-
-const KANBAN_KEYS = [
-  { key: 'a_produzir', defaultLabel: 'A Produzir' },
-  { key: 'em_producao', defaultLabel: 'Em Produção' },
-  { key: 'produzido', defaultLabel: 'Produzido' },
-  { key: 'em_embalagem', defaultLabel: 'Em Embalagem' },
-  { key: 'finalizado', defaultLabel: 'Finalizado' },
-];
-
-function getKanbanLabels() {
-  try { return JSON.parse(localStorage.getItem('kanban_labels') || '{}'); } catch { return {}; }
-}
+import { Save, Check, Building2 } from 'lucide-react';
 
 function getEmpresa() {
   try { return JSON.parse(localStorage.getItem('empresa_config') || '{}'); } catch { return {}; }
@@ -38,49 +26,6 @@ function SaveButton({ onClick, saved, saving }) {
       className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${saved ? 'bg-green-500 text-white' : 'bg-primary text-primary-foreground hover:opacity-90'}`}>
       {saved ? <><Check size={14} /> Salvo!</> : saving ? 'Salvando...' : <><Save size={14} /> Salvar</>}
     </button>
-  );
-}
-
-function SecaoKanban() {
-  const [labels, setLabels] = useState(() => {
-    const saved = getKanbanLabels();
-    const result = {};
-    for (const k of KANBAN_KEYS) result[k.key] = saved[k.key] || k.defaultLabel;
-    return result;
-  });
-  const [saved, setSaved] = useState(false);
-
-  const salvar = () => {
-    localStorage.setItem('kanban_labels', JSON.stringify(labels));
-    window.dispatchEvent(new Event('settings:saved'));
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
-
-  const resetar = () => {
-    const defaults = {};
-    for (const k of KANBAN_KEYS) defaults[k.key] = k.defaultLabel;
-    setLabels(defaults);
-  };
-
-  return (
-    <Section icon={Factory} title="Labels do Kanban" desc="Personalize os nomes das colunas">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {KANBAN_KEYS.map(({ key, defaultLabel }) => (
-          <div key={key}>
-            <label className="text-xs text-muted-foreground mb-1 block">Etapa: {defaultLabel}</label>
-            <input value={labels[key]} onChange={e => setLabels(prev => ({ ...prev, [key]: e.target.value }))}
-              className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
-          </div>
-        ))}
-      </div>
-      <div className="flex gap-2">
-        <SaveButton onClick={salvar} saved={saved} saving={false} />
-        <button onClick={resetar} className="text-xs text-muted-foreground hover:text-foreground px-3 py-2 rounded-xl border border-border">
-          Restaurar padrão
-        </button>
-      </div>
-    </Section>
   );
 }
 
@@ -166,7 +111,6 @@ export default function AbaPersonalizacao() {
   return (
     <div className="space-y-5">
       <SecaoEmpresa />
-      <SecaoKanban />
     </div>
   );
 }
