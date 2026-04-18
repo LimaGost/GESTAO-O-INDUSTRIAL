@@ -3,10 +3,12 @@ import { base44 } from '@/api/base44Client';
 import {
   Plus, Edit2, X, Check, Search,
   Package, AlertTriangle, LayoutGrid, List, SlidersHorizontal,
-  TrendingDown, CheckCircle, ChevronDown, ChevronRight, Trash2, Eye as EyeIcon
+  TrendingDown, CheckCircle, ChevronDown, ChevronRight, Trash2, Eye as EyeIcon,
+  FileSpreadsheet
 } from 'lucide-react';
 import FotoProduto from '@/components/produtos/FotoProduto';
 import ModalEditarSku from '@/components/produtos/ModalEditarSku';
+import ModalImportarPlanilha from '@/components/produtos/ModalImportarPlanilha';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 
 const emptyFamilia = {
@@ -26,6 +28,7 @@ export default function Produtos() {
   const [novaVariacao, setNovaVariacao] = useState('');
   const [loading, setLoading] = useState(false);
   const [editingSku, setEditingSku] = useState(null);
+  const [showImportar, setShowImportar] = useState(false);
 
   // Filtros
   const [busca, setBusca] = useState('');
@@ -153,10 +156,16 @@ export default function Produtos() {
           </div>
         </div>
         {!readonly ? (
-          <button onClick={() => { setShowFamilia(true); setFamilia({ ...emptyFamilia, codigoBase: gerarCodigoSku(produtos) }); setNovaVariacao(''); }}
-            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-amber-500 transition-colors shadow-sm">
-            <Plus size={16} /> Novo Produto
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => setShowImportar(true)}
+              className="flex items-center gap-2 border border-border bg-card text-foreground px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-muted transition-colors">
+              <FileSpreadsheet size={16} className="text-green-600" /> Importar Planilha
+            </button>
+            <button onClick={() => { setShowFamilia(true); setFamilia({ ...emptyFamilia, codigoBase: gerarCodigoSku(produtos) }); setNovaVariacao(''); }}
+              className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-amber-500 transition-colors shadow-sm">
+              <Plus size={16} /> Novo Produto
+            </button>
+          </div>
         ) : (
           <span className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted px-3 py-2 rounded-xl">
             <EyeIcon size={13} /> Somente visualização
@@ -498,6 +507,12 @@ export default function Produtos() {
             </tbody>
           </table>
         </div>
+      )}
+      {showImportar && (
+        <ModalImportarPlanilha
+          onClose={() => setShowImportar(false)}
+          onImportado={() => { load(); setShowImportar(false); }}
+        />
       )}
       {editingSku && (
         <ModalEditarSku
