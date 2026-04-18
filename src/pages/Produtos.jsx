@@ -190,58 +190,85 @@ export default function Produtos() {
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: 'Total de SKUs', value: kpis.total, icon: Package, color: 'text-sky-blue', sub: 'produtos cadastrados' },
-          { label: 'Estoque OK', value: kpis.ok, icon: CheckCircle, color: 'text-rainbow-green', sub: 'acima do mínimo' },
-          { label: 'Em Alerta', value: kpis.alertaMin, icon: AlertTriangle, color: 'text-sun-yellow', sub: 'abaixo do mínimo' },
-          { label: 'Zerados', value: kpis.zerados, icon: TrendingDown, color: 'text-rainbow-red', sub: 'sem estoque' },
-        ].map(({ label, value, icon: Icon, color, sub }) => (
-          <div key={label} className="bg-card border border-border rounded-2xl p-4">
-            <Icon size={20} className={`${color} mb-2`} />
-            <p className="text-2xl font-bold text-foreground">{value}</p>
-            <p className="text-xs font-medium text-foreground">{label}</p>
-            <p className="text-[10px] text-muted-foreground">{sub}</p>
+          { label: 'Total de SKUs', value: kpis.total, icon: Package, iconBg: 'bg-sky-blue/10', color: 'text-sky-blue', sub: 'produtos cadastrados', bar: null },
+          { label: 'Estoque OK', value: kpis.ok, icon: CheckCircle, iconBg: 'bg-rainbow-green/10', color: 'text-rainbow-green', sub: 'acima do mínimo', bar: { pct: kpis.total ? Math.round((kpis.ok / kpis.total) * 100) : 0, color: 'bg-rainbow-green' } },
+          { label: 'Em Alerta', value: kpis.alertaMin, icon: AlertTriangle, iconBg: 'bg-sun-yellow/10', color: 'text-sun-yellow', sub: 'abaixo do mínimo', bar: { pct: kpis.total ? Math.round((kpis.alertaMin / kpis.total) * 100) : 0, color: 'bg-sun-yellow' } },
+          { label: 'Zerados', value: kpis.zerados, icon: TrendingDown, iconBg: 'bg-rainbow-red/10', color: 'text-rainbow-red', sub: 'sem estoque', bar: { pct: kpis.total ? Math.round((kpis.zerados / kpis.total) * 100) : 0, color: 'bg-rainbow-red' } },
+        ].map(({ label, value, icon: Icon, iconBg, color, sub, bar }) => (
+          <div key={label} className="bg-card border border-border rounded-2xl p-4 flex flex-col gap-2">
+            <div className={`w-8 h-8 rounded-xl ${iconBg} flex items-center justify-center`}>
+              <Icon size={16} className={color} />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-foreground">{value}</p>
+              <p className="text-xs font-semibold text-foreground">{label}</p>
+              <p className="text-[10px] text-muted-foreground">{sub}</p>
+            </div>
+            {bar && (
+              <div className="h-1 rounded-full bg-muted overflow-hidden">
+                <div className={`h-full rounded-full ${bar.color} transition-all`} style={{ width: `${bar.pct}%` }} />
+              </div>
+            )}
           </div>
         ))}
       </div>
 
       {/* Barra de busca + filtros */}
-      <div className="flex flex-wrap gap-2">
-        {/* Busca */}
-        <div className="flex items-center gap-2.5 flex-1 min-w-48 bg-card border border-border rounded-xl px-3.5 py-2.5">
-          <Search size={14} className="text-muted-foreground flex-shrink-0" />
-          <input value={busca} onChange={e => setBusca(e.target.value)}
-            placeholder="Buscar por nome, código ou categoria..."
-            className="bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground w-full"
-          />
-          {busca && <button onClick={() => setBusca('')}><X size={13} className="text-muted-foreground" /></button>}
+      <div className="space-y-2">
+        <div className="flex flex-wrap gap-2">
+          {/* Busca */}
+          <div className="flex items-center gap-2.5 flex-1 min-w-48 bg-card border border-border rounded-xl px-3.5 py-2.5">
+            <Search size={14} className="text-muted-foreground flex-shrink-0" />
+            <input value={busca} onChange={e => setBusca(e.target.value)}
+              placeholder="Buscar por nome, código ou categoria..."
+              className="bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground w-full"
+            />
+            {busca && <button onClick={() => setBusca('')}><X size={13} className="text-muted-foreground" /></button>}
+          </div>
+
+          {/* Toggle filtros */}
+          <button onClick={() => setShowFiltros(v => !v)}
+            className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-medium border transition-colors ${showFiltros || filtrosAtivos ? 'bg-primary/10 border-primary/30 text-primary' : 'border-border text-muted-foreground hover:bg-muted'}`}>
+            <SlidersHorizontal size={14} />
+            Filtros
+            {filtrosAtivos && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
+          </button>
+
+          {/* View toggle */}
+          <div className="flex bg-muted rounded-xl p-1">
+            <button onClick={() => setViewMode('grid')}
+              className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-card shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+              <LayoutGrid size={15} />
+            </button>
+            <button onClick={() => setViewMode('table')}
+              className={`p-2 rounded-lg transition-colors ${viewMode === 'table' ? 'bg-card shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+              <List size={15} />
+            </button>
+          </div>
         </div>
 
-        {/* Toggle filtros */}
-        <button onClick={() => setShowFiltros(v => !v)}
-          className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-medium border transition-colors ${showFiltros || (filtroCategoria !== 'todas' || filtroEstoque !== 'todos') ? 'bg-primary/10 border-primary/30 text-primary' : 'border-border text-muted-foreground hover:bg-muted'}`}>
-          <SlidersHorizontal size={14} />
-          Filtros
-          {(filtroCategoria !== 'todas' || filtroEstoque !== 'todos') && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
-        </button>
-
-        {/* View toggle */}
-        <div className="flex bg-muted rounded-xl p-1">
-          <button onClick={() => setViewMode('grid')}
-            className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-card shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
-            <LayoutGrid size={15} />
-          </button>
-          <button onClick={() => setViewMode('table')}
-            className={`p-2 rounded-lg transition-colors ${viewMode === 'table' ? 'bg-card shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
-            <List size={15} />
-          </button>
+        {/* Filtros rápidos de estoque — sempre visíveis */}
+        <div className="flex flex-wrap gap-1.5">
+          {[
+            { key: 'todos', label: 'Todos', count: kpis.total },
+            { key: 'ok', label: '✓ OK', count: kpis.ok },
+            { key: 'alerta', label: '⚠️ Alerta', count: kpis.alertaMin },
+            { key: 'zerado', label: '🔴 Zerado', count: kpis.zerados },
+          ].map(f => (
+            <button key={f.key} onClick={() => setFiltroEstoque(f.key)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filtroEstoque === f.key ? 'bg-primary text-primary-foreground' : 'bg-card border border-border text-muted-foreground hover:text-foreground'}`}>
+              {f.label}
+              <span className={`text-[10px] font-bold px-1 rounded-full ${filtroEstoque === f.key ? 'bg-white/20' : 'bg-muted'}`}>{f.count}</span>
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Painel de filtros expandido */}
+      {/* Painel de filtros expandido — apenas categorias */}
       {showFiltros && (
         <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
           <div>
-            <p className="text-xs font-semibold text-muted-foreground mb-2">Categoria</p>
+            <p className="text-xs font-semibold text-muted-foreground mb-2">Filtrar por Categoria</p>
             <div className="flex flex-wrap gap-1.5">
               <button onClick={() => setFiltroCategoria('todas')}
                 className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${filtroCategoria === 'todas' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'}`}>
@@ -255,26 +282,10 @@ export default function Produtos() {
               ))}
             </div>
           </div>
-          <div>
-            <p className="text-xs font-semibold text-muted-foreground mb-2">Status de Estoque</p>
-            <div className="flex flex-wrap gap-1.5">
-              {[
-                { key: 'todos', label: 'Todos' },
-                { key: 'ok', label: '✓ OK' },
-                { key: 'alerta', label: '⚠️ Alerta' },
-                { key: 'zerado', label: '🔴 Zerado' },
-              ].map(f => (
-                <button key={f.key} onClick={() => setFiltroEstoque(f.key)}
-                  className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${filtroEstoque === f.key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'}`}>
-                  {f.label}
-                </button>
-              ))}
-            </div>
-          </div>
           {filtrosAtivos && (
             <button onClick={() => { setBusca(''); setFiltroCategoria('todas'); setFiltroEstoque('todos'); }}
               className="text-xs text-muted-foreground hover:text-destructive transition-colors">
-              Limpar filtros
+              Limpar todos os filtros
             </button>
           )}
         </div>
@@ -427,39 +438,59 @@ export default function Produtos() {
                           </div>
                         ) : (
                           <>
-                            <div className="p-3 flex gap-3 items-start">
-                              <FotoProduto fotoUrl={p.foto_url} size="sm" readOnly />
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-start justify-between gap-1">
-                                  <p className="text-xs font-bold text-foreground leading-tight truncate">{p.nome}</p>
-                                  {!readonly && (
-                                    <div className="flex gap-0.5 flex-shrink-0">
-                                      <button onClick={() => startEditSku(p)} className="p-1 hover:bg-muted rounded-md transition-colors">
-                                        <Edit2 size={11} className="text-muted-foreground" />
-                                      </button>
-                                      <button onClick={() => deleteSku(p.id, p.nome)} className="p-1 hover:bg-destructive/10 rounded-md transition-colors">
-                                        <Trash2 size={11} className="text-muted-foreground hover:text-destructive" />
-                                      </button>
-                                    </div>
-                                  )}
+                            {/* Foto em destaque no topo */}
+                            <div className="relative">
+                              {p.foto_url ? (
+                                <img src={p.foto_url} alt={p.nome}
+                                  className="w-full h-28 object-cover rounded-t-2xl" />
+                              ) : (
+                                <div className="w-full h-28 bg-muted/50 rounded-t-2xl flex items-center justify-center">
+                                  <Package size={28} className="text-muted-foreground/40" />
                                 </div>
-                                <p className="text-[10px] text-muted-foreground font-mono">{p.codigo}</p>
+                              )}
+                              {/* Badge de status sobreposto */}
+                              <span className={`absolute top-2 right-2 text-[10px] px-2 py-1 rounded-full font-bold shadow-sm ${zerado ? 'bg-rainbow-red text-white' : alerta ? 'bg-sun-yellow text-white' : 'bg-rainbow-green text-white'}`}>
+                                {zerado ? '● Zerado' : alerta ? '▲ Alerta' : '✓ OK'}
+                              </span>
+                              {!readonly && (
+                                <div className="absolute top-2 left-2 flex gap-1">
+                                  <button onClick={() => startEditSku(p)}
+                                    className="p-1.5 bg-white/90 hover:bg-white rounded-lg shadow-sm transition-colors">
+                                    <Edit2 size={11} className="text-foreground" />
+                                  </button>
+                                  <button onClick={() => deleteSku(p.id, p.nome)}
+                                    className="p-1.5 bg-white/90 hover:bg-red-50 rounded-lg shadow-sm transition-colors">
+                                    <Trash2 size={11} className="text-destructive" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Info do produto */}
+                            <div className="p-3">
+                              <p className="text-xs font-bold text-foreground leading-tight truncate">{p.nome}</p>
+                              <div className="flex items-center justify-between mt-0.5">
+                                <p className="text-[10px] text-muted-foreground font-mono">{p.codigo || '—'}</p>
                                 <p className="text-[10px] text-muted-foreground">{p.unidade || 'un'} · R$ {(p.preco_unitario || 0).toFixed(2)}</p>
                               </div>
-                            </div>
-                            <div className={`px-3 pb-3 ${zerado ? 'bg-rainbow-red/5' : alerta ? 'bg-sun-yellow/5' : ''}`}>
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <p className="text-xl font-bold text-foreground">{p.estoque_atual || 0}</p>
-                                  <p className="text-[10px] text-muted-foreground">de {p.estoque_minimo || 0} min</p>
+
+                              {/* Estoque + barra */}
+                              <div className="mt-2.5">
+                                <div className="flex items-end justify-between mb-1">
+                                  <div>
+                                    <p className={`text-xl font-bold ${zerado ? 'text-rainbow-red' : alerta ? 'text-sun-yellow' : 'text-foreground'}`}>
+                                      {p.estoque_atual || 0}
+                                    </p>
+                                    <p className="text-[10px] text-muted-foreground">min: {p.estoque_minimo || 0}</p>
+                                  </div>
+                                  {p.estoque_maximo > 0 && (
+                                    <p className="text-[10px] text-muted-foreground">máx: {p.estoque_maximo}</p>
+                                  )}
                                 </div>
-                                <span className={`text-[10px] px-2 py-1 rounded-full font-semibold ${zerado ? 'bg-rainbow-red/10 text-rainbow-red' : alerta ? 'bg-sun-yellow/10 text-sun-yellow' : 'bg-rainbow-green/10 text-rainbow-green'}`}>
-                                  {zerado ? 'Zerado' : alerta ? 'Alerta' : 'OK'}
-                                </span>
-                              </div>
-                              <div className="mt-2 h-1 rounded-full bg-muted overflow-hidden">
-                                <div className={`h-full rounded-full ${zerado ? 'bg-rainbow-red' : alerta ? 'bg-sun-yellow' : 'bg-rainbow-green'}`}
-                                  style={{ width: `${p.estoque_minimo > 0 ? Math.min(100, Math.round(((p.estoque_atual || 0) / (p.estoque_minimo * 2)) * 100)) : 100}%` }} />
+                                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                                  <div className={`h-full rounded-full transition-all ${zerado ? 'bg-rainbow-red' : alerta ? 'bg-sun-yellow' : 'bg-rainbow-green'}`}
+                                    style={{ width: `${p.estoque_minimo > 0 ? Math.min(100, Math.round(((p.estoque_atual || 0) / (p.estoque_minimo * 2)) * 100)) : 100}%` }} />
+                                </div>
                               </div>
                             </div>
                           </>
