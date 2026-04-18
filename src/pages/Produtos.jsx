@@ -3,11 +3,11 @@ import { base44 } from '@/api/base44Client';
 import {
   Plus, Edit2, X, Check, Search,
   Package, AlertTriangle, LayoutGrid, List, SlidersHorizontal,
-  TrendingDown, CheckCircle, ChevronDown, ChevronRight, Trash2
+  TrendingDown, CheckCircle, ChevronDown, ChevronRight, Trash2, Eye as EyeIcon
 } from 'lucide-react';
 import FotoProduto from '@/components/produtos/FotoProduto';
+import ModalEditarSku from '@/components/produtos/ModalEditarSku';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
-import { Eye as EyeIcon } from 'lucide-react';
 
 const emptyFamilia = {
   nomeBase: '', codigoBase: '', categoria: '', novaCategoria: '',
@@ -15,11 +15,6 @@ const emptyFamilia = {
   estoque_inicial: 0, estoque_minimo: 10, estoque_maximo: 0, preco_unitario: 0, variacoes: [],
 };
 
-const emptyEditForm = {
-  nome: '', codigo: '', categoria: '', descricao: '',
-  unidade: 'unidade', itens_por_caixa: 1,
-  estoque_atual: 0, estoque_minimo: 10, estoque_maximo: 0, preco_unitario: 0, foto_url: '',
-};
 
 export default function Produtos() {
   const { somenteLeitura } = usePermissoes();
@@ -31,7 +26,6 @@ export default function Produtos() {
   const [novaVariacao, setNovaVariacao] = useState('');
   const [loading, setLoading] = useState(false);
   const [editingSku, setEditingSku] = useState(null);
-  const [editForm, setEditForm] = useState(emptyEditForm);
 
   // Filtros
   const [busca, setBusca] = useState('');
@@ -126,23 +120,6 @@ export default function Produtos() {
     }
     setShowFamilia(false); setFamilia(emptyFamilia); setNovaVariacao('');
     await load(); setLoading(false);
-  };
-
-  const startEditSku = (p) => {
-    setEditForm({
-      nome: p.nome, codigo: p.codigo, categoria: p.categoria || '',
-      descricao: p.descricao || '', unidade: p.unidade || 'unidade',
-      itens_por_caixa: p.itens_por_caixa || 1, estoque_atual: p.estoque_atual || 0,
-      estoque_minimo: p.estoque_minimo || 10, estoque_maximo: p.estoque_maximo || 0,
-      preco_unitario: p.preco_unitario || 0, foto_url: p.foto_url || '',
-    });
-    setEditingSku(p);
-  };
-
-  const saveSku = async () => {
-    setLoading(true);
-    await base44.entities.Produto.update(editingSku.id, editForm);
-    setEditingSku(null); await load(); setLoading(false);
   };
 
   const deleteSku = async (id, nome) => {
@@ -401,43 +378,9 @@ export default function Produtos() {
                   {prods.map(p => {
                     const alerta = (p.estoque_atual || 0) <= (p.estoque_minimo || 0);
                     const zerado = (p.estoque_atual || 0) === 0;
-                    const isEditing = editingSku?.id === p.id;
                     return (
                       <div key={p.id} className={`bg-card border rounded-2xl overflow-hidden transition-all ${zerado ? 'border-rainbow-red/30' : alerta ? 'border-sun-yellow/30' : 'border-border'}`}>
-                        {isEditing ? (
-                          <div className="p-4 space-y-3">
-                            <div className="flex items-center justify-between mb-2">
-                              <p className="text-xs font-bold text-foreground">Editar SKU</p>
-                              <button onClick={() => setEditingSku(null)}><X size={13} className="text-muted-foreground" /></button>
-                            </div>
-                            <FotoProduto fotoUrl={editForm.foto_url} onUpload={url => setEditForm(f => ({ ...f, foto_url: url }))} size="md" />
-                            {[['nome','Nome'], ['codigo','Código'], ['categoria','Categoria'], ['unidade','Unidade'], ['descricao','Descrição']].map(([k, l]) => (
-                              <div key={k}>
-                                <label className="text-[10px] text-muted-foreground">{l}</label>
-                                <input value={editForm[k]} onChange={e => setEditForm(f => ({ ...f, [k]: e.target.value }))}
-                                  className="w-full border border-border rounded-lg px-2 py-1.5 text-xs bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
-                              </div>
-                            ))}
-                            {[['estoque_atual','Estoque Atual'],['estoque_minimo','Mínimo'],['estoque_maximo','Máximo'],['preco_unitario','Preço'],['itens_por_caixa','Its/Caixa']].map(([k, l]) => (
-                              <div key={k}>
-                                <label className="text-[10px] text-muted-foreground">{l}</label>
-                                <input type="number" value={editForm[k]} onChange={e => setEditForm(f => ({ ...f, [k]: Number(e.target.value) }))}
-                                  className="w-full border border-border rounded-lg px-2 py-1.5 text-xs bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
-                              </div>
-                            ))}
-                            <div className="flex gap-2 pt-1">
-                              <button onClick={saveSku} disabled={loading}
-                                className="flex-1 flex items-center justify-center gap-1 bg-primary text-primary-foreground py-1.5 rounded-lg text-xs font-semibold">
-                                <Check size={12} /> Salvar
-                              </button>
-                              <button onClick={() => setEditingSku(null)}
-                                className="border border-border px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-muted">
-                                Cancelar
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <>
+                        <>
                             {/* Foto em destaque no topo */}
                             <div className="relative">
                               {p.foto_url ? (
@@ -454,7 +397,7 @@ export default function Produtos() {
                               </span>
                               {!readonly && (
                                 <div className="absolute top-2 left-2 flex gap-1">
-                                  <button onClick={() => startEditSku(p)}
+                                  <button onClick={() => setEditingSku(p)}
                                     className="p-1.5 bg-white/90 hover:bg-white rounded-lg shadow-sm transition-colors">
                                     <Edit2 size={11} className="text-foreground" />
                                   </button>
@@ -494,10 +437,10 @@ export default function Produtos() {
                               </div>
                             </div>
                           </>
-                        )}
-                      </div>
-                    );
-                  })}
+                          </>
+                          </div>
+                          );
+                          })}
                 </div>
               )}
             </div>
@@ -538,7 +481,7 @@ export default function Produtos() {
                     <td className="px-3 py-2">
                       {!readonly && (
                         <div className="flex gap-1">
-                          <button onClick={() => startEditSku(p)} className="p-1.5 hover:bg-muted rounded-lg">
+                          <button onClick={() => setEditingSku(p)} className="p-1.5 hover:bg-muted rounded-lg">
                             <Edit2 size={12} className="text-muted-foreground" />
                           </button>
                           <button onClick={() => deleteSku(p.id, p.nome)} className="p-1.5 hover:bg-destructive/10 rounded-lg">
@@ -556,6 +499,13 @@ export default function Produtos() {
             </tbody>
           </table>
         </div>
+      )}
+      {editingSku && (
+        <ModalEditarSku
+          produto={editingSku}
+          onClose={() => setEditingSku(null)}
+          onSaved={() => { setEditingSku(null); load(); }}
+        />
       )}
     </div>
   );
