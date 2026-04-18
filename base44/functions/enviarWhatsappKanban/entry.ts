@@ -11,6 +11,18 @@ const ETAPA_LABELS = {
   finalizado:   'Finalizado 🎉',
 };
 
+const DEFAULT_MSG_INTERNO = `📋 *Atualização de Produção*\n\nOP: *{op}*\nProduto: {produto}\nEtapa: *{etapa}*\nCliente: {cliente}\nQuantidade: {qtd}`;
+const DEFAULT_MSG_CLIENTE = `Olá! Seu pedido está sendo processado.\n\nProduto: *{produto}*\nStatus atual: *{etapa}*\n\nObrigado pela preferência! 🙏`;
+
+function renderMensagem(template, vars) {
+  return template
+    .replace(/{op}/g, vars.op || '')
+    .replace(/{produto}/g, vars.produto || '')
+    .replace(/{etapa}/g, vars.etapa || '')
+    .replace(/{cliente}/g, vars.cliente || '')
+    .replace(/{qtd}/g, vars.qtd || '');
+}
+
 async function enviarMensagem(telefone, mensagem) {
   const telefoneFormatado = String(telefone).replace(/\D/g, '');
   const res = await fetch('https://api.smclick.com.br/instances/messages', {
@@ -32,25 +44,43 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
 
-    const { ordem, novoStatus, clienteNome, clienteTelefone, notificar_interno = true } = await req.json();
+    const {
+      ordem,
+      novoStatus,
+      clienteNome,
+      clienteTelefone,
+      notificar_interno = true,
+      msg_interno,
+      msg_cliente,
+    } = await req.json();
 
     const etapaLabel = ETAPA_LABELS[novoStatus];
     if (!etapaLabel) {
       return Response.json({ ok: false, msg: 'Etapa não configurada para notificação' });
     }
 
+    const vars = {
+      op: ordem.numero,
+      produto: ordem.produto_nome,
+      etapa: etapaLabel,
+      cliente: clienteNome || '',
+      qtd: String(ordem.quantidade || ''),
+    };
+
     const resultados = [];
 
     // Mensagem para o número interno
     if (NUMERO_INTERNO && notificar_interno) {
-      const msgInterna = `📋 *Atualização de Produção*\n\nOP: *${ordem.numero}*\nProduto: ${ordem.produto_nome}\nEtapa: *${etapaLabel}*${clienteNome ? `\nCliente: ${clienteNome}` : ''}\nQuantidade: ${ordem.quantidade || ''}`;
+      const template = msg_interno || DEFAULT_MSG_INTERNO;
+      const msgInterna = renderMensagem(template, vars);
       const ok = await enviarMensagem(NUMERO_INTERNO, msgInterna);
       resultados.push({ destino: 'interno', ok });
     }
 
     // Mensagem para o cliente (se tiver telefone)
     if (clienteTelefone) {
-      const msgCliente = `Olá! Seu pedido está sendo processado.\n\nProduto: *${ordem.produto_nome}*\nStatus atual: *${etapaLabel}*\n\nObrigado pela preferência! 🙏`;
+      const template = msg_cliente || DEFAULT_MSG_CLIENTE;
+      const msgCliente = renderMensagem(template, vars);
       const ok = await enviarMensagem(clienteTelefone, msgCliente);
       resultados.push({ destino: 'cliente', ok });
     }

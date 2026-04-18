@@ -219,12 +219,15 @@ export default function Kanban() {
           const clientes = await base44.entities.Cliente.filter({ id: pedInfo.cliente_id });
           clienteTelefone = clientes[0]?.telefone || null;
         }
+        const waCfg = (() => { try { return JSON.parse(localStorage.getItem('whatsapp_kanban_config') || '{}'); } catch { return {}; } })();
         base44.functions.invoke('enviarWhatsappKanban', {
           ordem: { numero: ordem.numero, produto_nome: ordem.produto_nome, quantidade: ordem.quantidade },
           novoStatus: proximo,
           clienteNome,
           clienteTelefone: WHATSAPP_NOTIFICAR_CLIENTE ? clienteTelefone : null,
           notificar_interno: WHATSAPP_NOTIFICAR_INTERNO,
+          msg_interno: waCfg.msg_interno || null,
+          msg_cliente: waCfg.msg_cliente || null,
         }).catch(() => {}); // fire-and-forget, não bloqueia o fluxo
       } catch {}
     }
