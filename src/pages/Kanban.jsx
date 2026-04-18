@@ -109,6 +109,9 @@ export default function Kanban() {
 
   const COLUNAS = kanbanColunas.filter(c => colunasVisiveis.includes(c.key));
 
+  // Etapas que disparam WhatsApp (configurável)
+  const ETAPAS_WHATSAPP = ['produzido', 'finalizado'];
+
   const load = async (invalidate = false) => {
     if (invalidate) { cacheInvalidate('OrdemProducao'); cacheInvalidate('Produto'); }
     const [ords, prods, checklists, peds] = await Promise.all([
@@ -120,7 +123,7 @@ export default function Kanban() {
     setOrdens(ords);
     setProdutos(prods);
     const pm = {};
-    for (const p of peds) pm[p.id] = p.cliente_nome;
+    for (const p of peds) pm[p.id] = { nome: p.cliente_nome, cliente_id: p.cliente_id };
     setPedidoMap(pm);
     const map = {};
     for (const c of checklists) map[c.etapa] = c;
@@ -193,6 +196,26 @@ export default function Kanban() {
     await base44.entities.OrdemProducao.update(ordem.id, updates);
     const labelProximo = { em_producao: 'Em Produção', produzido: 'Produzido', em_embalagem: 'Em Embalagem', finalizado: 'Finalizado' }[proximo] || proximo;
     await registrarLog('OrdemProducao', ordem.id, 'AVANCO_STATUS', `OP ${ordem.numero} (${ordem.produto_nome || ''}) avançou para "${labelProximo}" por ${usuarioAtual}`, usuarioAtual);
+
+    // Disparo WhatsApp nas etapas configuradas
+    if (ETAPAS_WHATSAPP.includes(proximo)) {
+      try {
+        const pedInfo = ordem.pedido_id ? pedidoMap[ordem.pedido_id] : null;
+        const clienteNome = pedInfo?.nome || null;
+        let clienteTelefone = null;
+        if (pedInfo?.cliente_id) {
+          const clientes = await base44.entities.Cliente.filter({ id: pedInfo.cliente_id });
+          clienteTelefone = clientes[0]?.telefone || null;
+        }
+        base44.functions.invoke('enviarWhatsappKanban', {
+          ordem: { numero: ordem.numero, produto_nome: ordem.produto_nome, quantidade: ordem.quantidade },
+          novoStatus: proximo,
+          clienteNome,
+          clienteTelefone,
+        }).catch(() => {}); // fire-and-forget, não bloqueia o fluxo
+      } catch {}
+    }
+
     await load(true);
     setLoadingId(null);
   };
@@ -420,7 +443,7 @@ export default function Kanban() {
                   <KanbanCard
                     key={ordem.id}
                     ordem={ordem}
-                    clienteNome={ordem.pedido_id ? pedidoMap[ordem.pedido_id] : null}
+                    clienteNome={ordem.pedido_id ? pedidoMap[ordem.pedido_id]?.nome : null}
                     checklistConfigs={checklistConfigs}
                     checklistOk={checklistOk}
                     setChecklistOk={setChecklistOk}
@@ -510,7 +533,7 @@ export default function Kanban() {
           ordem={ordemSelecionada}
           checklistConfigs={checklistConfigs}
           produtos={produtos}
-          clienteNome={ordemSelecionada.pedido_id ? pedidoMap[ordemSelecionada.pedido_id] : null}
+          clienteNome={ordemSelecionada.pedido_id ? pedidoMap[ordemSelecionada.pedido_id]?.nome : null}
           onAvancar={async (ordem, descarte) => { await avancarStatus(ordem, descarte); setOrdemSelecionada(null); }}
           loading={loadingId === ordemSelecionada.id}
           onClose={() => setOrdemSelecionada(null)}
