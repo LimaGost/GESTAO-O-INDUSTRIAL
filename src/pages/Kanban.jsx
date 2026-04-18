@@ -426,7 +426,7 @@ export default function Kanban() {
                     setChecklistOk={setChecklistOk}
                     onAvancar={readonly ? null : avancarStatus}
                     loading={loadingId === ordem.id}
-                    onOpenModal={readonly ? null : () => setOrdemSelecionada(ordem)}
+                    onOpenModal={() => setOrdemSelecionada(ordem)}
                   />
                 ))}
               </div>

@@ -1,4 +1,4 @@
-import { ArrowRight, Clock, Package, AlertTriangle, CheckCircle, User, Layers, Calendar } from 'lucide-react';
+import { ArrowRight, Clock, Package, AlertTriangle, CheckCircle, User, Calendar, ExternalLink } from 'lucide-react';
 import CardChecklist from './CardChecklist';
 
 function fmtData(iso) {
@@ -70,7 +70,7 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
 
   return (
     <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden"
-      style={{ borderLeft: `3px solid ${leftBorderColor}`, border: `1px solid #E2E8F0`, borderLeftWidth: '3px', borderLeftColor: leftBorderColor }}>
+      style={{ border: `1px solid #E2E8F0`, borderLeftWidth: '3px', borderLeftColor: leftBorderColor }}>
 
       {/* Header */}
       <div className="px-3 pt-3 pb-2">
@@ -86,11 +86,6 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
               style={{ background: origemCfg.bg, color: origemCfg.color, border: `1px solid ${origemCfg.border}` }}>
               {origemCfg.label}
             </span>
-            {onOpenModal && (
-              <button onClick={onOpenModal} className="w-5 h-5 flex items-center justify-center rounded hover:bg-muted transition-colors">
-                <ArrowRight size={11} className="text-muted-foreground" />
-              </button>
-            )}
           </div>
         </div>
 
@@ -104,14 +99,14 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
 
         {/* Cliente */}
         {clienteNome && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1.5">
-            <User size={10} /><span className="truncate">{clienteNome}</span>
+          <div className="flex items-center gap-1 text-xs text-blue-600 mb-1.5 bg-blue-50 px-2 py-1 rounded-lg">
+            <User size={10} className="flex-shrink-0" /><span className="truncate font-medium">{clienteNome}</span>
           </div>
         )}
 
         {/* Produtos */}
         {ordem.itens?.length > 0 ? (
-          <div className="space-y-1 mb-2">
+          <div className="space-y-0.5 mb-2">
             {ordem.itens.slice(0, 3).map((item, idx) => (
               <div key={idx} className="flex items-center justify-between text-xs">
                 <span className="text-foreground truncate flex-1">{item.produto_nome}</span>
@@ -154,7 +149,7 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
         )}
       </div>
 
-      {/* Checklist */}
+      {/* Checklist no card — sempre visível se houver itens */}
       {itensChecklist.length > 0 && (
         <div className="px-3 pb-2">
           <CardChecklist
@@ -167,8 +162,17 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
         </div>
       )}
 
-      {/* Botão */}
-      <div className="px-3 pb-3">
+      {/* Botões */}
+      <div className="px-3 pb-3 space-y-1.5">
+        {/* Ver Detalhes — sempre visível */}
+        {onOpenModal && (
+          <button
+            onClick={onOpenModal}
+            className="w-full py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 border border-border text-muted-foreground hover:bg-muted hover:text-foreground">
+            <ExternalLink size={11} /> Ver Detalhes
+          </button>
+        )}
+
         {ordem.status === 'finalizado' ? (
           <div className="flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-green-600 bg-green-50 rounded-xl">
             <CheckCircle size={12} /> Concluído

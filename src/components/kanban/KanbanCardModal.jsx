@@ -27,17 +27,14 @@ function getStorageKey(ordemId, status) { return `checklist_modal_${ordemId}_${s
 function loadStorage(key) { try { return JSON.parse(localStorage.getItem(key)) || {}; } catch { return {}; } }
 function saveStorage(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 
-// Agrupa itens por "família" (prefixo do nome antes da variação)
-function agruparPorFamilia(itens) {
+// Agrupa itens por categoria do produto (via lista de produtos)
+function agruparPorCategoria(itens, produtos) {
   const map = {};
   for (const item of itens) {
-    // Tenta extrair família pelo nome base (últimas palavras são variação)
-    // Usa a primeira palavra(s) como chave de família
-    const partes = item.produto_nome.trim().split(/\s+/);
-    // Família = tudo exceto a última palavra (que seria variação), ou nome inteiro se só 1 palavra
-    const familia = partes.length > 1 ? partes.slice(0, -1).join(' ') : item.produto_nome;
-    if (!map[familia]) map[familia] = [];
-    map[familia].push(item);
+    const prod = produtos?.find(p => p.id === item.produto_id);
+    const categoria = prod?.categoria || item.produto_nome;
+    if (!map[categoria]) map[categoria] = [];
+    map[categoria].push(item);
   }
   return map;
 }
@@ -63,7 +60,7 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
     return [];
   }, [ordem]);
 
-  const porFamilia = useMemo(() => agruparPorFamilia(itensNormalizados), [itensNormalizados]);
+  const porFamilia = useMemo(() => agruparPorCategoria(itensNormalizados, produtos), [itensNormalizados, produtos]);
 
   const totalItens = itensNormalizados.length;
   const totalItensChecked = Object.values(checkItens).filter(Boolean).length;
@@ -156,10 +153,6 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
                   {itens.map((item, idx) => {
                     const itemKey = `${item.produto_id || item.produto_nome}`;
                     const checked = !!checkItens[itemKey];
-                    // Mostra apenas a variação (o que vem após o nome da família)
-                    const variacaoLabel = item.produto_nome.startsWith(familia)
-                      ? item.produto_nome.slice(familia.length).trim() || item.produto_nome
-                      : item.produto_nome;
                     return (
                       <button key={idx}
                         onClick={onAvancar ? () => toggleItem(itemKey) : undefined}
@@ -170,7 +163,7 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
                           : <Square size={14} className="text-muted-foreground flex-shrink-0" />
                         }
                         <span className={`text-sm flex-1 ${checked ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-                          {variacaoLabel}
+                          {item.produto_nome}
                         </span>
                         <span className="text-xs font-semibold text-muted-foreground">{item.quantidade} un</span>
                       </button>
