@@ -1,0 +1,15 @@
+{
+  "name": "PermissaoRole",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string"
+    },
+    "modulos_niveis": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "role"
+  ]
+}

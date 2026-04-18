@@ -1,0 +1,33 @@
+{
+  "name": "Etiqueta",
+  "type": "object",
+  "properties": {
+    "ordem_producao_id": {
+      "type": "string"
+    },
+    "produto_id": {
+      "type": "string"
+    },
+    "produto_nome": {
+      "type": "string"
+    },
+    "quantidade": {
+      "type": "number",
+      "default": 0
+    },
+    "lote": {
+      "type": "string"
+    },
+    "data_producao": {
+      "type": "string",
+      "format": "date"
+    },
+    "impresso": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "produto_nome"
+  ]
+}

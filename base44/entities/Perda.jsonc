@@ -1,0 +1,30 @@
+{
+  "name": "Perda",
+  "type": "object",
+  "properties": {
+    "produto_nome": {
+      "type": "string"
+    },
+    "produto_id": {
+      "type": "string"
+    },
+    "quantidade": {
+      "type": "number",
+      "default": 0
+    },
+    "motivo": {
+      "type": "string"
+    },
+    "data": {
+      "type": "string",
+      "format": "date"
+    },
+    "ordem_producao_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "produto_nome",
+    "motivo"
+  ]
+}

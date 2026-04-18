@@ -1,0 +1,25 @@
+{
+  "name": "LogAuditoria",
+  "type": "object",
+  "properties": {
+    "entidade": {
+      "type": "string"
+    },
+    "entidade_id": {
+      "type": "string"
+    },
+    "acao": {
+      "type": "string"
+    },
+    "descricao": {
+      "type": "string"
+    },
+    "usuario": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "entidade",
+    "acao"
+  ]
+}

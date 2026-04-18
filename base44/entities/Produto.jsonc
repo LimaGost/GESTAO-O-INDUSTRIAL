@@ -1,0 +1,41 @@
+{
+  "name": "Produto",
+  "type": "object",
+  "properties": {
+    "nome": {
+      "type": "string"
+    },
+    "categoria": {
+      "type": "string"
+    },
+    "preco": {
+      "type": "number",
+      "default": 0
+    },
+    "estoque_atual": {
+      "type": "number",
+      "default": 0
+    },
+    "estoque_minimo": {
+      "type": "number",
+      "default": 0
+    },
+    "variacoes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "descricao": {
+      "type": "string"
+    },
+    "ativo": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "nome"
+  ]
+}

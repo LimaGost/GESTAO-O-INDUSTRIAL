@@ -1,0 +1,74 @@
+{
+  "name": "OrdemProducao",
+  "type": "object",
+  "properties": {
+    "numero": {
+      "type": "string"
+    },
+    "produto_id": {
+      "type": "string"
+    },
+    "produto_nome": {
+      "type": "string"
+    },
+    "quantidade": {
+      "type": "number",
+      "default": 0
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "a_produzir",
+        "em_producao",
+        "produzido",
+        "em_embalagem",
+        "finalizado"
+      ],
+      "default": "a_produzir"
+    },
+    "itens": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "default": []
+    },
+    "variacoes": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "default": []
+    },
+    "lote": {
+      "type": "string"
+    },
+    "pedido_id": {
+      "type": "string"
+    },
+    "pedido_numero": {
+      "type": "string"
+    },
+    "origem": {
+      "type": "string"
+    },
+    "observacoes": {
+      "type": "string"
+    },
+    "data_inicio": {
+      "type": "string"
+    },
+    "data_fim_producao": {
+      "type": "string"
+    },
+    "data_embalagem": {
+      "type": "string"
+    },
+    "data_finalizacao": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "produto_nome"
+  ]
+}

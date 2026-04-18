@@ -1,0 +1,53 @@
+{
+  "name": "Expedicao",
+  "type": "object",
+  "properties": {
+    "numero_nf": {
+      "type": "string"
+    },
+    "pedido_id": {
+      "type": "string"
+    },
+    "pedido_numero": {
+      "type": "string"
+    },
+    "cliente_id": {
+      "type": "string"
+    },
+    "cliente_nome": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "emitida",
+        "enviada",
+        "entregue"
+      ],
+      "default": "emitida"
+    },
+    "data_emissao": {
+      "type": "string",
+      "format": "date"
+    },
+    "data_envio": {
+      "type": "string"
+    },
+    "data_entrega": {
+      "type": "string"
+    },
+    "confirmado_pelo_cliente": {
+      "type": "boolean",
+      "default": false
+    },
+    "data_confirmacao": {
+      "type": "string"
+    },
+    "observacoes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "cliente_nome"
+  ]
+}

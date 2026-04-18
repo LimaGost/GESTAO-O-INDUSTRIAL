@@ -1,0 +1,63 @@
+{
+  "name": "Pedido",
+  "type": "object",
+  "properties": {
+    "numero": {
+      "type": "string",
+      "description": "N\u00famero do pedido"
+    },
+    "cliente_id": {
+      "type": "string",
+      "description": "ID do cliente"
+    },
+    "cliente_nome": {
+      "type": "string",
+      "description": "Nome do cliente"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "rascunho",
+        "aguardando_estoque",
+        "separacao",
+        "separado",
+        "expedido",
+        "entregue",
+        "cancelado"
+      ],
+      "default": "rascunho"
+    },
+    "data_pedido": {
+      "type": "string",
+      "format": "date"
+    },
+    "data_entrega_prevista": {
+      "type": "string",
+      "format": "date"
+    },
+    "itens": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "default": []
+    },
+    "valor_total": {
+      "type": "number",
+      "default": 0
+    },
+    "observacoes": {
+      "type": "string"
+    },
+    "ordens_producao_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    }
+  },
+  "required": [
+    "cliente_nome"
+  ]
+}

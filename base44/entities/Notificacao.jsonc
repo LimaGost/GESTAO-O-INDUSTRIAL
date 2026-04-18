@@ -1,0 +1,32 @@
+{
+  "name": "Notificacao",
+  "type": "object",
+  "properties": {
+    "titulo": {
+      "type": "string"
+    },
+    "descricao": {
+      "type": "string"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "pedido",
+        "estoque",
+        "producao",
+        "cliente"
+      ],
+      "default": "pedido"
+    },
+    "lida": {
+      "type": "boolean",
+      "default": false
+    },
+    "link": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "titulo"
+  ]
+}
