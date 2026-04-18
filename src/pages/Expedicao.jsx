@@ -86,18 +86,182 @@ export default function Expedicao() {
   };
 
   const imprimirNF = (exp) => {
-    const win = window.open('', '_blank', 'width=700,height=800');
-    win.document.write(`<!DOCTYPE html><html><head><title>NF-e ${exp.numero_nf}</title>
-      <style>body{font-family:Arial,sans-serif;padding:24px;font-size:13px;}h1{font-size:18px;}table{width:100%;border-collapse:collapse;}td,th{border:1px solid #ccc;padding:6px 10px;}th{background:#f5f5f5;}</style></head>
-      <body><h1>NF-e ${exp.numero_nf}</h1>
-      <h3>Destinatário</h3><table><tr><th>Nome / Razão Social</th><td>${exp.cliente_nome}</td></tr>
-      <tr><th>CNPJ / CPF</th><td>${exp.cliente_cnpj_cpf || '—'}</td></tr>
-      <tr><th>Endereço</th><td>${exp.cliente_endereco || '—'}</td></tr></table>
-      <h3>Itens</h3><table><tr><th>Produto</th><th>Qtd</th><th>Vlr Unit.</th><th>Total</th></tr>
-      ${(exp.itens||[]).map(item=>`<tr><td>${item.produto_nome}</td><td>${item.quantidade}</td><td>R$ ${(item.preco_unitario||0).toFixed(2)}</td><td>R$ ${(item.total||0).toFixed(2)}</td></tr>`).join('')}
-      </table><p><strong>Total: R$ ${(exp.valor_total||0).toFixed(2)}</strong></p>
-      ${exp.transportadora?`<p>Transportadora: ${exp.transportadora}</p>`:''}
-      <script>window.onload=()=>setTimeout(()=>window.print(),300);</script></body></html>`);
+    const win = window.open('', '_blank', 'width=900,height=1100');
+    const hoje = new Date().toLocaleDateString('pt-BR');
+    const totalItens = (exp.itens || []).reduce((s, i) => s + (i.quantidade || 0), 0);
+    const totalProdutos = (exp.itens || []).length;
+    const valorTotal = (exp.valor_total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    const itensRows = (exp.itens || []).map((item, idx) => `
+      <tr style="background:${idx % 2 === 0 ? '#fff' : '#f9f9f9'}">
+        <td style="border:1px solid #ccc;padding:5px 8px;font-size:11px;">${String(idx + 1).padStart(3, '0')}</td>
+        <td style="border:1px solid #ccc;padding:5px 8px;font-size:11px;">${item.produto_nome || '—'}</td>
+        <td style="border:1px solid #ccc;padding:5px 8px;font-size:11px;text-align:center;">UN</td>
+        <td style="border:1px solid #ccc;padding:5px 8px;font-size:11px;text-align:center;">${item.quantidade || 0}</td>
+        <td style="border:1px solid #ccc;padding:5px 8px;font-size:11px;text-align:right;">R$ ${(item.preco_unitario || 0).toFixed(2)}</td>
+        <td style="border:1px solid #ccc;padding:5px 8px;font-size:11px;text-align:right;font-weight:bold;">R$ ${(item.total || 0).toFixed(2)}</td>
+      </tr>
+    `).join('');
+
+    win.document.write(`<!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8"/>
+      <title>NF-e ${exp.numero_nf}</title>
+      <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; font-size: 11px; color: #111; background: #fff; padding: 20px; }
+        .nf { border: 2px solid #000; max-width: 850px; margin: 0 auto; }
+        .secao { border-bottom: 1.5px solid #000; padding: 8px 10px; }
+        .secao-titulo { font-size: 9px; font-weight: bold; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+        .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+        .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; }
+        .campo { border: 1px solid #ccc; padding: 4px 6px; }
+        .campo-label { font-size: 8px; color: #666; text-transform: uppercase; }
+        .campo-valor { font-size: 11px; font-weight: bold; color: #111; margin-top: 1px; }
+        .header { display: flex; align-items: stretch; border-bottom: 2px solid #000; }
+        .header-logo { flex: 0 0 200px; padding: 12px; border-right: 1.5px solid #000; display: flex; flex-direction: column; justify-content: center; }
+        .header-danfe { flex: 0 0 160px; padding: 10px; border-right: 1.5px solid #000; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .header-chave { flex: 1; padding: 10px; display: flex; flex-direction: column; justify-content: center; }
+        .empresa-nome { font-size: 15px; font-weight: bold; color: #B45309; }
+        .empresa-sub { font-size: 9px; color: #666; margin-top: 2px; }
+        .danfe-titulo { font-size: 13px; font-weight: bold; letter-spacing: 3px; border: 2px solid #000; padding: 4px 8px; margin-bottom: 6px; }
+        .danfe-modelo { font-size: 10px; margin: 2px 0; }
+        .chave-acesso { font-family: monospace; font-size: 10px; letter-spacing: 1px; background: #f5f5f5; padding: 6px; border: 1px solid #ccc; border-radius: 3px; word-break: break-all; }
+        .nfe-numero { font-size: 13px; font-weight: bold; color: #B45309; margin-top: 6px; }
+        table.itens { width: 100%; border-collapse: collapse; }
+        table.itens th { background: #333; color: #fff; padding: 5px 8px; font-size: 10px; text-align: left; border: 1px solid #000; }
+        .totais { display: grid; grid-template-columns: 1fr 1fr 1fr; }
+        .total-box { border: 1px solid #ccc; padding: 6px 10px; }
+        .total-label { font-size: 9px; color: #666; text-transform: uppercase; }
+        .total-valor { font-size: 14px; font-weight: bold; color: #111; }
+        .total-valor.destaque { color: #B45309; font-size: 16px; }
+        @media print { body { padding: 0; } .nf { border: 2px solid #000; } }
+      </style>
+    </head>
+    <body>
+      <div class="nf">
+
+        <!-- HEADER -->
+        <div class="header">
+          <div class="header-logo">
+            <div class="empresa-nome">☀️ RAIO DO SOL</div>
+            <div class="empresa-sub">Indústria e Comércio</div>
+            <div style="margin-top:8px;font-size:9px;color:#666;">
+              <div>CNPJ: 00.000.000/0001-00</div>
+              <div>IE: 000.000.000.000</div>
+              <div style="margin-top:4px;">Rua Exemplo, 100 — Bairro Industrial</div>
+              <div>Cidade, Estado — CEP 00000-000</div>
+            </div>
+          </div>
+          <div class="header-danfe">
+            <div class="danfe-titulo">DANFE</div>
+            <div class="danfe-modelo">Documento Auxiliar da<br/>Nota Fiscal Eletrônica</div>
+            <div style="margin-top:8px;font-size:9px;color:#333;">
+              <div><strong>Modelo:</strong> 55</div>
+              <div><strong>Série:</strong> 001</div>
+            </div>
+            <div class="nfe-numero">Nº ${exp.numero_nf}</div>
+          </div>
+          <div class="header-chave">
+            <div style="font-size:9px;color:#666;margin-bottom:4px;text-transform:uppercase;font-weight:bold;">Chave de Acesso</div>
+            <div class="chave-acesso">${exp.numero_nf.replace(/\D/g,'').padStart(44,'0').replace(/(.{4})/g,'$1 ').trim()}</div>
+            <div style="margin-top:10px;font-size:9px;color:#666;">
+              <div><strong>Natureza da Operação:</strong> Venda de Mercadoria</div>
+              <div style="margin-top:4px;"><strong>Data de Emissão:</strong> ${exp.data_emissao || hoje}</div>
+              <div><strong>Data de Saída:</strong> ${exp.data_envio ? new Date(exp.data_envio).toLocaleDateString('pt-BR') : hoje}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DESTINATÁRIO -->
+        <div class="secao">
+          <div class="secao-titulo">Destinatário / Remetente</div>
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:0;">
+            <div class="campo">
+              <div class="campo-label">Nome / Razão Social</div>
+              <div class="campo-valor">${exp.cliente_nome}</div>
+            </div>
+            <div class="campo">
+              <div class="campo-label">CNPJ / CPF</div>
+              <div class="campo-valor">${exp.cliente_cnpj_cpf || '—'}</div>
+            </div>
+            <div class="campo">
+              <div class="campo-label">Data de Emissão</div>
+              <div class="campo-valor">${exp.data_emissao || hoje}</div>
+            </div>
+          </div>
+          <div class="campo" style="border-top:none;">
+            <div class="campo-label">Endereço</div>
+            <div class="campo-valor">${exp.cliente_endereco || '—'}</div>
+          </div>
+        </div>
+
+        <!-- ITENS -->
+        <div class="secao">
+          <div class="secao-titulo">Dados dos Produtos / Serviços</div>
+          <table class="itens">
+            <thead>
+              <tr>
+                <th style="width:40px;">Nº</th>
+                <th>Descrição do Produto</th>
+                <th style="width:50px;text-align:center;">UN</th>
+                <th style="width:60px;text-align:center;">Qtd</th>
+                <th style="width:90px;text-align:right;">Vlr. Unit.</th>
+                <th style="width:90px;text-align:right;">Vlr. Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itensRows}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- TRANSPORTADORA -->
+        <div class="secao">
+          <div class="secao-titulo">Transportador / Volumes Transportados</div>
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:0;">
+            <div class="campo">
+              <div class="campo-label">Razão Social / Transportadora</div>
+              <div class="campo-valor">${exp.transportadora || 'A definir'}</div>
+            </div>
+            <div class="campo">
+              <div class="campo-label">Quantidade de Volumes</div>
+              <div class="campo-valor">${totalItens} un em ${totalProdutos} produto(s)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TOTAIS -->
+        <div class="secao" style="border-bottom:none;">
+          <div class="secao-titulo">Cálculo do Imposto / Totais</div>
+          <div class="totais">
+            <div class="total-box">
+              <div class="total-label">Total de Produtos</div>
+              <div class="total-valor">R$ ${valorTotal}</div>
+            </div>
+            <div class="total-box">
+              <div class="total-label">Frete / Seguro / Outros</div>
+              <div class="total-valor">R$ 0,00</div>
+            </div>
+            <div class="total-box" style="background:#FEF3C7;">
+              <div class="total-label">Valor Total da NF-e</div>
+              <div class="total-valor destaque">R$ ${valorTotal}</div>
+            </div>
+          </div>
+          ${exp.observacoes ? `
+          <div class="campo" style="margin-top:6px;">
+            <div class="campo-label">Informações Complementares / Observações</div>
+            <div class="campo-valor" style="font-weight:normal;">${exp.observacoes}</div>
+          </div>` : ''}
+          <div style="text-align:center;font-size:9px;color:#999;margin-top:10px;padding-top:8px;border-top:1px solid #eee;">
+            Documento emitido pelo sistema Raio do Sol · ${hoje} · NF-e nº ${exp.numero_nf} · Série 001 · Modelo 55
+          </div>
+        </div>
+
+      </div>
+      <script>window.onload=()=>setTimeout(()=>window.print(),400);<\/script>
+    </body>
+    </html>`);
     win.document.close();
   };
 
