@@ -437,7 +437,6 @@ export default function Produtos() {
                               </div>
                             </div>
                           </>
-                          </>
                           </div>
                           );
                           })}
