@@ -3,12 +3,13 @@ import { base44 } from '@/api/base44Client';
 import {
   Plus, Trash2, Save, CheckSquare, ChevronDown,
   Settings2, GripVertical, Shield, Search,
-  RefreshCw, User, Tag, Activity, AlertTriangle, Users, Factory, Paintbrush, Printer, Database
+  RefreshCw, User, Tag, Activity, AlertTriangle, Users, Factory, Paintbrush, Printer, Database, Columns
 } from 'lucide-react';
 import SupabaseSchemas from '@/pages/SupabaseSchemas';
 import AbaUsuarios from '@/components/configuracoes/AbaUsuarios';
 import AbaPersonalizacao from '@/components/configuracoes/AbaPersonalizacao';
 import AbaEtiquetas from '@/components/configuracoes/AbaEtiquetas';
+import AbaKanban from '@/components/configuracoes/AbaKanban';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 
 const ETAPAS_BASE = [
@@ -620,6 +621,7 @@ const TAB_GROUPS = [
     label: 'Sistema',
     items: [
       { key: 'personalizacao', label: 'Personalização', icon: Paintbrush,  desc: 'Logo, empresa e visual' },
+      { key: 'kanban',         label: 'Kanban',          icon: Columns,     desc: 'Colunas e ações' },
       { key: 'producao',       label: 'Produção',        icon: Factory,     desc: 'Capacidade semanal' },
       { key: 'checklists',     label: 'Checklists',      icon: CheckSquare, desc: 'Etapas do Kanban' },
       { key: 'etiquetas',      label: 'Etiquetas',        icon: Printer,     desc: 'Configuração de impressora' },
@@ -719,6 +721,7 @@ export default function Configuracoes() {
           </div>
 
           {aba === 'personalizacao' && <AbaPersonalizacao />}
+          {aba === 'kanban'         && <AbaKanban />}
           {aba === 'checklists'     && <AbaChecklists />}
           {aba === 'producao'       && <AbaProducao />}
           {aba === 'etiquetas'      && <AbaEtiquetas />}
