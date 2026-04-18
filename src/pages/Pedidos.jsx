@@ -114,7 +114,7 @@ export default function Pedidos() {
     setForm({ cliente_id: '', cliente_nome: '', data_pedido: new Date().toISOString().split('T')[0], data_entrega_prevista: '', observacoes: '', itens: [] });
     await load();
     setLoading(false);
-    setPedidoConfirmado({ numero, cliente: form.cliente_nome, status, itens: itensAgrupados, valorTotal, precisaProducao, itensComEstoque: itensComEstoque.length, itensSemEstoque: itensSemEstoque.length });
+    setPedidoConfirmado({ numero, cliente: form.cliente_nome, status: 'aguardando_estoque', itens: itensAgrupados, valorTotal, precisaProducao: true, itensComEstoque: itensComEstoque.length, itensSemEstoque: itensSemEstoque.length });
   };
 
   const marcarSeparado = async (id, numero) => {
