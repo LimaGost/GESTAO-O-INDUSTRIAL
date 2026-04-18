@@ -74,41 +74,39 @@ export default function Clientes() {
 
   return (
     <div className="space-y-5">
-      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-sky-blue/10 flex items-center justify-center">
-            <Users size={19} className="text-sky-blue" />
+          <div className="w-10 h-10 rounded-2xl bg-rainbow-orange/10 flex items-center justify-center">
+            <Users size={19} className="text-rainbow-orange" />
           </div>
           <div>
             <h2 className="text-lg font-bold text-foreground">Clientes</h2>
             <p className="text-xs text-muted-foreground">{clientes.length} cliente(s) cadastrado(s)</p>
           </div>
         </div>
-
-        {/* Abas */}
-        <div className="flex items-center gap-2 bg-muted rounded-xl p-1">
-          <button onClick={() => setAba('lista')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${aba === 'lista' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
-            <Users size={13} /> Lista
-          </button>
-          <button onClick={() => setAba('crm')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${aba === 'crm' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
-            <TrendingUp size={13} /> CRM
-          </button>
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1 bg-muted rounded-xl p-1">
+            <button onClick={() => setAba('lista')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${aba === 'lista' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+              <Users size={12} /> Lista
+            </button>
+            <button onClick={() => setAba('crm')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${aba === 'crm' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+              <TrendingUp size={12} /> CRM
+            </button>
+          </div>
+          {!readonly && (
+            <button onClick={() => { setShowForm(true); setEditing(null); setForm(emptyForm); }}
+              className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm">
+              <Plus size={16} /> Novo Cliente
+            </button>
+          )}
+          {readonly && (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted px-3 py-2 rounded-xl">
+              <Eye size={13} /> Somente visualização
+            </span>
+          )}
         </div>
-
-        {!readonly && (
-          <button onClick={() => { setShowForm(true); setEditing(null); setForm(emptyForm); }}
-            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm">
-            <Plus size={16} /> Novo Cliente
-          </button>
-        )}
-        {readonly && (
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted px-3 py-2 rounded-xl">
-            <Eye size={13} /> Somente visualização
-          </span>
-        )}
       </div>
 
       {aba === 'crm' && (
@@ -116,12 +114,13 @@ export default function Clientes() {
       )}
 
       {aba === 'lista' && (
-        <div className="flex flex-wrap gap-2 items-center bg-card border border-border rounded-xl px-3.5 py-2.5">
-          <Search size={14} className="text-muted-foreground flex-shrink-0" />
-          <input value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar cliente..."
-            className="bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground flex-1 min-w-32" />
-          {busca && <button onClick={() => setBusca('')} className="text-muted-foreground hover:text-foreground"><X size={13} /></button>}
-
+        <div className="flex flex-wrap gap-2">
+          <div className="flex items-center gap-2 bg-card border border-border rounded-xl px-3 py-2 flex-1 min-w-48">
+            <Search size={14} className="text-muted-foreground" />
+            <input value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar cliente..."
+              className="bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground w-full" />
+            {busca && <button onClick={() => setBusca('')} className="text-muted-foreground hover:text-foreground"><X size={13} /></button>}
+          </div>
           <select value={filtroCidade} onChange={e => setFiltroCidade(e.target.value)}
             className="border border-border rounded-xl px-3 py-2 text-sm bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
             <option value="">Todas as cidades</option>
@@ -132,71 +131,69 @@ export default function Clientes() {
             <option value="">Todos os estados</option>
             {estados.map(e => <option key={e} value={e}>{e}</option>)}
           </select>
-
           {(filtroCidade || filtroEstado) && (
             <button onClick={() => { setFiltroCidade(''); setFiltroEstado(''); }}
               className="text-xs text-muted-foreground hover:text-destructive border border-border rounded-xl px-3 py-2 bg-card flex items-center gap-1">
-              <X size={11} /> Limpar
+              <X size={12} /> Limpar
             </button>
           )}
         </div>
       )}
 
       {aba === 'lista' && showForm && !readonly && (
-        <div className="bg-white border border-border rounded-xl p-5 space-y-4 shadow-sm">
+        <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
           <h3 className="font-semibold text-foreground">{editing ? 'Editar Cliente' : 'Novo Cliente'}</h3>
-          <CampoCNPJ
-            value={form.cnpj_cpf}
-            onChange={val => setForm(f => ({ ...f, cnpj_cpf: val }))}
-            onPreenchido={dados => setForm(f => ({ ...f, ...dados }))}
-          />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CampoCNPJ
+              value={form.cnpj_cpf}
+              onChange={val => setForm(f => ({ ...f, cnpj_cpf: val }))}
+              onPreenchido={dados => setForm(f => ({ ...f, ...dados }))}
+            />
             {fieldsRestantes.map(({ label, field }) => (
               <div key={field}>
                 <label className="text-xs text-muted-foreground mb-1 block">{label}</label>
-                <input value={form[field] || ''} onChange={e => setForm({ ...form, [field]: e.target.value })}
+                <input value={form[field]} onChange={e => setForm({ ...form, [field]: e.target.value })}
                   className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
               </div>
             ))}
           </div>
-          <div className="flex gap-3">
-            <button onClick={save} disabled={loading}
-              className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2 rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50">
+          <div className="flex gap-3 pt-2">
+            <button onClick={save} disabled={loading} className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2 rounded-xl text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50">
               <Check size={15} /> {loading ? 'Salvando...' : 'Salvar'}
             </button>
             <button onClick={() => setShowForm(false)} className="flex items-center gap-2 border border-border px-5 py-2 rounded-xl text-sm text-muted-foreground hover:bg-muted transition-colors">
-              <X size={14} /> Cancelar
+              <X size={15} /> Cancelar
             </button>
           </div>
         </div>
       )}
 
       {aba === 'lista' && (
-        <div className="bg-white border border-border rounded-xl overflow-hidden shadow-sm">
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-muted/40">
+            <thead style={{ background: 'hsl(35,25%,93%)' }}>
               <tr>
                 {['Nome', 'CNPJ/CPF', 'Telefone', 'Cidade', 'Ações'].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-border">
               {filtered.map(c => (
-                <tr key={c.id} className="border-t border-border hover:bg-muted/20 transition-colors cursor-pointer" onClick={() => setPerfilCliente(c)}>
+                <tr key={c.id} className="hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => setPerfilCliente(c)}>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
                         {(c.nome || 'C').charAt(0).toUpperCase()}
                       </div>
-                      <span className="font-medium text-foreground">{c.nome}</span>
+                      <span className="font-semibold text-foreground">{c.nome}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">{c.cnpj_cpf || '—'}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{c.cnpj_cpf || '—'}</td>
                   <td className="px-4 py-3 text-muted-foreground">{c.telefone || '—'}</td>
                   <td className="px-4 py-3 text-muted-foreground">{c.cidade || '—'}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                  <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                    <div className="flex gap-1">
                       <button onClick={() => setPerfilCliente(c)} className="p-1.5 hover:bg-sky-blue/10 rounded-lg transition-colors" title="Ver perfil">
                         <Eye size={14} className="text-sky-blue" />
                       </button>
@@ -210,7 +207,7 @@ export default function Clientes() {
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={5} className="text-center py-12 text-muted-foreground">Nenhum cliente encontrado.</td></tr>
+                <tr><td colSpan={5} className="px-4 py-10 text-center text-muted-foreground text-sm">Nenhum cliente encontrado.</td></tr>
               )}
             </tbody>
           </table>
@@ -220,8 +217,6 @@ export default function Clientes() {
       {perfilCliente && (
         <PerfilCliente
           cliente={perfilCliente}
-          pedidos={pedidos}
-          readonly={readonly}
           onClose={() => setPerfilCliente(null)}
           onSave={(atualizado) => {
             setPerfilCliente(atualizado);
