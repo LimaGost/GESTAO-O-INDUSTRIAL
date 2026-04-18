@@ -5,10 +5,28 @@
     "nome": {
       "type": "string"
     },
+    "codigo": {
+      "type": "string"
+    },
     "categoria": {
       "type": "string"
     },
+    "descricao": {
+      "type": "string"
+    },
+    "unidade": {
+      "type": "string",
+      "default": "unidade"
+    },
+    "itens_por_caixa": {
+      "type": "number",
+      "default": 1
+    },
     "preco": {
+      "type": "number",
+      "default": 0
+    },
+    "preco_unitario": {
       "type": "number",
       "default": 0
     },
@@ -20,15 +38,19 @@
       "type": "number",
       "default": 0
     },
+    "estoque_maximo": {
+      "type": "number",
+      "default": 0
+    },
+    "foto_url": {
+      "type": "string"
+    },
     "variacoes": {
       "type": "array",
       "items": {
         "type": "string"
       },
       "default": []
-    },
-    "descricao": {
-      "type": "string"
     },
     "ativo": {
       "type": "boolean",
