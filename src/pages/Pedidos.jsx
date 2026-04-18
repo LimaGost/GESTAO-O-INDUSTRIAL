@@ -154,7 +154,7 @@ export default function Pedidos() {
         </div>
         {!readonly ? (
           <button onClick={() => setShowForm(!showForm)}
-            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm">
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-amber-500 transition-colors shadow-sm">
             <Plus size={16} /> Novo Pedido
           </button>
         ) : (
@@ -172,46 +172,51 @@ export default function Pedidos() {
       </div>
 
       {showForm && (
-        <div className="bg-card border border-border rounded-2xl p-6 space-y-5">
-          <h3 className="font-semibold text-foreground">Novo Pedido</h3>
+        <div className="bg-white border border-border rounded-xl p-6 space-y-5 shadow-sm">
+          <h3 className="font-semibold text-foreground text-base">Novo Pedido</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Cliente *</label>
+              <label className="text-xs text-muted-foreground mb-1.5 block font-medium">Cliente *</label>
               <select value={form.cliente_id} onChange={e => {
                 const c = clientes.find(c => c.id === e.target.value);
                 setForm(f => ({ ...f, cliente_id: e.target.value, cliente_nome: c ? c.nome : '' }));
-              }} className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
+              }} className="w-full border border-border rounded-lg px-3 py-2.5 text-sm bg-white text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/60">
                 <option value="">Selecione...</option>
                 {clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Data do Pedido *</label>
+              <label className="text-xs text-muted-foreground mb-1.5 block font-medium">Data do Pedido *</label>
               <input type="date" value={form.data_pedido} onChange={e => setForm(f => ({ ...f, data_pedido: e.target.value }))}
-                className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
+                className="w-full border border-border rounded-lg px-3 py-2.5 text-sm bg-white text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/60" />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Entrega Prevista</label>
+              <label className="text-xs text-muted-foreground mb-1.5 block font-medium">Entrega Prevista</label>
               <input type="date" value={form.data_entrega_prevista} onChange={e => setForm(f => ({ ...f, data_entrega_prevista: e.target.value }))}
-                className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
+                className="w-full border border-border rounded-lg px-3 py-2.5 text-sm bg-white text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/60" />
             </div>
           </div>
           <div>
-            <label className="text-sm font-medium text-foreground mb-3 block">Itens do Pedido</label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium text-foreground">Itens do Pedido</label>
+            </div>
             <SeletorProdutos produtos={produtos} itens={form.itens} onChange={itens => setForm(f => ({ ...f, itens }))} />
           </div>
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Observações</label>
-            <textarea value={form.observacoes} onChange={e => setForm(f => ({ ...f, observacoes: e.target.value }))} rows={2}
-              className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
+            <label className="text-xs text-muted-foreground mb-1.5 block font-medium">Observações</label>
+            <textarea value={form.observacoes} onChange={e => setForm(f => ({ ...f, observacoes: e.target.value }))} rows={3}
+              className="w-full border border-border rounded-lg px-3 py-2.5 text-sm bg-white text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/60 resize-none" />
           </div>
-          <div className="flex items-center justify-end pt-2">
+          <div className="flex items-center justify-between pt-1 border-t border-border">
+            <p className="text-sm font-semibold text-foreground">
+              Total: R$ {form.itens.reduce((s, i) => s + (i.total || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </p>
             <div className="flex gap-3">
               <button onClick={confirmarPedido} disabled={loading}
-                className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2 rounded-xl text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50">
+                className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-amber-500 active:bg-amber-600 transition-colors disabled:opacity-50 shadow-sm">
                 <CheckCircle size={15} /> {loading ? 'Processando...' : 'Confirmar Pedido'}
               </button>
-              <button onClick={() => setShowForm(false)} className="border border-border px-5 py-2 rounded-xl text-sm text-muted-foreground hover:bg-muted transition-colors">
+              <button onClick={() => setShowForm(false)} className="border border-border px-5 py-2.5 rounded-lg text-sm text-muted-foreground hover:bg-muted transition-colors">
                 Cancelar
               </button>
             </div>
@@ -224,7 +229,7 @@ export default function Pedidos() {
           const st = STATUS_LABELS[statusEfetivo(p)] || STATUS_LABELS.rascunho;
           const StIcon = st.icon;
           return (
-            <div key={p.id} className={`bg-card border border-border border-l-4 ${st.border} rounded-2xl overflow-hidden hover:shadow-md transition-all`}>
+            <div key={p.id} className={`bg-white border border-border border-l-4 ${st.border} rounded-xl overflow-hidden hover:shadow-md transition-all`}>
               <div className="p-4">
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -268,9 +273,11 @@ export default function Pedidos() {
           );
         })}
         {pedidosFiltrados.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
-            <p className="text-4xl mb-3">📋</p>
-            <p className="text-sm">{busca ? 'Nenhum pedido encontrado.' : 'Nenhum pedido ainda.'}</p>
+          <div className="text-center py-16 text-muted-foreground">
+            <p className="text-5xl mb-3">📋</p>
+            <p className="text-sm">
+              {busca ? 'Nenhum pedido encontrado.' : <>Nenhum pedido ainda. Clique em <span className="text-primary font-medium">"Novo Pedido"</span> para começar.</>}
+            </p>
           </div>
         )}
       </div>

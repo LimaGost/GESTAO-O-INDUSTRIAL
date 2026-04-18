@@ -177,7 +177,7 @@ export default function Produtos() {
         </div>
         {!readonly ? (
           <button onClick={() => { setShowFamilia(true); setFamilia({ ...emptyFamilia, codigoBase: gerarCodigoSku(produtos) }); setNovaVariacao(''); }}
-            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity">
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-amber-500 transition-colors shadow-sm">
             <Plus size={16} /> Novo Produto
           </button>
         ) : (
@@ -282,7 +282,7 @@ export default function Produtos() {
 
       {/* Formulário de novo produto */}
       {showFamilia && !readonly && (
-        <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
+        <div className="bg-white border border-border rounded-xl p-5 space-y-4 shadow-sm">
           <h3 className="font-semibold text-foreground">Novo Produto / Família</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[

@@ -143,7 +143,7 @@ export default function Clientes() {
       )}
 
       {aba === 'lista' && showForm && !readonly && (
-        <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
+        <div className="bg-white border border-border rounded-xl p-5 space-y-4 shadow-sm">
           <h3 className="font-semibold text-foreground">{editing ? 'Editar Cliente' : 'Novo Cliente'}</h3>
           <CampoCNPJ
             value={form.cnpj_cpf}
@@ -172,7 +172,7 @@ export default function Clientes() {
       )}
 
       {aba === 'lista' && (
-        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+        <div className="bg-white border border-border rounded-xl overflow-hidden shadow-sm">
           <table className="w-full text-sm">
             <thead className="bg-muted/40">
               <tr>

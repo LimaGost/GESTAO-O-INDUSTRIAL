@@ -105,7 +105,7 @@ export default function Estoque() {
           <p className="text-xs text-muted-foreground">{produtos.length} SKUs cadastrados</p>
         </div>
         {!readonly ? (
-          <button onClick={() => setShowAjuste(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm">
+          <button onClick={() => setShowAjuste(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-amber-500 transition-colors shadow-sm">
             <Plus size={16} /> Ajuste Manual
           </button>
         ) : (
@@ -151,7 +151,7 @@ export default function Estoque() {
       </div>
 
       {showAjuste && !readonly && (
-        <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
+        <div className="bg-white border border-border rounded-xl p-5 space-y-4 shadow-sm">
           <h3 className="font-semibold text-foreground">Ajuste de Estoque</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -194,7 +194,7 @@ export default function Estoque() {
         </div>
       )}
 
-      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+      <div className="bg-white border border-border rounded-xl overflow-hidden shadow-sm">
         <table className="w-full text-sm">
           <thead className="bg-muted/40">
             <tr>
