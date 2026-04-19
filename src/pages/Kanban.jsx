@@ -178,13 +178,16 @@ export default function Kanban() {
     let usuarioAtual = 'sistema';
     try { const me = await base44.auth.me(); usuarioAtual = me?.email || me?.full_name || 'sistema'; } catch {}
 
-    if (proximo === 'em_producao') updates.data_inicio = agora;
-    if (proximo === 'produzido') {
+    const colunaProximo = kanbanColunas.find(c => c.key === proximo);
+    const acaoProximo = colunaProximo?.acao || '';
+
+    if (acaoProximo === 'registrar_data_inicio' || proximo === 'em_producao') updates.data_inicio = agora;
+    if (acaoProximo === 'registrar_data_fim_producao' || proximo === 'produzido') {
       updates.data_fim_producao = agora;
       updates.lote = ordem.lote || gerarLote(ordem.produto_id);
     }
-    if (proximo === 'em_embalagem') updates.data_embalagem = agora;
-    if (proximo === 'finalizado') {
+    if (acaoProximo === 'registrar_data_embalagem' || proximo === 'em_embalagem') updates.data_embalagem = agora;
+    if (acaoProximo === 'entrada_estoque' || proximo === 'finalizado') {
       updates.data_finalizacao = agora;
       const lote = ordem.lote || gerarLote(ordem.id);
       const dataProducao = hojeData();
@@ -309,8 +312,9 @@ export default function Kanban() {
     sortKey
   );
 
-  const ativas = ordens.filter(o => o.status !== 'finalizado').length;
-  const finalizadas = ordens.filter(o => o.status === 'finalizado').length;
+  const colunasFinais = kanbanColunas.filter(c => c.acao === 'entrada_estoque' || c.key === 'finalizado').map(c => c.key);
+  const ativas = ordens.filter(o => !colunasFinais.includes(o.status)).length;
+  const finalizadas = ordens.filter(o => colunasFinais.includes(o.status)).length;
   const filtrosAtivos = busca || filtroOrigem !== 'todas' || filtroCategoria !== 'todas' || sortKey !== 'urgencia';
 
   return (
