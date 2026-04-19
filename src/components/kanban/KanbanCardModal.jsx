@@ -3,20 +3,21 @@ import { X, ArrowRight, CheckCircle, CheckSquare, Square, Trash2, Printer, User,
 import ModalDescarte from './ModalDescarte';
 import { imprimirEtiquetaProduto } from '@/lib/imprimirEtiquetaProduto';
 
-const LABELS_BOTAO = {
-  a_produzir: 'Iniciar Produção', em_producao: 'Finalizar Produção',
-  produzido: 'Enviar p/ Embalagem', em_embalagem: 'Finalizar',
-};
+function buildProximos(colunas) {
+  const map = {};
+  for (let i = 0; i < colunas.length - 1; i++) map[colunas[i].key] = colunas[i + 1].key;
+  return map;
+}
 
-const PROXIMOS = {
-  a_produzir: 'em_producao', em_producao: 'produzido',
-  produzido: 'em_embalagem', em_embalagem: 'finalizado',
-};
+const COLUNAS_DEFAULT_KEYS = ['a_produzir', 'em_producao', 'produzido', 'em_embalagem', 'finalizado'];
 
-const ETAPAS_LABEL = {
-  a_produzir: 'A Produzir', em_producao: 'Em Produção',
-  produzido: 'Produzido', em_embalagem: 'Em Embalagem',
-};
+function loadKanbanColunas() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('kanban_colunas_config') || 'null');
+    if (saved && Array.isArray(saved) && saved.length > 0) return saved;
+  } catch {}
+  return COLUNAS_DEFAULT_KEYS.map(key => ({ key, label: key }));
+}
 
 const MOTIVO_LABEL = {
   defeito_fabricacao: 'Defeito de Fabricação', contaminacao: 'Contaminação',
@@ -39,7 +40,9 @@ function agruparPorCategoria(itens, produtos) {
   return map;
 }
 
-export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos = [], clienteNome, onAvancar, loading, onClose }) {
+export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos = [], kanbanColunas: kanbanColunasProps, clienteNome, onAvancar, loading, onClose }) {
+  const kanbanColunas = kanbanColunasProps || loadKanbanColunas();
+  const PROXIMOS = buildProximos(kanbanColunas);
   const checkKey = `${ordem.id}_${ordem.status}`;
 
   // Checklist da etapa com persistência
@@ -124,7 +127,7 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
               {totalItens > 1 ? `${totalItens} produto(s) — ${qtdTotal} un` : `${ordem.produto_nome} — ${qtdTotal} un`}
             </p>
             <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-medium mt-1 inline-block">
-              {ETAPAS_LABEL[ordem.status] || ordem.status}
+              {kanbanColunas.find(c => c.key === ordem.status)?.label || ordem.status}
             </span>
           </div>
           <button onClick={onClose} className="p-1.5 hover:bg-muted rounded-lg">
@@ -185,7 +188,7 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
               <div className="flex items-center justify-between px-4 py-2.5 border-b border-border"
                 style={{ background: etapaCompleto ? '#F0FDF4' : '#FFFBEB' }}>
                 <p className="text-xs font-semibold text-foreground">
-                  Checklist — {ETAPAS_LABEL[ordem.status]}
+                 Checklist — {kanbanColunas.find(c => c.key === ordem.status)?.label || ordem.status}
                 </p>
                 <div className="flex items-center gap-2">
                   <div className="w-24 h-1.5 rounded-full bg-border overflow-hidden">
@@ -300,7 +303,7 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
                   title={!tudoCompleto ? 'Complete o checklist e informe o descarte para avançar' : ''}
                   className="flex-1 bg-primary text-primary-foreground py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity flex items-center justify-center gap-2">
                   <ArrowRight size={15} />
-                  {loading ? 'Avançando...' : LABELS_BOTAO[ordem.status] || 'Avançar'}
+                  {loading ? 'Avançando...' : `→ ${kanbanColunas.find(c => c.key === PROXIMOS[ordem.status])?.label || 'Avançar'}`}
                 </button>
               )}
               {ordem.status === 'finalizado' && (

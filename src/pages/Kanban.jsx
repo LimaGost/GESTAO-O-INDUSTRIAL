@@ -13,29 +13,48 @@ import KanbanCardModal from '@/components/kanban/KanbanCardModal';
 import ModalTotalProducao from '@/components/kanban/ModalTotalProducao';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 
-const DEFAULTS_LABELS = {
-  a_produzir: 'A Produzir', em_producao: 'Em Produção',
-  produzido: 'Produzido', em_embalagem: 'Em Embalagem', finalizado: 'Finalizado',
-};
+const CORES_OPCOES = [
+  { accent: '#64748B', bg: '#F8FAFC', border: '#CBD5E1', dot: '#94A3B8' },
+  { accent: '#0EA5E9', bg: '#F0F9FF', border: '#7DD3FC', dot: '#0EA5E9' },
+  { accent: '#22C55E', bg: '#F0FDF4', border: '#86EFAC', dot: '#22C55E' },
+  { accent: '#F59E0B', bg: '#FFFBEB', border: '#FCD34D', dot: '#F59E0B' },
+  { accent: '#A855F7', bg: '#FAF5FF', border: '#D8B4FE', dot: '#A855F7' },
+  { accent: '#EF4444', bg: '#FFF5F5', border: '#FCA5A5', dot: '#EF4444' },
+  { accent: '#F97316', bg: '#FFF7ED', border: '#FDBA74', dot: '#F97316' },
+  { accent: '#14B8A6', bg: '#F0FDFA', border: '#99F6E4', dot: '#14B8A6' },
+];
 
-const COLUNAS_BASE = [
-  { key: 'a_produzir',   icon: Clock,        accent: '#64748B', bg: '#F8FAFC', border: '#CBD5E1', dot: '#94A3B8' },
-  { key: 'em_producao',  icon: Factory,      accent: '#0EA5E9', bg: '#F0F9FF', border: '#7DD3FC', dot: '#0EA5E9' },
-  { key: 'produzido',    icon: CheckCircle,  accent: '#22C55E', bg: '#F0FDF4', border: '#86EFAC', dot: '#22C55E' },
-  { key: 'em_embalagem', icon: Package,      accent: '#F59E0B', bg: '#FFFBEB', border: '#FCD34D', dot: '#F59E0B' },
-  { key: 'finalizado',   icon: Flag,         accent: '#A855F7', bg: '#FAF5FF', border: '#D8B4FE', dot: '#A855F7' },
+const ICON_MAP = { Clock, Factory, CheckCircle, Package, Flag, Truck: Package, Archive: Package, Layers: Package };
+
+const COLUNAS_DEFAULT = [
+  { key: 'a_produzir',   label: 'A Produzir',   cor: 0, icone: 'Clock',       acao: 'nenhuma' },
+  { key: 'em_producao',  label: 'Em Produção',  cor: 1, icone: 'Factory',     acao: 'registrar_data_inicio' },
+  { key: 'produzido',    label: 'Produzido',    cor: 2, icone: 'CheckCircle', acao: 'registrar_data_fim_producao' },
+  { key: 'em_embalagem', label: 'Em Embalagem', cor: 3, icone: 'Package',     acao: 'registrar_data_embalagem' },
+  { key: 'finalizado',   label: 'Finalizado',   cor: 4, icone: 'Flag',        acao: 'entrada_estoque' },
 ];
 
 function buildColunas() {
-  let labels = {};
-  try { labels = JSON.parse(localStorage.getItem('kanban_labels') || '{}'); } catch {}
-  return COLUNAS_BASE.map(c => ({ ...c, label: labels[c.key] || DEFAULTS_LABELS[c.key] }));
+  try {
+    const saved = JSON.parse(localStorage.getItem('kanban_colunas_config') || 'null');
+    if (saved && Array.isArray(saved) && saved.length > 0) {
+      return saved.map(c => {
+        const cores = CORES_OPCOES[c.cor] || CORES_OPCOES[0];
+        return { ...c, icon: ICON_MAP[c.icone] || Clock, ...cores };
+      });
+    }
+  } catch {}
+  return COLUNAS_DEFAULT.map(c => {
+    const cores = CORES_OPCOES[c.cor] || CORES_OPCOES[0];
+    return { ...c, icon: ICON_MAP[c.icone] || Clock, ...cores };
+  });
 }
 
-const PROXIMOS = {
-  a_produzir: 'em_producao', em_producao: 'produzido',
-  produzido: 'em_embalagem', em_embalagem: 'finalizado',
-};
+function buildProximos(colunas) {
+  const map = {};
+  for (let i = 0; i < colunas.length - 1; i++) map[colunas[i].key] = colunas[i + 1].key;
+  return map;
+}
 
 const SORT_OPTIONS = [
   { key: 'urgencia', label: 'Urgência' },
@@ -71,6 +90,7 @@ export default function Kanban() {
   const { somenteLeitura } = usePermissoes();
   const readonly = somenteLeitura('Kanban');
   const [kanbanColunas, setKanbanColunas] = useState(buildColunas);
+  const PROXIMOS = buildProximos(kanbanColunas);
   const [ordens, setOrdens]               = useState([]);
   const [produtos, setProdutos]           = useState([]);
   const [pedidoMap, setPedidoMap]         = useState({});
@@ -89,12 +109,17 @@ export default function Kanban() {
   const [showFilters, setShowFilters]     = useState(false);
   const [showTotal, setShowTotal]         = useState(false);
   const [colunasVisiveis, setColunasVisiveis] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('kanban_colunas')) || COLUNAS_BASE.map(c => c.key); }
-    catch { return COLUNAS_BASE.map(c => c.key); }
+    try { return JSON.parse(localStorage.getItem('kanban_colunas')) || buildColunas().map(c => c.key); }
+    catch { return buildColunas().map(c => c.key); }
   });
 
   useEffect(() => {
-    const onSettings = () => setKanbanColunas(buildColunas());
+    const onSettings = () => {
+      const novas = buildColunas();
+      setKanbanColunas(novas);
+      // reset colunas visíveis para incluir as novas
+      setColunasVisiveis(novas.map(c => c.key));
+    };
     window.addEventListener('settings:saved', onSettings);
     return () => window.removeEventListener('settings:saved', onSettings);
   }, []);
@@ -206,7 +231,7 @@ export default function Kanban() {
     }
 
     await base44.entities.OrdemProducao.update(ordem.id, updates);
-    const labelProximo = { em_producao: 'Em Produção', produzido: 'Produzido', em_embalagem: 'Em Embalagem', finalizado: 'Finalizado' }[proximo] || proximo;
+    const labelProximo = kanbanColunas.find(c => c.key === proximo)?.label || proximo;
     await registrarLog('OrdemProducao', ordem.id, 'AVANCO_STATUS', `OP ${ordem.numero} (${ordem.produto_nome || ''}) avançou para "${labelProximo}" por ${usuarioAtual}`, usuarioAtual);
 
     // Disparo WhatsApp nas etapas configuradas
@@ -466,6 +491,7 @@ export default function Kanban() {
                     onAvancar={readonly ? null : avancarStatus}
                     loading={loadingId === ordem.id}
                     onOpenModal={() => setOrdemSelecionada(ordem)}
+                    labelBotao={PROXIMOS[key] ? `→ ${kanbanColunas.find(c => c.key === PROXIMOS[key])?.label || ''}` : null}
                   />
                 ))}
               </div>
@@ -549,6 +575,7 @@ export default function Kanban() {
           ordem={ordemSelecionada}
           checklistConfigs={checklistConfigs}
           produtos={produtos}
+          kanbanColunas={kanbanColunas}
           clienteNome={ordemSelecionada.pedido_id ? pedidoMap[ordemSelecionada.pedido_id]?.nome : null}
           onAvancar={async (ordem, descarte) => { await avancarStatus(ordem, descarte); setOrdemSelecionada(null); }}
           loading={loadingId === ordemSelecionada.id}

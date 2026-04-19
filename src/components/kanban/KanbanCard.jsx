@@ -11,10 +11,7 @@ const PROXIMOS = {
   produzido: 'em_embalagem', em_embalagem: 'finalizado',
 };
 
-const LABELS_BOTAO = {
-  a_produzir: 'Iniciar Produção', em_producao: 'Finalizar Produção',
-  produzido: 'Enviar p/ Embalagem', em_embalagem: 'Finalizar',
-};
+
 
 const ETAPAS = ['a_produzir', 'em_producao', 'produzido', 'em_embalagem', 'finalizado'];
 
@@ -43,7 +40,7 @@ function tempoDecorrido(dataISO) {
   return { text: `${m}min`, hours };
 }
 
-export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, checklistOk, setChecklistOk, onAvancar, loading, onOpenModal }) {
+export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, checklistOk, setChecklistOk, onAvancar, loading, onOpenModal, labelBotao }) {
   const origem = ordem.origem || 'manual';
   const origemCfg = ORIGEM_CONFIG[origem] || ORIGEM_CONFIG.manual;
   const checkKey = `${ordem.id}_${ordem.status}`;
@@ -186,7 +183,7 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
             onMouseEnter={e => { e.currentTarget.style.background = accent; e.currentTarget.style.color = '#fff'; }}
             onMouseLeave={e => { e.currentTarget.style.background = `${accent}15`; e.currentTarget.style.color = accent; }}
           >
-            {loading ? '...' : <><ArrowRight size={12} />{LABELS_BOTAO[ordem.status]}</>}
+            {loading ? '...' : <><ArrowRight size={12} />{labelBotao || 'Avançar'}</>}
           </button>
         ) : null}
       </div>
