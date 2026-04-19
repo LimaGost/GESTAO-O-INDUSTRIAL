@@ -111,28 +111,26 @@
 
 /* ── Scrollbar personalizada ── */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: hsl(var(--sidebar-background));
-  border-radius: 10px;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--border));
-  border-radius: 10px;
-  border: 1px solid hsl(var(--sidebar-background));
+  background: hsl(38 20% 78% / 0.6);
+  border-radius: 99px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--primary));
+  background: hsl(38 92% 50% / 0.55);
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: hsl(var(--border)) hsl(var(--sidebar-background));
+  scrollbar-color: hsl(38 20% 78% / 0.6) transparent;
 }
 
 @layer components {
