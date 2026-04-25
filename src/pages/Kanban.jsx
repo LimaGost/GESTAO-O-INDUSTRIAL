@@ -239,10 +239,9 @@ export default function Kanban() {
       }
     }
 
-    // ── Finalizado: cai no Kanban de Expedição ─────────────────────────────
+    // ── Finalizado: cria expedição automaticamente ─────────────────────────
     if (acaoProximo === 'finalizar_expedicao') {
       updates.data_finalizacao = agora;
-      // Libera pedido vinculado para separação/expedição se todas as OPs finalizaram
       if (ordem.pedido_id) {
         const todosPedidos = await base44.entities.Pedido.list();
         const ped = todosPedidos.find(p => p.id === ordem.pedido_id);
@@ -251,8 +250,23 @@ export default function Kanban() {
           const ordens_pedido = todasOrdens.filter(o => o.pedido_id === ordem.pedido_id);
           const todasFin = ordens_pedido.every(o => o.id === ordem.id ? true : o.status === proximo);
           if (todasFin) {
-            await base44.entities.Pedido.update(ped.id, { status: 'separacao' });
-            await registrarLog('Pedido', ped.id, 'STATUS', `Pedido ${ped.numero} liberado para expedição.`);
+            // Atualiza pedido para expedido e cria a expedição automaticamente
+            await base44.entities.Pedido.update(ped.id, { status: 'expedido' });
+            const numero_nf = gerarNumero('NF');
+            const hoje = new Date().toISOString().split('T')[0];
+            const expedicao = await base44.entities.Expedicao.create({
+              numero_nf,
+              pedido_id: ped.id,
+              pedido_numero: ped.numero,
+              cliente_id: ped.cliente_id || '',
+              cliente_nome: ped.cliente_nome,
+              itens: ped.itens || [],
+              status: 'emitida',
+              data_emissao: hoje,
+              valor_total: ped.valor_total || 0,
+            });
+            await registrarLog('Expedicao', expedicao.id, 'EXPEDICAO_CRIADA', `Expedição NF ${numero_nf} criada automaticamente ao finalizar OP ${ordem.numero}`);
+            await registrarLog('Pedido', ped.id, 'STATUS', `Pedido ${ped.numero} expedido automaticamente.`);
           }
         }
       }
