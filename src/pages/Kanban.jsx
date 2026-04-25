@@ -109,6 +109,7 @@ export default function Kanban() {
   const [sortKey, setSortKey]             = useState('urgencia');
   const [showFilters, setShowFilters]     = useState(false);
   const [showTotal, setShowTotal]         = useState(false);
+  const [isMobile, setIsMobile]           = useState(window.innerWidth < 768);
   const [colunasVisiveis, setColunasVisiveis] = useState(() => {
     const todasKeys = buildColunas().map(c => c.key);
     try {
@@ -124,15 +125,19 @@ export default function Kanban() {
     const onSettings = () => {
       const novas = buildColunas();
       setKanbanColunas(novas);
-      // Adiciona novas colunas à lista de visíveis (sem remover as já ocultas intencionalmente)
       setColunasVisiveis(prev => {
         const keysNovas = novas.map(c => c.key);
         const adicionadas = keysNovas.filter(k => !prev.includes(k));
         return [...prev.filter(k => keysNovas.includes(k)), ...adicionadas];
       });
     };
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('settings:saved', onSettings);
-    return () => window.removeEventListener('settings:saved', onSettings);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('settings:saved', onSettings);
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   const toggleColuna = (key) => {
@@ -379,40 +384,49 @@ export default function Kanban() {
   return (
     <div className="flex flex-col h-full space-y-4">
       {/* Header */}
-      <div className="bg-card border border-border rounded-2xl px-5 py-4 flex-shrink-0">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <Factory size={19} className="text-primary" />
+      <div className="bg-card border border-border rounded-2xl px-4 md:px-5 py-4 flex-shrink-0">
+        <div className="flex items-center justify-between flex-wrap gap-2 md:gap-3">
+          <div className="flex items-center gap-2 md:gap-3 min-w-0">
+            <div className="w-9 md:w-10 h-9 md:h-10 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Factory size={18} className="text-primary" />
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-foreground">Kanban de Produção</h2>
+            <div className="min-w-0">
+              <h2 className="text-base md:text-lg font-bold text-foreground truncate">Kanban de Produção</h2>
               <p className="text-xs text-muted-foreground">{ativas} ativa(s) · {finalizadas} finalizada(s)</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={() => load(true)} className="p-2.5 border border-border rounded-xl hover:bg-muted transition-colors">
+          <div className="flex items-center gap-1.5 md:gap-2 flex-wrap justify-end">
+            <button onClick={() => load(true)} className="p-2 md:p-2.5 border border-border rounded-lg md:rounded-xl hover:bg-muted transition-colors flex-shrink-0">
               <RefreshCw size={15} className="text-muted-foreground" />
             </button>
-            <button onClick={() => setShowFilters(v => !v)}
-              className={`flex items-center gap-2 border px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${filtrosAtivos ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border hover:bg-muted text-muted-foreground'}`}>
-              <SlidersHorizontal size={15} /> Filtros {filtrosAtivos && <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block" />}
-            </button>
-            <button onClick={() => setShowTotal(true)}
-              className="flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-100 transition-colors">
-              <BarChart2 size={16} /> Total
-            </button>
+            {!isMobile && (
+              <>
+                <button onClick={() => setShowFilters(v => !v)}
+                  className={`flex items-center gap-2 border px-3 py-2.5 rounded-xl text-xs md:text-sm font-medium transition-colors ${filtrosAtivos ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border hover:bg-muted text-muted-foreground'}`}>
+                  <SlidersHorizontal size={15} /> Filtros {filtrosAtivos && <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block" />}
+                </button>
+                <button onClick={() => setShowTotal(true)}
+                  className="hidden md:flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-700 px-3 py-2.5 rounded-xl text-xs md:text-sm font-semibold hover:bg-blue-100 transition-colors">
+                  <BarChart2 size={16} /> Total
+                </button>
+              </>
+            )}
+            {isMobile && (
+              <button onClick={() => setShowFilters(v => !v)} className={`p-2 border rounded-lg ${filtrosAtivos ? 'bg-primary/10 border-primary/30' : 'border-border'}`}>
+                <SlidersHorizontal size={15} className={filtrosAtivos ? 'text-primary' : 'text-muted-foreground'} />
+              </button>
+            )}
             {!readonly && (
               <button onClick={() => setShowNovaOP(true)}
-                className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm">
-                <Plus size={16} /> Nova OP
+                className="flex items-center gap-1 bg-primary text-primary-foreground px-3 py-2 md:px-4 md:py-2.5 rounded-lg md:rounded-xl text-xs md:text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm flex-shrink-0">
+                <Plus size={15} /> <span className="hidden sm:inline">OP</span>
               </button>
             )}
           </div>
         </div>
 
         {/* Progress bars */}
-        <div className="mt-4 grid grid-cols-5 gap-2">
+        <div className={`mt-4 grid gap-2 ${isMobile ? 'grid-cols-3 md:grid-cols-5' : 'grid-cols-5'}`}>
           {kanbanColunas.map(col => {
             const count = ordens.filter(o => o.status === col.key).length;
             const pct = ordens.length > 0 ? Math.round((count / ordens.length) * 100) : 0;
@@ -421,8 +435,8 @@ export default function Kanban() {
                 <div className="h-1.5 rounded-full mb-1.5 overflow-hidden bg-muted">
                   <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: col.accent }} />
                 </div>
-                <p className="text-lg font-bold text-foreground">{count}</p>
-                <p className="text-[10px] text-muted-foreground leading-tight hidden sm:block">{col.label}</p>
+                <p className="text-base md:text-lg font-bold text-foreground">{count}</p>
+                <p className="text-[9px] md:text-[10px] text-muted-foreground leading-tight hidden sm:block">{col.label}</p>
               </div>
             );
           })}
@@ -431,7 +445,7 @@ export default function Kanban() {
 
       {/* Painel de filtros */}
       {showFilters && (
-        <div className="bg-card border border-border rounded-2xl p-4 flex-shrink-0 space-y-3">
+        <div className="bg-card border border-border rounded-2xl p-3 md:p-4 flex-shrink-0 space-y-3 max-h-96 md:max-h-none overflow-y-auto md:overflow-y-visible">
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Filtros e Ordenação</p>
             {filtrosAtivos && (
@@ -516,14 +530,16 @@ export default function Kanban() {
       )}
 
       {/* Colunas Kanban */}
-      <div className="flex gap-3 overflow-x-auto pb-4 flex-1 items-start">
+      <div className={`flex gap-3 overflow-x-auto pb-4 flex-1 items-start ${isMobile ? 'snap-x snap-mandatory' : ''}`}>
         {COLUNAS.map(({ key, label, icon: Icon, accent, bg, border, dot }) => {
           const colOrdens = ordensFiltradas.filter(o => o.status === key);
           const total = ordens.filter(o => o.status === key).length;
+          const colWidth = isMobile ? 'w-80 sm:w-96' : 'w-72';
+          const minHeight = isMobile ? '50vh' : '60vh';
 
           return (
-            <div key={key} className="flex-shrink-0 w-72 rounded-2xl flex flex-col overflow-hidden"
-              style={{ minHeight: '60vh', background: bg, border: `1.5px solid ${border}` }}>
+            <div key={key} className={`flex-shrink-0 ${colWidth} rounded-2xl flex flex-col overflow-hidden ${isMobile ? 'snap-center' : ''}`}
+              style={{ minHeight, background: bg, border: `1.5px solid ${border}` }}>
               <div className="px-4 py-3 flex items-center justify-between sticky top-0 z-10"
                 style={{ background: bg, borderBottom: `1px solid ${border}` }}>
                 <div className="flex items-center gap-2">
@@ -535,11 +551,11 @@ export default function Kanban() {
                   style={{ background: accent, opacity: total === 0 ? 0.4 : 1 }}>{total}</span>
               </div>
 
-              <div className="flex-1 p-3 overflow-y-auto space-y-2.5">
+              <div className="flex-1 p-2 md:p-3 overflow-y-auto space-y-1.5 md:space-y-2.5">
                 {colOrdens.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 opacity-30">
-                    <div className="w-10 h-10 rounded-full border-2 border-dashed flex items-center justify-center mb-2" style={{ borderColor: accent }}>
-                      <Icon size={16} style={{ color: accent }} />
+                  <div className="flex flex-col items-center justify-center py-8 md:py-16 opacity-30">
+                    <div className="w-8 md:w-10 h-8 md:h-10 rounded-full border-2 border-dashed flex items-center justify-center mb-2" style={{ borderColor: accent }}>
+                      <Icon size={14} style={{ color: accent }} />
                     </div>
                     <p className="text-xs text-muted-foreground">Sem ordens</p>
                   </div>
