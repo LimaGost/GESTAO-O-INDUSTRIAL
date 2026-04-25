@@ -6,57 +6,40 @@ import { registrarLog } from '@/lib/audit';
 import ModalConfirmacaoRecebimento from '@/components/expedicao/ModalConfirmacaoRecebimento';
 import NovaExpedicaoModal from '@/components/expedicao/NovaExpedicaoModal';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
+import { getExpedicaoColunasConfig } from '@/components/configuracoes/AbaExpedicao';
 
-// Coluna 0: OPs finalizadas aguardando NF
-// Coluna 1-3: Expedições emitida / enviada / entregue
-const COLUNAS_EXP = [
-  {
-    key: 'a_expedir',
-    label: 'A Expedir',
-    icon: Package,
-    accent: '#A855F7',
-    bg: '#FAF5FF',
-    border: '#D8B4FE',
-    dot: '#A855F7',
-    desc: 'OPs prontas para NF',
-  },
-  {
-    key: 'emitida',
-    label: 'NF Emitida',
-    icon: FileText,
-    accent: '#3B82F6',
-    bg: '#EFF6FF',
-    border: '#BFDBFE',
-    dot: '#3B82F6',
-    desc: 'Aguardando envio',
-    proximo: 'enviada',
-    proximoLabel: 'Marcar como Enviada',
-  },
-  {
-    key: 'enviada',
-    label: 'Em Trânsito',
-    icon: Truck,
-    accent: '#F59E0B',
-    bg: '#FFFBEB',
-    border: '#FCD34D',
-    dot: '#F59E0B',
-    desc: 'Em rota de entrega',
-    proximo: 'entregue',
-    proximoLabel: 'Confirmar Entrega',
-  },
-  {
-    key: 'entregue',
-    label: 'Entregue',
-    icon: CheckCircle,
-    accent: '#22C55E',
-    bg: '#F0FDF4',
-    border: '#86EFAC',
-    dot: '#22C55E',
-    desc: 'Entrega confirmada',
-    proximo: null,
-    proximoLabel: null,
-  },
+const CORES_MAP = [
+  { accent: '#64748B', bg: '#F8FAFC', border: '#CBD5E1', dot: '#94A3B8' },
+  { accent: '#3B82F6', bg: '#EFF6FF', border: '#BFDBFE', dot: '#3B82F6' },
+  { accent: '#22C55E', bg: '#F0FDF4', border: '#86EFAC', dot: '#22C55E' },
+  { accent: '#F59E0B', bg: '#FFFBEB', border: '#FCD34D', dot: '#F59E0B' },
+  { accent: '#A855F7', bg: '#FAF5FF', border: '#D8B4FE', dot: '#A855F7' },
+  { accent: '#EF4444', bg: '#FFF5F5', border: '#FCA5A5', dot: '#EF4444' },
+  { accent: '#F97316', bg: '#FFF7ED', border: '#FDBA74', dot: '#F97316' },
+  { accent: '#14B8A6', bg: '#F0FDFA', border: '#99F6E4', dot: '#14B8A6' },
 ];
+
+const ICON_MAP = {
+  a_expedir: Package,
+  emitida: FileText,
+  enviada: Truck,
+  entregue: CheckCircle,
+};
+
+function buildColunasExp() {
+  const config = getExpedicaoColunasConfig();
+  return config.map((c, i) => {
+    const cores = CORES_MAP[c.cor] || CORES_MAP[0];
+    const nextCol = config[i + 1];
+    return {
+      ...c,
+      ...cores,
+      icon: ICON_MAP[c.key] || Package,
+      proximo: nextCol && c.key !== 'a_expedir' ? nextCol.key : null,
+      proximoLabel: nextCol && c.key !== 'a_expedir' ? `→ ${nextCol.label}` : null,
+    };
+  });
+}
 
 function fmtDate(d) {
   if (!d) return '—';
@@ -177,7 +160,7 @@ function ExpedicaoCard({ exp, coluna, onAvancar, onImprimirNF, onConfirmarRecebi
             onClick={() => onAvancar(exp.id, coluna.proximo)}
             disabled={advancing}
             className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg text-white transition-all disabled:opacity-50"
-            style={{ background: COLUNAS_EXP.find(c => c.key === coluna.proximo)?.accent || '#22C55E' }}
+            style={{ background: '#22C55E' }}
           >
             {advancing ? <RefreshCw size={11} className="animate-spin" /> : <Send size={11} />}
             {coluna.proximoLabel}
@@ -192,6 +175,7 @@ export default function Expedicao() {
   const { somenteLeitura } = usePermissoes();
   const readonly = somenteLeitura('Expedicao');
 
+  const [colunasExp, setColunasExp] = useState(buildColunasExp);
   const [expedicoes, setExpedicoes] = useState([]);
   const [opsFinalizadas, setOpsFinalizadas] = useState([]);
   const [pedidoMap, setPedidoMap] = useState({});
@@ -231,6 +215,12 @@ export default function Expedicao() {
   };
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    const onSettings = () => setColunasExp(buildColunasExp());
+    window.addEventListener('expedicao:settings:saved', onSettings);
+    return () => window.removeEventListener('expedicao:settings:saved', onSettings);
+  }, []);
 
   // Emite NF direto da OP finalizada
   const emitirNFdaOP = async (op) => {
@@ -357,12 +347,12 @@ export default function Expedicao() {
     );
   }, [opsFinalizadas, busca]);
 
-  const counts = {
-    a_expedir: opsFinalizadas.length,
-    emitida: expedicoes.filter(e => e.status === 'emitida').length,
-    enviada: expedicoes.filter(e => e.status === 'enviada').length,
-    entregue: expedicoes.filter(e => e.status === 'entregue').length,
-  };
+  const counts = colunasExp.reduce((acc, col) => {
+    acc[col.key] = col.key === 'a_expedir'
+      ? opsFinalizadas.length
+      : expedicoes.filter(e => e.status === col.key).length;
+    return acc;
+  }, {});
 
   // Pedidos disponíveis para NF manual (separados, sem expedição)
   const pedidosDisponiveis = Object.entries(pedidoMap)
@@ -410,8 +400,8 @@ export default function Expedicao() {
         </div>
 
         {/* Progress summary */}
-        <div className="mt-4 grid grid-cols-4 gap-2">
-          {COLUNAS_EXP.map(col => (
+        <div className="mt-4 grid gap-2" style={{ gridTemplateColumns: `repeat(${colunasExp.length}, 1fr)` }}>
+          {colunasExp.map(col => (
             <div key={col.key} className="text-center">
               <div className="h-1.5 rounded-full mb-1.5 overflow-hidden bg-muted">
                 <div className="h-full rounded-full transition-all duration-500"
@@ -426,7 +416,7 @@ export default function Expedicao() {
 
       {/* Kanban integrado */}
       <div className="flex gap-4 overflow-x-auto pb-4 flex-1 items-start">
-        {COLUNAS_EXP.map((coluna) => {
+        {colunasExp.map((coluna) => {
           const Icon = coluna.icon;
           const isAExpedir = coluna.key === 'a_expedir';
           const cards = isAExpedir ? opsFiltradas : expFiltradas.filter(e => e.status === coluna.key);
