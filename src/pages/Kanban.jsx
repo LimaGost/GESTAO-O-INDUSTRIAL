@@ -181,7 +181,11 @@ export default function Kanban() {
   const avancarStatus = async (ordem, descarte = null) => {
     const proximo = PROXIMOS[ordem.status];
     if (!proximo) return;
+    
+    // ── Otimistic UI: Atualiza imediatamente na UI ──
+    setOrdens(prev => prev.map(o => o.id === ordem.id ? { ...o, status: proximo } : o));
     setLoadingId(ordem.id);
+    
     const agora = agoraISO();
     const updates = { status: proximo };
     let usuarioAtual = 'sistema';
@@ -298,34 +302,42 @@ export default function Kanban() {
       }
     }
 
-    await base44.entities.OrdemProducao.update(ordem.id, updates);
-    const labelProximo = kanbanColunas.find(c => c.key === proximo)?.label || proximo;
-    await registrarLog('OrdemProducao', ordem.id, 'AVANCO_STATUS', `OP ${ordem.numero} (${ordem.produto_nome || ''}) avançou para "${labelProximo}" por ${usuarioAtual}`, usuarioAtual);
+    try {
+      // ── Chamada à API (otimistic já aconteceu acima) ──
+      await base44.entities.OrdemProducao.update(ordem.id, updates);
+      const labelProximo = kanbanColunas.find(c => c.key === proximo)?.label || proximo;
+      await registrarLog('OrdemProducao', ordem.id, 'AVANCO_STATUS', `OP ${ordem.numero} (${ordem.produto_nome || ''}) avançou para "${labelProximo}" por ${usuarioAtual}`, usuarioAtual);
 
-    // Disparo WhatsApp nas etapas configuradas
-    if (ETAPAS_WHATSAPP.includes(proximo)) {
-      try {
-        const pedInfo = ordem.pedido_id ? pedidoMap[ordem.pedido_id] : null;
-        const clienteNome = pedInfo?.nome || null;
-        let clienteTelefone = null;
-        if (pedInfo?.cliente_id) {
-          const clientes = await base44.entities.Cliente.filter({ id: pedInfo.cliente_id });
-          clienteTelefone = clientes[0]?.telefone || null;
-        }
-        base44.functions.invoke('enviarWhatsappKanban', {
-          ordem: { numero: ordem.numero, produto_nome: ordem.produto_nome, quantidade: ordem.quantidade },
-          novoStatus: proximo,
-          clienteNome,
-          clienteTelefone: WHATSAPP_NOTIFICAR_CLIENTE ? clienteTelefone : null,
-          numeros_internos: WHATSAPP_NUMEROS_INTERNOS,
-          msg_interno: waCfgGlobal.msg_interno || null,
-          msg_cliente: waCfgGlobal.msg_cliente || null,
-        }).catch(() => {}); // fire-and-forget, não bloqueia o fluxo
-      } catch {}
+      // Disparo WhatsApp nas etapas configuradas
+      if (ETAPAS_WHATSAPP.includes(proximo)) {
+        try {
+          const pedInfo = ordem.pedido_id ? pedidoMap[ordem.pedido_id] : null;
+          const clienteNome = pedInfo?.nome || null;
+          let clienteTelefone = null;
+          if (pedInfo?.cliente_id) {
+            const clientes = await base44.entities.Cliente.filter({ id: pedInfo.cliente_id });
+            clienteTelefone = clientes[0]?.telefone || null;
+          }
+          base44.functions.invoke('enviarWhatsappKanban', {
+            ordem: { numero: ordem.numero, produto_nome: ordem.produto_nome, quantidade: ordem.quantidade },
+            novoStatus: proximo,
+            clienteNome,
+            clienteTelefone: WHATSAPP_NOTIFICAR_CLIENTE ? clienteTelefone : null,
+            numeros_internos: WHATSAPP_NUMEROS_INTERNOS,
+            msg_interno: waCfgGlobal.msg_interno || null,
+            msg_cliente: waCfgGlobal.msg_cliente || null,
+          }).catch(() => {}); // fire-and-forget
+        } catch {}
+      }
+
+      await load(true);
+    } catch (error) {
+      // Se a API falhar, desfazer a mudança otimista
+      setOrdens(prev => prev.map(o => o.id === ordem.id ? { ...o, status: ordem.status } : o));
+      console.error('Erro ao avançar status:', error);
+    } finally {
+      setLoadingId(null);
     }
-
-    await load(true);
-    setLoadingId(null);
   };
 
   const criarOPManual = async () => {

@@ -53,6 +53,44 @@
     --sidebar-ring: 38 92% 50%;
   }
 
+  /* ── Auto Dark Mode (prefers-color-scheme) ── */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --background: 30 10% 8%;
+      --foreground: 40 20% 92%;
+      --card: 30 10% 11%;
+      --card-foreground: 40 20% 92%;
+      --popover: 30 10% 11%;
+      --popover-foreground: 40 20% 92%;
+      --primary: 38 92% 50%;
+      --primary-foreground: 0 0% 5%;
+      --secondary: 30 10% 16%;
+      --secondary-foreground: 40 20% 85%;
+      --muted: 30 10% 16%;
+      --muted-foreground: 30 8% 55%;
+      --accent: 38 92% 50%;
+      --accent-foreground: 0 0% 5%;
+      --destructive: 0 62.8% 30.6%;
+      --destructive-foreground: 0 0% 98%;
+      --border: 30 10% 20%;
+      --input: 30 10% 20%;
+      --ring: 38 92% 50%;
+      --chart-1: 38 92% 55%;
+      --chart-2: 200 65% 50%;
+      --chart-3: 145 50% 45%;
+      --chart-4: 25 80% 55%;
+      --chart-5: 280 55% 60%;
+      --sidebar-background: 30 10% 9%;
+      --sidebar-foreground: 40 20% 88%;
+      --sidebar-primary: 38 92% 50%;
+      --sidebar-primary-foreground: 0 0% 5%;
+      --sidebar-accent: 30 10% 14%;
+      --sidebar-accent-foreground: 40 20% 88%;
+      --sidebar-border: 30 10% 16%;
+      --sidebar-ring: 38 92% 50%;
+    }
+  }
+
   .dark {
     --background: 30 10% 8%;
     --foreground: 40 20% 92%;
@@ -97,11 +135,27 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    overscroll-behavior-y: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  main {
+    overscroll-behavior-y: none;
+  }
+
+  /* ── Mobile-friendly: Remove tap highlight + disable select on interactive elements ── */
+  button, [role="tab"], [role="navigation"], a[role="button"] {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
   }
 
   /* ── Inputs globais com estilo padrão bege ── */
   input, textarea, select {
     @apply bg-white border border-border rounded-lg text-foreground placeholder:text-muted-foreground;
+    -webkit-user-select: text;
+    user-select: text;
   }
 
   input:focus, textarea:focus, select:focus {
@@ -157,5 +211,20 @@
            text-foreground placeholder:text-muted-foreground
            focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/60
            transition-colors;
+  }
+
+  /* ── Mobile minimum font sizes (14px on mobile) ── */
+  @media (max-width: 768px) {
+    /* Base text */
+    p, span, div, li, button, a, label {
+      @apply text-sm; /* 14px */
+    }
+
+    /* Headings */
+    h1 { @apply text-2xl; }
+    h2 { @apply text-xl; }
+    h3 { @apply text-lg; }
+    h4 { @apply text-base; }
+    h5, h6 { @apply text-sm; }
   }
 }
