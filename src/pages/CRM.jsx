@@ -349,25 +349,22 @@ function ModalNovoContato({ onCriar, onClose, criando }) {
 
 // ── Página principal CRM ──────────────────────────────────────────────────────
 export default function CRM() {
-  const [contatos, setContatos] = useState([]);
-  const [busca, setBusca] = useState('');
-  const [buscaInput, setBuscaInput] = useState('');
-  const [chatsAtivos, setChatsAtivos] = useState({});
-  const [iniciandoId, setIniciandoId] = useState(null);
+  const [chats, setChats] = useState([]);
   const [chatAberto, setChatAberto] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [modalContato, setModalContato] = useState(null);
-  const [showNovoContato, setShowNovoContato] = useState(false);
-  const [criandoContato, setCriandoContato] = useState(false);
-  const [totalContatos, setTotalContatos] = useState(0);
-  const buscaTimeout = useRef(null);
+  const [abaSelecionada, setAbaSelecionada] = useState('todas');
+  const [statusSelecionado, setStatusSelecionado] = useState('ativos');
 
-  const carregarContatos = useCallback(async (buscaTermo = '') => {
+  const carregarChats = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await base44.functions.invoke('smClickListarContatos', { busca: buscaTermo, page: 1 });
-      setContatos(res.data?.contatos || []);
-      setTotalContatos(res.data?.total || 0);
+      const chatsWaiting = await base44.functions.invoke('smClickListarChats', { status: 'waiting' });
+      const chatsAttending = await base44.functions.invoke('smClickListarChats', { status: 'attending' });
+      const todosChatsCombinados = [
+        ...(chatsWaiting.data?.chats || []).map(c => ({ ...c, status: 'waiting' })),
+        ...(chatsAttending.data?.chats || []).map(c => ({ ...c, status: 'attending' }))
+      ];
+      setChats(todosChatsCombinados.sort((a, b) => new Date(b.updated_date) - new Date(a.updated_date)));
     } catch (e) {
       console.error(e);
     }
@@ -375,170 +372,122 @@ export default function CRM() {
   }, []);
 
   useEffect(() => {
-    carregarContatos();
-    try {
-      const saved = JSON.parse(localStorage.getItem('crm_chats_ativos') || '{}');
-      setChatsAtivos(saved);
-    } catch {}
+    carregarChats();
+    const interval = setInterval(carregarChats, 15000);
+    return () => clearInterval(interval);
   }, []);
 
-  // Debounce da busca
-  useEffect(() => {
-    clearTimeout(buscaTimeout.current);
-    buscaTimeout.current = setTimeout(() => {
-      setBusca(buscaInput);
-      carregarContatos(buscaInput);
-    }, 500);
-    return () => clearTimeout(buscaTimeout.current);
-  }, [buscaInput]);
-
-  const salvarChats = (novos) => {
-    setChatsAtivos(novos);
-    localStorage.setItem('crm_chats_ativos', JSON.stringify(novos));
+  const filtrarChats = () => {
+    if (abaSelecionada === 'todas') return chats;
+    if (abaSelecionada === 'nao_lidas') return chats.filter(c => c.unread_count > 0);
+    if (abaSelecionada === 'grupos') return chats.filter(c => c.is_group);
+    return chats;
   };
 
-  const iniciarChat = (contato) => setModalContato(contato);
-
-  const confirmarIniciarChat = async ({ departmentId, attendantId }) => {
-    const contato = modalContato;
-    const tel = fmtTelefone(contato.telephone);
-    setIniciandoId(contato.id);
-
-    try {
-      // 1. Cria/reutiliza o chat
-      const res = await base44.functions.invoke('smClickCriarChat', {
-        telefone: tel,
-        nomeCliente: contato.name,
-        department: departmentId,
-      });
-
-      if (!res.data?.chat_id) {
-        alert('Erro ao criar chat: ' + (res.data?.erro || JSON.stringify(res.data)));
-        setIniciandoId(null);
-        setModalContato(null);
-        return;
-      }
-
-      const chatId = res.data.chat_id;
-
-      // 2. Inicia o atendimento (start) vinculando atendente
-      try {
-        await base44.functions.invoke('smClickIniciarAtendimento', {
-          chatId,
-          attendantId,
-          departmentId,
-        });
-      } catch {
-        // start pode falhar se já estiver active — não bloqueia
-      }
-
-      // 3. Salva e abre o chat
-      const novos = { ...chatsAtivos, [contato.id]: { chat_id: chatId } };
-      salvarChats(novos);
-      setModalContato(null);
-      setChatAberto({ contato, chat_id: chatId });
-    } catch (e) {
-      alert('Erro ao iniciar chat: ' + e.message);
-    }
-
-    setIniciandoId(null);
+  const abrirChat = (chat) => {
+    setChatAberto(chat);
   };
 
-  const criarContato = async ({ name, telephone, setErro, onClose }) => {
-    setCriandoContato(true);
-    try {
-      const res = await base44.functions.invoke('smClickCriarContato', { name, telephone });
-      if (res.data?.ok) {
-        onClose();
-        await carregarContatos(buscaInput);
-      } else if (res.data?.status === 'duplicado') {
-        setErro('✓ Contato já existe. Ele aparecerá na lista abaixo.');
-        setTimeout(() => { setShowNovoContato(false); }, 2000);
-      } else {
-        setErro(res.data?.error || 'Erro ao criar contato');
-      }
-    } catch (e) {
-      setErro(e.message);
-    }
-    setCriandoContato(false);
-  };
+  const chatsFilterados = filtrarChats();
 
   return (
     <div className="flex h-full gap-4" style={{ minHeight: 'calc(100vh - 140px)' }}>
-      {modalContato && (
-        <ModalIniciarChat
-          contato={modalContato}
-          iniciando={iniciandoId === modalContato.id}
-          onConfirmar={confirmarIniciarChat}
-          onClose={() => setModalContato(null)}
-        />
-      )}
-      {showNovoContato && (
-        <ModalNovoContato
-          criando={criandoContato}
-          onCriar={criarContato}
-          onClose={() => setShowNovoContato(false)}
-        />
-      )}
-
-      {/* Lista de contatos */}
-      <div className={`flex flex-col ${chatAberto ? 'hidden md:flex md:w-80 flex-shrink-0' : 'flex-1'}`}>
+      {/* Sidebar de chats */}
+      <div className={`flex flex-col ${chatAberto ? 'hidden md:flex md:w-96 flex-shrink-0' : 'flex-1'}`}>
         {/* Header */}
         <div className="bg-card border border-border rounded-2xl px-4 py-4 mb-4 flex-shrink-0">
-          <div className="flex items-center gap-3 mb-3">
+          <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-2xl bg-green-100 flex items-center justify-center">
               <MessageCircle size={19} className="text-green-600" />
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="text-lg font-bold text-foreground">CRM WhatsApp</h2>
-              <p className="text-xs text-muted-foreground">
-                {totalContatos.toLocaleString('pt-BR')} contato(s) · {Object.keys(chatsAtivos).length} chat(s) ativo(s)
-              </p>
+              <h2 className="text-lg font-bold text-foreground">Conversas</h2>
+              <p className="text-xs text-muted-foreground">{chats.length} ativa(s)</p>
             </div>
-            <button
-              onClick={() => setShowNovoContato(true)}
-              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-opacity flex-shrink-0"
-            >
-              <UserPlus size={13} /> Novo
+            <button onClick={carregarChats} className="p-1.5 hover:bg-muted rounded-lg">
+              <RefreshCw size={16} className="text-muted-foreground" />
             </button>
           </div>
           <div className="flex items-center gap-2 bg-muted/40 border border-border rounded-xl px-3 py-2">
             <Search size={14} className="text-muted-foreground flex-shrink-0" />
             <input
-              value={buscaInput}
-              onChange={e => setBuscaInput(e.target.value)}
-              placeholder="Buscar contato..."
+              placeholder="Procure sua conversa..."
               className="bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground w-full"
             />
-            {buscaInput && (
-              <button onClick={() => setBuscaInput('')} className="text-muted-foreground hover:text-foreground">
-                <X size={13} />
-              </button>
-            )}
           </div>
         </div>
 
-        {/* Lista */}
-        <div className="flex-1 overflow-y-auto space-y-3">
+        {/* Abas */}
+        <div className="flex gap-2 px-2 mb-4 flex-shrink-0 overflow-x-auto pb-2">
+          <button
+            onClick={() => setAbaSelecionada('todas')}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
+              abaSelecionada === 'todas'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+            }`}
+          >
+            Todas
+          </button>
+          <button
+            onClick={() => setAbaSelecionada('nao_lidas')}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
+              abaSelecionada === 'nao_lidas'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+            }`}
+          >
+            Não lidas
+          </button>
+          <button
+            onClick={() => setAbaSelecionada('grupos')}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
+              abaSelecionada === 'grupos'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+            }`}
+          >
+            Grupos
+          </button>
+        </div>
+
+        {/* Lista de chats */}
+        <div className="flex-1 overflow-y-auto space-y-2">
           {loading ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 size={24} className="animate-spin text-muted-foreground" />
             </div>
-          ) : contatos.length === 0 ? (
+          ) : chatsFilterados.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <User size={40} className="opacity-20 mb-2" />
-              <p className="text-sm">Nenhum contato encontrado</p>
+              <MessageCircle size={40} className="opacity-20 mb-2" />
+              <p className="text-sm">Nenhuma conversa</p>
             </div>
           ) : (
-            contatos.map(contato => (
-              <ContatoCard
-                key={contato.id}
-                contato={contato}
-                chatAtivo={chatsAtivos[contato.id]}
-                iniciando={iniciandoId === contato.id}
-                onIniciarChat={iniciarChat}
-                onAbrirChat={(c, chat) => setChatAberto({ contato: c, chat_id: chat.chat_id })}
-              />
+            chatsFilterados.map(chat => (
+              <button
+                key={chat.id}
+                onClick={() => abrirChat(chat)}
+                className={`w-full text-left p-3 rounded-xl border transition-colors ${
+                  chatAberto?.id === chat.id
+                    ? 'bg-primary/10 border-primary/50'
+                    : 'bg-muted/40 border-border hover:bg-muted/60'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary flex-shrink-0 overflow-hidden text-sm">
+                    {chat.contact?.name ? chat.contact.name.charAt(0).toUpperCase() : '?'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm text-foreground truncate">{chat.contact?.name || 'Chat'}</p>
+                    <p className="text-xs text-muted-foreground truncate line-clamp-1">{chat.last_message || 'Sem mensagens'}</p>
+                  </div>
+                  {chat.unread_count > 0 && (
+                    <span className="bg-destructive text-white text-[10px] font-bold px-2 py-1 rounded-full flex-shrink-0">
+                      {chat.unread_count}
+                    </span>
+                  )}
+                </div>
+              </button>
             ))
           )}
         </div>
@@ -548,8 +497,8 @@ export default function CRM() {
       {chatAberto ? (
         <div className="flex-1 bg-card border border-border rounded-2xl overflow-hidden flex flex-col">
           <ChatPanel
-            contato={chatAberto.contato}
-            chatId={chatAberto.chat_id}
+            contato={chatAberto.contact || { name: chatAberto.contact?.name || 'Chat' }}
+            chatId={chatAberto.id}
             onClose={() => setChatAberto(null)}
           />
         </div>
@@ -557,8 +506,8 @@ export default function CRM() {
         <div className="hidden md:flex flex-1 bg-card border border-border rounded-2xl items-center justify-center">
           <div className="text-center text-muted-foreground">
             <MessageCircle size={56} className="mx-auto mb-4 opacity-20" />
-            <p className="font-semibold">Selecione um contato</p>
-            <p className="text-sm mt-1">Inicie ou abra um chat para conversar</p>
+            <p className="font-semibold">Selecione uma conversa</p>
+            <p className="text-sm mt-1">Abra um chat para responder</p>
           </div>
         </div>
       )}
