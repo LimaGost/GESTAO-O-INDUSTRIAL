@@ -341,151 +341,183 @@ export default function Expedicao() {
   };
 
   const imprimirNF = (exp) => {
-    const win = window.open('', '_blank', 'width=900,height=1100');
+    const win = window.open('', '_blank', 'width=960,height=1200');
     const hoje = new Date().toLocaleDateString('pt-BR');
     const totalItens = (exp.itens || []).reduce((s, i) => s + (i.quantidade || 0), 0);
     const valorTotal = (exp.valor_total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
     const itensRows = (exp.itens || []).map((item, idx) => `
       <tr>
-        <td style="border:1px solid #000;padding:4px;font-size:10px;text-align:center;">${String(idx + 1).padStart(3, '0')}</td>
-        <td style="border:1px solid #000;padding:4px;font-size:10px;">${item.produto_nome || '—'}</td>
-        <td style="border:1px solid #000;padding:4px;font-size:10px;text-align:center;">UN</td>
-        <td style="border:1px solid #000;padding:4px;font-size:10px;text-align:center;">${item.quantidade || 0}</td>
-        <td style="border:1px solid #000;padding:4px;font-size:9px;text-align:right;">R$ ${(item.preco_unitario || 0).toFixed(2)}</td>
-        <td style="border:1px solid #000;padding:4px;font-size:9px;text-align:right;font-weight:bold;">R$ ${(item.total || 0).toFixed(2)}</td>
+        <td style="border:1px solid #000;padding:3px 4px;font-size:9px;text-align:center;width:25px;">${idx + 1}</td>
+        <td style="border:1px solid #000;padding:3px 4px;font-size:9px;flex:1;">${item.produto_nome || '—'}</td>
+        <td style="border:1px solid #000;padding:3px 4px;font-size:9px;text-align:center;width:45px;">UN</td>
+        <td style="border:1px solid #000;padding:3px 4px;font-size:9px;text-align:center;width:50px;">${item.quantidade || 0}</td>
+        <td style="border:1px solid #000;padding:3px 4px;font-size:9px;text-align:right;width:70px;">R$ ${(item.preco_unitario || 0).toFixed(2)}</td>
+        <td style="border:1px solid #000;padding:3px 4px;font-size:9px;text-align:right;width:70px;font-weight:bold;">R$ ${(item.total || 0).toFixed(2)}</td>
       </tr>
     `).join('');
-    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>NF-e ${exp.numero_nf}</title>
-    <style>
-      * { box-sizing: border-box; margin: 0; padding: 0; }
-      body { font-family: Arial, sans-serif; font-size: 11px; color: #000; background: #fff; }
-      .nf { width: 21cm; height: 29.7cm; padding: 0; margin: 0 auto; background: #fff; page-break-after: always; border: 1px dashed #ccc; }
-      
-      /* HEADER - Área de identificação */
-      .header { display: flex; height: 70px; border-bottom: 3px solid #000; }
-      .header-logo { flex: 0 0 200px; padding: 8px; border-right: 2px solid #000; display: flex; flex-direction: column; justify-content: center; }
-      .logo-nome { font-size: 14px; font-weight: bold; color: #333; }
-      .logo-desc { font-size: 7px; color: #666; margin-top: 2px; line-height: 1.2; }
-      .header-danfe { flex: 0 0 150px; padding: 8px; border-right: 2px solid #000; text-align: center; display: flex; flex-direction: column; justify-content: center; }
-      .danfe-titulo { font-size: 14px; font-weight: bold; color: #000; letter-spacing: 2px; border: 2px solid #000; padding: 3px; margin-bottom: 3px; }
-      .danfe-desc { font-size: 7px; color: #333; }
-      .header-info { flex: 1; padding: 8px; display: flex; flex-direction: column; justify-content: center; }
-      .header-chave { font-size: 12px; font-weight: bold; letter-spacing: 1px; font-family: monospace; margin-bottom: 3px; }
-      .header-nf { font-size: 14px; font-weight: bold; color: #B45309; }
-      
-      /* Seções */
-      .secao { border-bottom: 2px solid #000; padding: 6px 8px; }
-      .secao-titulo { font-size: 9px; font-weight: bold; color: #000; text-transform: uppercase; margin-bottom: 3px; }
-      .campo-linha { display: flex; gap: 8px; margin-bottom: 3px; }
-      .campo { flex: 1; font-size: 10px; }
-      .campo-label { font-size: 8px; color: #666; font-weight: bold; }
-      .campo-valor { font-size: 10px; font-weight: bold; margin-top: 1px; }
-      
-      /* Tabela de itens */
-      table.itens { width: 100%; border-collapse: collapse; margin: 4px 0; }
-      table.itens th { background: #333; color: #fff; padding: 3px 4px; font-size: 9px; border: 1px solid #000; text-align: left; }
-      table.itens td { border: 1px solid #000; padding: 3px 4px; font-size: 9px; }
-      table.itens td.num { text-align: center; width: 30px; }
-      table.itens td.qtd { text-align: center; width: 50px; }
-      table.itens td.valor { text-align: right; width: 70px; }
-      
-      /* Totais */
-      .totais { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2px; padding: 6px; }
-      .total-box { border: 1px solid #000; padding: 6px 4px; text-align: center; }
-      .total-label { font-size: 8px; font-weight: bold; margin-bottom: 2px; }
-      .total-valor { font-size: 12px; font-weight: bold; color: #000; }
-      .total-destaque { background: #FEF3C7; border: 2px solid #B45309; }
-      
-      /* Rodapé */
-      .rodape { padding: 4px 8px; font-size: 8px; color: #666; text-align: center; }
-      
-      @media print {
-        body { margin: 0; padding: 0; }
-        .nf { border: none; page-break-inside: avoid; }
-      }
-    </style>
-    </head><body>
     
-    <div class="nf">
-      
-      <!-- HEADER -->
-      <div class="header">
-        <div class="header-logo">
-          <div class="logo-nome">☀️ RAIO DO SOL</div>
-          <div class="logo-desc">Velas e Cosméticos<br/>CNPJ: 00.000.000/0000-00<br/>Fone: (11) 9999-9999</div>
-        </div>
-        <div class="header-danfe">
-          <div class="danfe-titulo">DANFE</div>
-          <div class="danfe-desc">Documento Auxiliar<br/>NFe</div>
-        </div>
-        <div class="header-info">
-          <div class="header-chave">${exp.numero_nf}</div>
-          <div class="header-nf">NF-e nº ${exp.numero_nf}</div>
-        </div>
-      </div>
-      
-      <!-- DESTINATÁRIO -->
-      <div class="secao">
-        <div class="secao-titulo">Destinatário / Tomador</div>
-        <div class="campo-linha">
-          <div class="campo" style="flex: 2;">
-            <div class="campo-label">Nome / Razão Social</div>
-            <div class="campo-valor">${exp.cliente_nome || '—'}</div>
+    win.document.write(`<!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8"/>
+      <title>NF-e ${exp.numero_nf}</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Courier New', monospace; font-size: 10px; background: #fff; color: #000; line-height: 1.2; }
+        .nf { width: 21cm; margin: 0 auto; background: #fff; page-break-after: always; }
+        
+        /* CABEÇALHO - DANFE */
+        .cabecalho { display: flex; border-bottom: 3px solid #000; min-height: 60px; }
+        .emitente { flex: 1; border-right: 2px solid #000; padding: 6px; display: flex; flex-direction: column; justify-content: center; }
+        .razao-social { font-weight: bold; font-size: 14px; }
+        .info-emitente { font-size: 8px; margin-top: 2px; line-height: 1.4; }
+        .danfe { flex: 0 0 140px; border-right: 2px solid #000; padding: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .danfe-titulo { font-size: 13px; font-weight: bold; letter-spacing: 2px; border: 2px solid #000; padding: 2px 4px; margin-bottom: 4px; }
+        .danfe-desc { font-size: 7px; text-align: center; }
+        .nf-numero { flex: 0 0 140px; padding: 6px; display: flex; flex-direction: column; justify-content: center; }
+        .nf-titulo { font-size: 8px; font-weight: bold; }
+        .nf-valor { font-size: 13px; font-weight: bold; color: #B45309; }
+        
+        /* SEÇÕES COM CAMPOS */
+        .secao { border-bottom: 2px solid #000; }
+        .secao-titulo { background: #f5f5f5; padding: 2px 4px; font-size: 8px; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #000; }
+        .campos { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0; border-right: 1px solid #000; border-bottom: 1px solid #000; }
+        .campo { border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 4px; display: flex; flex-direction: column; }
+        .campo:last-child { border-right: none; }
+        .campo-label { font-size: 7px; font-weight: bold; color: #666; }
+        .campo-valor { font-size: 9px; font-weight: bold; margin-top: 2px; }
+        
+        /* TABELA DE ITENS */
+        .produtos-titulo { background: #333; color: #fff; padding: 3px 4px; font-size: 8px; font-weight: bold; border-bottom: 1px solid #000; }
+        .produtos-header { display: flex; border-bottom: 1px solid #000; background: #f5f5f5; }
+        .col-num { width: 25px; padding: 3px 4px; font-size: 8px; font-weight: bold; border-right: 1px solid #000; text-align: center; }
+        .col-desc { flex: 1; padding: 3px 4px; font-size: 8px; font-weight: bold; border-right: 1px solid #000; }
+        .col-un { width: 45px; padding: 3px 4px; font-size: 8px; font-weight: bold; border-right: 1px solid #000; text-align: center; }
+        .col-qtd { width: 50px; padding: 3px 4px; font-size: 8px; font-weight: bold; border-right: 1px solid #000; text-align: center; }
+        .col-valor { width: 70px; padding: 3px 4px; font-size: 8px; font-weight: bold; border-right: 1px solid #000; text-align: center; }
+        .col-total { width: 70px; padding: 3px 4px; font-size: 8px; font-weight: bold; text-align: center; }
+        
+        .item-linha { display: flex; border-bottom: 1px solid #000; }
+        .item-linha > div { border-right: 1px solid #000; padding: 3px 4px; font-size: 9px; display: flex; align-items: center; }
+        .item-linha > div:last-child { border-right: none; }
+        
+        /* TOTALIZAÇÕES */
+        .totalizacao { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-bottom: 2px solid #000; }
+        .total-box { border-right: 1px solid #000; padding: 4px; text-align: center; }
+        .total-box:last-child { border-right: none; }
+        .total-label { font-size: 7px; font-weight: bold; color: #666; }
+        .total-valor { font-size: 11px; font-weight: bold; margin-top: 2px; }
+        .total-destaque { background: #FEF3C7; border: 1px solid #B45309; }
+        
+        /* RODAPÉ */
+        .rodape { padding: 4px; font-size: 8px; text-align: center; color: #666; }
+        
+        @media print {
+          body { margin: 0; padding: 0; }
+          .nf { border: none; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="nf">
+        
+        <!-- CABEÇALHO DANFE -->
+        <div class="cabecalho">
+          <div class="emitente">
+            <div class="razao-social">☀️ RAIO DO SOL</div>
+            <div class="info-emitente">
+              CNPJ: 00.000.000/0000-00<br/>
+              Velas e Cosméticos<br/>
+              Fone: (11) 9999-9999
+            </div>
           </div>
-          <div class="campo">
-            <div class="campo-label">Data Emissão</div>
-            <div class="campo-valor">${exp.data_emissao || hoje}</div>
+          <div class="danfe">
+            <div class="danfe-titulo">DANFE</div>
+            <div class="danfe-desc">Documento Auxiliar<br/>da Nota Fiscal<br/>Eletrônica</div>
+          </div>
+          <div class="nf-numero">
+            <div class="nf-titulo">NF-e nº</div>
+            <div class="nf-valor">${exp.numero_nf || '—'}</div>
+            <div class="nf-titulo" style="margin-top: 4px; font-size: 7px;">Série 1</div>
           </div>
         </div>
-      </div>
-      
-      <!-- PRODUTOS -->
-      <div class="secao">
-        <div class="secao-titulo">Dados dos Produtos / Serviços</div>
-        <table class="itens">
-          <thead>
-            <tr>
-              <th class="num">Nº</th>
-              <th>Descrição</th>
-              <th style="width: 45px; text-align: center;">UN</th>
-              <th class="qtd">Qtd</th>
-              <th class="valor">Vlr. Unit.</th>
-              <th class="valor">Vlr. Total</th>
-            </tr>
-          </thead>
-          <tbody>${itensRows}</tbody>
-        </table>
-      </div>
-      
-      <!-- TOTAIS -->
-      <div class="secao">
-        <div class="secao-titulo">Totalizações</div>
-        <div class="totais">
+        
+        <!-- DESTINATÁRIO -->
+        <div class="secao">
+          <div class="secao-titulo">Destinatário / Tomador</div>
+          <div class="campos">
+            <div class="campo" style="grid-column: span 3;">
+              <div class="campo-label">Nome / Razão Social</div>
+              <div class="campo-valor">${exp.cliente_nome || '—'}</div>
+            </div>
+            <div class="campo">
+              <div class="campo-label">Data Emissão</div>
+              <div class="campo-valor">${exp.data_emissao || hoje}</div>
+            </div>
+            <div class="campo">
+              <div class="campo-label">Pedido</div>
+              <div class="campo-valor">${exp.pedido_numero || '—'}</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- PRODUTOS -->
+        <div class="secao">
+          <div class="secao-titulo">Dados dos Produtos / Serviços</div>
+          <div class="produtos-header">
+            <div class="col-num">Nº</div>
+            <div class="col-desc">Descrição</div>
+            <div class="col-un">UN</div>
+            <div class="col-qtd">Qtd</div>
+            <div class="col-valor">Vlr. Unit.</div>
+            <div class="col-total">Vlr. Total</div>
+          </div>
+          ${itensRows.split('<tr>').map((row, idx) => idx > 0 ? '<div class="item-linha">' + row.replace(/<\/?tr>|<\/?td[^>]*>/g, (match) => {
+            if (match === '<tr>') return '';
+            if (match === '</tr>') return '</div>';
+            if (match.startsWith('<td')) return '<div>';
+            if (match === '</td>') return '</div>';
+            return match;
+          }) : '').join('')}
+          ${(exp.itens || []).map((item, idx) => `
+            <div class="item-linha">
+              <div style="width: 25px; text-align: center;">${idx + 1}</div>
+              <div style="flex: 1;">${item.produto_nome || '—'}</div>
+              <div style="width: 45px; text-align: center;">UN</div>
+              <div style="width: 50px; text-align: center;">${item.quantidade || 0}</div>
+              <div style="width: 70px; text-align: right;">R$ ${(item.preco_unitario || 0).toFixed(2)}</div>
+              <div style="width: 70px; text-align: right;">${(item.total || 0).toFixed(2)}</div>
+            </div>
+          `).join('')}
+        </div>
+        
+        <!-- TOTALIZAÇÕES -->
+        <div class="totalizacao">
           <div class="total-box">
-            <div class="total-label">Quantidade Total</div>
+            <div class="total-label">QUANTIDADE TOTAL</div>
             <div class="total-valor">${totalItens}</div>
           </div>
           <div class="total-box">
-            <div class="total-label">Valor Total Produtos</div>
+            <div class="total-label">VALOR TOTAL PRODUTOS</div>
             <div class="total-valor">R$ ${valorTotal}</div>
           </div>
           <div class="total-box total-destaque">
-            <div class="total-label">Valor Total NF-e</div>
+            <div class="total-label">VALOR TOTAL NF-e</div>
             <div class="total-valor">R$ ${valorTotal}</div>
           </div>
         </div>
+        
+        <!-- RODAPÉ -->
+        <div class="rodape">
+          <div>Documento emitido por sistema informatizado. Emissão: ${hoje}</div>
+          <div style="margin-top: 4px; color: #B45309; font-weight: bold;">NF-e nº ${exp.numero_nf} | Série 1 | Modelo 55</div>
+        </div>
+        
       </div>
       
-      <!-- RODAPÉ -->
-      <div class="rodape">
-        <div>Documento emitido por sistema informatizado. Emissão: ${hoje}</div>
-        <div style="margin-top: 4px;">NF-e nº ${exp.numero_nf} | Série: 1 | Modelo 55</div>
-      </div>
-      
-    </div>
-    
-    <script>window.onload=()=>setTimeout(()=>window.print(),400);<\/script>
-    </body></html>`);
+      <script>window.onload=()=>setTimeout(()=>window.print(),400);<\/script>
+    </body>
+    </html>`);
     win.document.close();
   };
 
