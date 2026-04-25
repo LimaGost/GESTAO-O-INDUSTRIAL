@@ -48,6 +48,21 @@ Deno.serve(async (req) => {
     const data = await res.json();
 
     if (!res.ok) {
+      // Se já existe um chat para esse contato, busca o chat existente
+      if (data?.message?.toLowerCase().includes('já existe')) {
+        for (const status of ['waiting', 'attending']) {
+          const searchRes = await fetch(`https://api.smclick.com.br/attendances/chats?status=${status}`, {
+            headers: { 'x-api-key': apiKey },
+          });
+          const searchData = await searchRes.json();
+          const results = searchData?.results || [];
+          const existingChat = results.find(c => c?.contact?.telephone === telefone);
+          if (existingChat?.id) {
+            return Response.json({ chat_id: existingChat.id, raw: existingChat, reaproveitado: true });
+          }
+        }
+        return Response.json({ erro: 'Já existe um chat ativo para este contato mas não foi possível recuperá-lo. Verifique na plataforma SM Click.', detalhes: data }, { status: 409 });
+      }
       return Response.json({ erro: data?.message || 'Erro ao criar chat', detalhes: data }, { status: res.status });
     }
 

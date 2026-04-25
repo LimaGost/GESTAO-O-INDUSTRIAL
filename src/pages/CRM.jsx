@@ -301,6 +301,9 @@ export default function CRM() {
         salvarChats(novos);
         setModalCliente(null);
         setChatAberto({ cliente, chat_id: res.data.chat_id });
+      } else if (res.data?.erro?.includes('não foi possível recuperá-lo')) {
+        alert('Já existe um chat ativo para este cliente na plataforma SM Click. Finalize o atendimento anterior antes de iniciar um novo.');
+        setModalCliente(null);
       } else {
         alert('Erro ao criar chat: ' + (res.data?.erro || JSON.stringify(res.data)));
       }
