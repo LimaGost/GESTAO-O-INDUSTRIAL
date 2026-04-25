@@ -55,6 +55,15 @@
     "ativo": {
       "type": "boolean",
       "default": true
+    },
+    "atributos_customizados": {
+      "type": "object",
+      "description": "Atributos din\u00e2micos espec\u00edficos por categoria",
+      "default": {}
+    },
+    "alerta_ativo": {
+      "type": "boolean",
+      "default": false
     }
   },
   "required": [

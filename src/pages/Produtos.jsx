@@ -4,11 +4,12 @@ import {
   Plus, Edit2, X, Check, Search,
   Package, AlertTriangle, LayoutGrid, List, SlidersHorizontal,
   TrendingDown, CheckCircle, ChevronDown, ChevronRight, Trash2, Eye as EyeIcon,
-  FileSpreadsheet
+  FileSpreadsheet, Settings
 } from 'lucide-react';
 import FotoProduto from '@/components/produtos/FotoProduto';
 import ModalEditarSku from '@/components/produtos/ModalEditarSku';
 import ModalImportarPlanilha from '@/components/produtos/ModalImportarPlanilha';
+import GerenciadorVariaveisCategoria from '@/components/produtos/GerenciadorVariaveisCategoria';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 
 const emptyFamilia = {
@@ -29,6 +30,8 @@ export default function Produtos() {
   const [loading, setLoading] = useState(false);
   const [editingSku, setEditingSku] = useState(null);
   const [showImportar, setShowImportar] = useState(false);
+  const [categoriasComVariaveis, setCategoriasComVariaveis] = useState({});
+  const [gerenciandoVariaveis, setGerenciandoVariaveis] = useState(null);
 
   // Filtros
   const [busca, setBusca] = useState('');
@@ -43,7 +46,25 @@ export default function Produtos() {
     setProdutos(data);
     const catsUnique = [...new Set(data.map(p => p.categoria).filter(Boolean))].sort();
     setCategorias(catsUnique);
+    carregarVariaveisCategorias();
     return data;
+  };
+
+  const carregarVariaveisCategorias = async () => {
+    const vars = await base44.entities.CategoriaVariaveisProduto.list();
+    const map = {};
+    vars.forEach(v => { map[v.nome_categoria] = v; });
+    setCategoriasComVariaveis(map);
+  };
+
+  const salvarVariaveisCategoria = async (nomeCategoria, variaveis) => {
+    const existente = categoriasComVariaveis[nomeCategoria];
+    if (existente) {
+      await base44.entities.CategoriaVariaveisProduto.update(existente.id, { variaveis });
+    } else {
+      await base44.entities.CategoriaVariaveisProduto.create({ nome_categoria: nomeCategoria, variaveis });
+    }
+    await carregarVariaveisCategorias();
   };
 
   const gerarCodigoSku = (produtosAtuais) => {
@@ -233,26 +254,34 @@ export default function Produtos() {
           </div>
         </div>
 
-        {/* Filtros rápidos de estoque — sempre visíveis */}
-        <div className="flex flex-wrap gap-1.5">
-          {[
-            { key: 'todos', label: 'Todos', count: kpis.total },
-            { key: 'ok', label: '✓ OK', count: kpis.ok },
-            { key: 'alerta', label: '⚠️ Alerta', count: kpis.alertaMin },
-            { key: 'zerado', label: '🔴 Zerado', count: kpis.zerados },
-          ].map(f => (
-            <button key={f.key} onClick={() => setFiltroEstoque(f.key)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filtroEstoque === f.key ? 'bg-primary text-primary-foreground' : 'bg-card border border-border text-muted-foreground hover:text-foreground'}`}>
-              {f.label}
-              <span className={`text-[10px] font-bold px-1 rounded-full ${filtroEstoque === f.key ? 'bg-white/20' : 'bg-muted'}`}>{f.count}</span>
+        {/* Filtros rápidos de estoque + gerenciar variáveis */}
+        <div className="flex flex-wrap gap-1.5 justify-between items-center">
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              { key: 'todos', label: 'Todos', count: kpis.total },
+              { key: 'ok', label: '✓ OK', count: kpis.ok },
+              { key: 'alerta', label: '⚠️ Alerta', count: kpis.alertaMin },
+              { key: 'zerado', label: '🔴 Zerado', count: kpis.zerados },
+            ].map(f => (
+              <button key={f.key} onClick={() => setFiltroEstoque(f.key)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filtroEstoque === f.key ? 'bg-primary text-primary-foreground' : 'bg-card border border-border text-muted-foreground hover:text-foreground'}`}>
+                {f.label}
+                <span className={`text-[10px] font-bold px-1 rounded-full ${filtroEstoque === f.key ? 'bg-white/20' : 'bg-muted'}`}>{f.count}</span>
+              </button>
+            ))}
+          </div>
+          {!readonly && categorias.length > 0 && (
+            <button onClick={() => setGerenciandoVariaveis(categorias[0])}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-muted border border-border text-muted-foreground hover:text-foreground transition-all">
+              <Settings size={12} /> Variáveis das Categorias
             </button>
-          ))}
+          )}
         </div>
       </div>
 
-      {/* Painel de filtros expandido — apenas categorias */}
+      {/* Painel de filtros expandido — categorias + seletor de variáveis */}
       {showFiltros && (
-        <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+        <div className="bg-card border border-border rounded-2xl p-4 space-y-4">
           <div>
             <p className="text-xs font-semibold text-muted-foreground mb-2">Filtrar por Categoria</p>
             <div className="flex flex-wrap gap-1.5">
@@ -261,10 +290,21 @@ export default function Produtos() {
                 Todas
               </button>
               {categorias.map(cat => (
-                <button key={cat} onClick={() => setFiltroCategoria(cat)}
-                  className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${filtroCategoria === cat ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'}`}>
-                  {cat}
-                </button>
+                <div key={cat} className="flex gap-1 items-center">
+                  <button onClick={() => setFiltroCategoria(cat)}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${filtroCategoria === cat ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'}`}>
+                    {cat}
+                  </button>
+                  {!readonly && categoriasComVariaveis[cat] && categoriasComVariaveis[cat].variaveis?.length > 0 && (
+                    <button
+                      onClick={() => setGerenciandoVariaveis(cat)}
+                      className="p-1 hover:bg-muted/80 rounded text-muted-foreground hover:text-foreground"
+                      title="Editar variáveis desta categoria"
+                    >
+                      <Settings size={12} />
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
           </div>
@@ -523,6 +563,14 @@ export default function Produtos() {
           setProdutos(prev => prev.map(p => p.id === produtoAtualizado.id ? { ...p, ...produtoAtualizado } : p));
           load();
         }}
+        />
+      )}
+      {gerenciandoVariaveis && (
+        <GerenciadorVariaveisCategoria
+          nomeCategoria={gerenciandoVariaveis}
+          variavelExistentes={categoriasComVariaveis[gerenciandoVariaveis]?.variaveis || []}
+          onSalvar={(variaveis) => salvarVariaveisCategoria(gerenciandoVariaveis, variaveis)}
+          onFechar={() => setGerenciandoVariaveis(null)}
         />
       )}
     </div>
