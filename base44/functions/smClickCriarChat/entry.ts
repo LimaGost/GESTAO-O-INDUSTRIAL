@@ -22,14 +22,28 @@ Deno.serve(async (req) => {
       department,
     };
 
-    const res = await fetch('https://api.smclick.com.br/attendances/chats', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-      },
-      body: JSON.stringify(body),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 25000);
+
+    let res;
+    try {
+      res = await fetch('https://api.smclick.com.br/attendances/chats', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+    } catch (fetchErr) {
+      clearTimeout(timeout);
+      if (fetchErr.name === 'AbortError') {
+        return Response.json({ error: 'Timeout: a API do SM Click demorou demais para responder. Tente novamente.' }, { status: 504 });
+      }
+      throw fetchErr;
+    }
+    clearTimeout(timeout);
 
     const data = await res.json();
 
