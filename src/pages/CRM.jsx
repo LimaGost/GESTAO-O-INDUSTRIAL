@@ -139,7 +139,7 @@ function ChatPanel({ contato, protocol, chatId, status, onClose }) {
                 <div className={`max-w-[75%] px-3 py-2 rounded-2xl shadow-sm text-sm leading-relaxed ${
                   deSistema ? 'bg-green-100 text-green-900 rounded-br-sm' : 'bg-white text-foreground rounded-bl-sm'
                 }`}>
-                  <p>{msg.texto || msg.body || msg.message || msg.content}</p>
+                  <p>{typeof msg.text === 'string' ? msg.text : (msg.texto || msg.body || msg.message || msg.content || '')}</p>
                   <p className={`text-[10px] mt-1 text-right ${deSistema ? 'text-green-600' : 'text-muted-foreground'}`}>
                     {timeAgo(msg.created_date || msg.createdAt)}
                     {deSistema && <CheckCheck size={11} className="inline ml-1" />}
