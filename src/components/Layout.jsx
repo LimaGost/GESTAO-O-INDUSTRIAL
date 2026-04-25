@@ -48,7 +48,6 @@ const navGroups = [
   {
     label: 'SISTEMA',
     items: [
-      { path: '/WhatsApp',      label: 'WhatsApp',      icon: MessageCircle },
       { path: '/Configuracoes', label: 'Configurações', icon: SlidersHorizontal },
     ],
   },
@@ -66,7 +65,6 @@ const allNavItems = [
   { path: '/Produtos',       label: 'Produtos',          icon: Settings },
   { path: '/Relatorios',     label: 'Relatórios',        icon: BarChart2 },
   { path: '/Perdas',         label: 'Perdas',            icon: Trash2 },
-  { path: '/WhatsApp',       label: 'WhatsApp',           icon: MessageCircle },
   { path: '/Configuracoes',  label: 'Configurações',     icon: SlidersHorizontal },
 ];
 
@@ -84,7 +82,6 @@ const PATH_MODULO = {
   '/Relatorios':   'Relatorios',
   '/Perdas':       'Perdas',
   '/Auditoria':    'Auditoria',
-  '/WhatsApp':      'Configuracoes',
   '/Configuracoes': 'Configuracoes',
   '/SupabaseSchemas': null,
 };
