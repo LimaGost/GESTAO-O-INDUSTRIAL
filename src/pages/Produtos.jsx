@@ -18,6 +18,41 @@ const emptyFamilia = {
   estoque_inicial: 0, estoque_minimo: 10, estoque_maximo: 0, preco_unitario: 0, variacoes: [],
 };
 
+function exportarProdutos(produtos) {
+  const bom = '\uFEFF';
+  const colunas = ['codigo', 'nome', 'categoria', 'descricao', 'unidade', 'preco_unitario', 'preco_custo', 'estoque_atual', 'estoque_minimo', 'estoque_maximo', 'itens_por_caixa', 'peso_liquido_kg', 'peso_bruto_kg', 'largura_cm', 'altura_cm', 'profundidade_cm'];
+  const header = colunas.join(';');
+  
+  const linhas = produtos.map(p => {
+    return [
+      p.codigo || '',
+      p.nome || '',
+      p.categoria || '',
+      p.descricao || '',
+      p.unidade || 'unidade',
+      p.preco_unitario || 0,
+      p.preco_custo || 0,
+      p.estoque_atual || 0,
+      p.estoque_minimo || 0,
+      p.estoque_maximo || 0,
+      p.itens_por_caixa || 1,
+      p.peso_liquido_kg || 0,
+      p.peso_bruto_kg || 0,
+      p.largura_cm || 0,
+      p.altura_cm || 0,
+      p.profundidade_cm || 0,
+    ].join(';');
+  }).join('\n');
+  
+  const blob = new Blob([bom + header + '\n' + linhas], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `produtos_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 
 export default function Produtos() {
   const { somenteLeitura } = usePermissoes();
@@ -177,10 +212,14 @@ export default function Produtos() {
           </div>
         </div>
         {!readonly ? (
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <button onClick={() => exportarProdutos(produtos)}
+              className="flex items-center gap-2 border border-border bg-card text-foreground px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-muted transition-colors">
+              <FileSpreadsheet size={16} className="text-blue-600" /> Exportar Planilha
+            </button>
             <button onClick={() => setShowImportar(true)}
               className="flex items-center gap-2 border border-border bg-card text-foreground px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-muted transition-colors">
-              <FileSpreadsheet size={16} className="text-green-600" /> Importar Planilha
+              <FileSpreadsheet size={16} className="text-green-600" /> Atualizar via Planilha
             </button>
             <button onClick={() => { setShowFamilia(true); setFamilia({ ...emptyFamilia, codigoBase: gerarCodigoSku(produtos) }); setNovaVariacao(''); }}
               className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-amber-500 transition-colors shadow-sm">

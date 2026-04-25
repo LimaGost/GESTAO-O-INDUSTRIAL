@@ -13,32 +13,36 @@ import { Upload, X, FileSpreadsheet, CheckCircle, AlertCircle, Download, Loader2
  */
 
 const COLUNAS = [
-  { key: 'nome_base', label: 'nome_base', obrigatorio: true, desc: 'Nome base do produto (ex: Sabonete Artesanal)' },
-  { key: 'variacao', label: 'variacao', obrigatorio: false, desc: 'Variação/grade (ex: Lavanda, Rosa)' },
-  { key: 'codigo', label: 'codigo', obrigatorio: false, desc: 'Código SKU' },
+  { key: 'codigo', label: 'codigo', obrigatorio: false, desc: 'Código SKU (se preenchido, atualiza produto existente)' },
+  { key: 'nome', label: 'nome', obrigatorio: false, desc: 'Nome do produto' },
   { key: 'categoria', label: 'categoria', obrigatorio: false, desc: 'Categoria' },
   { key: 'descricao', label: 'descricao', obrigatorio: false, desc: 'Descrição' },
   { key: 'unidade', label: 'unidade', obrigatorio: false, desc: 'unidade, kg, caixa...' },
   { key: 'preco_unitario', label: 'preco_unitario', obrigatorio: false, desc: 'Preço unitário (ex: 5.90)' },
-  { key: 'estoque_atual', label: 'estoque_atual', obrigatorio: false, desc: 'Estoque inicial' },
+  { key: 'preco_custo', label: 'preco_custo', obrigatorio: false, desc: 'Preço de custo (ex: 2.50)' },
+  { key: 'estoque_atual', label: 'estoque_atual', obrigatorio: false, desc: 'Estoque atual' },
   { key: 'estoque_minimo', label: 'estoque_minimo', obrigatorio: false, desc: 'Estoque mínimo' },
   { key: 'estoque_maximo', label: 'estoque_maximo', obrigatorio: false, desc: 'Estoque máximo' },
   { key: 'itens_por_caixa', label: 'itens_por_caixa', obrigatorio: false, desc: 'Itens por caixa' },
+  { key: 'peso_liquido_kg', label: 'peso_liquido_kg', obrigatorio: false, desc: 'Peso líquido (kg)' },
+  { key: 'peso_bruto_kg', label: 'peso_bruto_kg', obrigatorio: false, desc: 'Peso bruto (kg)' },
+  { key: 'largura_cm', label: 'largura_cm', obrigatorio: false, desc: 'Largura (cm)' },
+  { key: 'altura_cm', label: 'altura_cm', obrigatorio: false, desc: 'Altura (cm)' },
+  { key: 'profundidade_cm', label: 'profundidade_cm', obrigatorio: false, desc: 'Profundidade (cm)' },
 ];
 
 function baixarModelo() {
   const bom = '\uFEFF';
   const header = COLUNAS.map(c => c.label).join(';');
   const exemplos = [
-    'Sabonete Artesanal;Lavanda;001;Higiene;Sabonete premium;unidade;5.90;100;20;500;1',
-    'Sabonete Artesanal;Rosa;002;Higiene;Sabonete premium;unidade;5.90;80;20;500;1',
-    'Sabonete Artesanal;Baunilha;003;Higiene;Sabonete premium;unidade;5.90;60;20;500;1',
-    'Creme Hidratante;;004;Cosméticos;Creme corporal;unidade;12.90;50;10;200;1',
+    '001;Sabonete Lavanda;Higiene;Sabonete premium;unidade;5.90;2.50;100;20;500;1;0.15;0.18;8;12;6',
+    '002;Sabonete Rosa;Higiene;Sabonete premium;unidade;5.90;2.50;80;20;500;1;0.15;0.18;8;12;6',
+    '003;Creme Hidratante;Cosméticos;Creme corporal;unidade;12.90;5.00;50;10;200;1;0.30;0.35;10;15;8',
   ].join('\n');
   const blob = new Blob([bom + header + '\n' + exemplos], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = 'modelo_produtos_grade.csv'; a.click();
+  a.href = url; a.download = 'modelo_produtos.csv'; a.click();
   URL.revokeObjectURL(url);
 }
 
@@ -52,9 +56,7 @@ function parsearCSV(texto) {
     const vals = linhas[i].split(sep).map(v => v.trim().replace(/^"|"$/g, ''));
     const obj = {};
     cabecalho.forEach((col, j) => { obj[col] = vals[j] || ''; });
-    // suporte a alias "nome" como nome_base
-    if (!obj.nome_base && obj.nome) obj.nome_base = obj.nome;
-    if (obj.nome_base) rows.push(obj);
+    if (obj.nome || obj.codigo) rows.push(obj);
   }
   return { rows };
 }
@@ -64,73 +66,32 @@ function num(v) {
   return isNaN(n) ? 0 : n;
 }
 
-/**
- * Agrupa as linhas em famílias (grade) ou produtos simples.
- * Retorna array de SKUs prontos para criar.
- */
 function processarLinhas(rows) {
-  // Agrupa por chave: nome_base + categoria
-  const familias = {};
-  for (const row of rows) {
-    const nomeBase = row.nome_base?.trim() || '';
-    const variacao = row.variacao?.trim() || '';
-    const categoria = row.categoria?.trim() || '';
-    const chave = `${nomeBase}||${categoria}`;
-    if (!familias[chave]) familias[chave] = { nomeBase, categoria, rows: [] };
-    familias[chave].rows.push({ ...row, variacao });
-  }
-
   const skus = [];
-  const familiasList = [];
-
-  for (const [, fam] of Object.entries(familias)) {
-    const temVariacao = fam.rows.some(r => r.variacao);
-
-    if (temVariacao) {
-      // É uma família com grade — cada linha é um SKU
-      const variacoes = fam.rows.map(r => r.variacao).filter(Boolean);
-      familiasList.push({ nomeBase: fam.nomeBase, categoria: fam.categoria, variacoes, qtd: fam.rows.length });
-      for (const row of fam.rows) {
-        const nome = row.variacao ? `${fam.nomeBase} ${row.variacao}` : fam.nomeBase;
-        skus.push({
-          nome,
-          codigo: row.codigo?.trim() || '',
-          categoria: fam.categoria || '',
-          descricao: row.descricao?.trim() || '',
-          unidade: row.unidade?.trim() || 'unidade',
-          preco_unitario: num(row.preco_unitario),
-          estoque_atual: num(row.estoque_atual),
-          estoque_minimo: num(row.estoque_minimo),
-          estoque_maximo: num(row.estoque_maximo),
-          itens_por_caixa: num(row.itens_por_caixa) || 1,
-          ativo: true,
-          _familia: fam.nomeBase,
-          _variacao: row.variacao,
-        });
-      }
-    } else {
-      // Produto simples (sem variação)
-      for (const row of fam.rows) {
-        skus.push({
-          nome: fam.nomeBase,
-          codigo: row.codigo?.trim() || '',
-          categoria: fam.categoria || '',
-          descricao: row.descricao?.trim() || '',
-          unidade: row.unidade?.trim() || 'unidade',
-          preco_unitario: num(row.preco_unitario),
-          estoque_atual: num(row.estoque_atual),
-          estoque_minimo: num(row.estoque_minimo),
-          estoque_maximo: num(row.estoque_maximo),
-          itens_por_caixa: num(row.itens_por_caixa) || 1,
-          ativo: true,
-          _familia: null,
-          _variacao: null,
-        });
-      }
-    }
+  for (const row of rows) {
+    const codigo = row.codigo?.trim() || '';
+    skus.push({
+      codigo,
+      nome: row.nome?.trim() || '',
+      categoria: row.categoria?.trim() || '',
+      descricao: row.descricao?.trim() || '',
+      unidade: row.unidade?.trim() || 'unidade',
+      preco_unitario: num(row.preco_unitario),
+      preco_custo: num(row.preco_custo),
+      estoque_atual: num(row.estoque_atual),
+      estoque_minimo: num(row.estoque_minimo),
+      estoque_maximo: num(row.estoque_maximo),
+      itens_por_caixa: num(row.itens_por_caixa) || 1,
+      peso_liquido_kg: num(row.peso_liquido_kg),
+      peso_bruto_kg: num(row.peso_bruto_kg),
+      largura_cm: num(row.largura_cm),
+      altura_cm: num(row.altura_cm),
+      profundidade_cm: num(row.profundidade_cm),
+      ativo: true,
+      _codigo: codigo,
+    });
   }
-
-  return { skus, familiasList };
+  return { skus };
 }
 
 export default function ModalImportarPlanilha({ onClose, onImportado }) {
@@ -140,17 +101,25 @@ export default function ModalImportarPlanilha({ onClose, onImportado }) {
   const [importando, setImportando] = useState(false);
   const [resultado, setResultado] = useState(null);
   const inputRef = useRef();
+  const [produtosExistentes, setProdutosExistentes] = useState({});
 
-  const handleArquivo = (file) => {
+  const handleArquivo = async (file) => {
     if (!file) return;
     setErroArquivo(''); setPreview(null); setResultado(null); setArquivo(file);
+    
+    // Carrega todos os produtos existentes
+    const todos = await base44.entities.Produto.list();
+    const mapCodigo = {};
+    todos.forEach(p => { if (p.codigo) mapCodigo[p.codigo] = p; });
+    setProdutosExistentes(mapCodigo);
+    
     const reader = new FileReader();
     reader.onload = (e) => {
       const parsed = parsearCSV(e.target.result);
       if (parsed.erro) { setErroArquivo(parsed.erro); return; }
-      const { skus, familiasList } = processarLinhas(parsed.rows);
-      if (skus.length === 0) { setErroArquivo('Nenhum produto válido encontrado. Verifique se a coluna "nome_base" está preenchida.'); return; }
-      setPreview({ skus, familiasList, total: skus.length });
+      const { skus } = processarLinhas(parsed.rows);
+      if (skus.length === 0) { setErroArquivo('Nenhum produto válido encontrado.'); return; }
+      setPreview({ skus, total: skus.length });
     };
     reader.readAsText(file, 'UTF-8');
   };
@@ -166,9 +135,18 @@ export default function ModalImportarPlanilha({ onClose, onImportado }) {
     setImportando(true);
     let sucesso = 0, falha = 0;
     for (const prod of preview.skus) {
-      const { _familia, _variacao, ...dados } = prod;
-      try { await base44.entities.Produto.create(dados); sucesso++; }
-      catch { falha++; }
+      const { _codigo, ...dados } = prod;
+      try {
+        const existente = produtosExistentes[_codigo];
+        if (existente && _codigo) {
+          // Atualiza produto existente
+          await base44.entities.Produto.update(existente.id, dados);
+        } else {
+          // Cria novo produto
+          await base44.entities.Produto.create(dados);
+        }
+        sucesso++;
+      } catch { falha++; }
     }
     setImportando(false);
     setResultado({ sucesso, falha });
@@ -226,10 +204,10 @@ export default function ModalImportarPlanilha({ onClose, onImportado }) {
                 <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
                   <div className="flex items-center gap-1.5 mb-1">
                     <Layers size={12} className="text-blue-600" />
-                    <p className="text-xs font-semibold text-blue-800">Como funciona a grade?</p>
+                    <p className="text-xs font-semibold text-blue-800">Como funciona a atualização?</p>
                   </div>
                   <p className="text-xs text-blue-700">
-                    Produtos com <strong>mesmo nome_base + categoria</strong> e coluna <code className="bg-blue-100 px-1 rounded">variacao</code> preenchida são agrupados como família. Cada linha vira um SKU separado.
+                    Se um produto com o <strong>código informado já existe</strong>, ele será <strong>atualizado</strong>. Caso contrário, um novo produto será criado.
                   </p>
                 </div>
               </div>
@@ -245,7 +223,7 @@ export default function ModalImportarPlanilha({ onClose, onImportado }) {
                     </span>
                   ))}
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-2">* obrigatório · <span className="text-blue-600">variacao</span> = coluna especial para grade · separador: ; (ponto e vírgula)</p>
+                <p className="text-[10px] text-muted-foreground mt-2">separador: ; (ponto e vírgula) · use <code className="bg-muted px-1 rounded font-mono">codigo</code> para atualizar produtos existentes</p>
               </div>
 
               {/* Drop zone */}
@@ -285,45 +263,36 @@ export default function ModalImportarPlanilha({ onClose, onImportado }) {
                     </button>
                   </div>
 
-                  {/* Resumo de famílias */}
-                  {preview.familiasList.length > 0 && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 space-y-1.5">
-                      <p className="text-xs font-semibold text-blue-800 flex items-center gap-1.5">
-                        <Layers size={12} /> Grades detectadas:
-                      </p>
-                      {preview.familiasList.map((f, i) => (
-                        <div key={i} className="text-xs text-blue-700">
-                          <strong>{f.nomeBase}</strong> {f.categoria ? `(${f.categoria})` : ''} → {f.qtd} SKUs: {f.variacoes.join(', ')}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+
 
                   {/* Tabela de SKUs */}
                   <div className="max-h-52 overflow-y-auto rounded-xl border border-border">
                     <table className="w-full text-xs">
                       <thead className="bg-muted/50 sticky top-0">
                         <tr>
-                          {['Nome do SKU', 'Variação', 'Código', 'Categoria', 'Estoque', 'Preço'].map(h => (
+                          {['Código', 'Nome', 'Categoria', 'Estoque', 'Preço', 'Status'].map(h => (
                             <th key={h} className="text-left px-3 py-2 font-semibold text-muted-foreground">{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
-                        {preview.skus.slice(0, 60).map((p, i) => (
-                          <tr key={i} className={`border-t border-border ${p._familia ? 'bg-blue-50/30' : ''}`}>
-                            <td className="px-3 py-1.5 text-foreground font-medium">{p.nome}</td>
-                            <td className="px-3 py-1.5">
-                              {p._variacao
-                                ? <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">{p._variacao}</span>
-                                : <span className="text-muted-foreground">—</span>}
-                            </td>
-                            <td className="px-3 py-1.5 text-muted-foreground font-mono">{p.codigo || '—'}</td>
-                            <td className="px-3 py-1.5 text-muted-foreground">{p.categoria || '—'}</td>
-                            <td className="px-3 py-1.5 text-foreground">{p.estoque_atual}</td>
-                            <td className="px-3 py-1.5 text-foreground">R$ {p.preco_unitario.toFixed(2)}</td>
-                          </tr>
-                        ))}
+                        {preview.skus.slice(0, 60).map((p, i) => {
+                          const existe = produtosExistentes[p.codigo];
+                          return (
+                            <tr key={i} className={`border-t border-border ${existe ? 'bg-blue-50/30' : ''}`}>
+                              <td className="px-3 py-1.5 font-mono text-muted-foreground">{p.codigo || '—'}</td>
+                              <td className="px-3 py-1.5 text-foreground font-medium">{p.nome}</td>
+                              <td className="px-3 py-1.5 text-muted-foreground">{p.categoria || '—'}</td>
+                              <td className="px-3 py-1.5 text-foreground">{p.estoque_atual}</td>
+                              <td className="px-3 py-1.5 text-foreground">R$ {p.preco_unitario.toFixed(2)}</td>
+                              <td className="px-3 py-1.5">
+                                {existe
+                                  ? <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">Atualizar</span>
+                                  : <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Novo</span>}
+                              </td>
+                            </tr>
+                          );
+                        })}
                         {preview.total > 60 && (
                           <tr><td colSpan={6} className="px-3 py-2 text-center text-muted-foreground">+{preview.total - 60} mais...</td></tr>
                         )}
