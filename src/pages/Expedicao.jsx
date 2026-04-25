@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
+import { gerarDANFEHTML } from '@/lib/danfeGenerator';
 import { Truck, FileText, CheckCircle, Plus, Search, X, Send, Printer, ExternalLink, RefreshCw, Package, ArrowRight } from 'lucide-react';
 import { gerarNumero } from '@/lib/numeracao';
 import { registrarLog } from '@/lib/audit';
@@ -340,7 +341,18 @@ export default function Expedicao() {
     setAdvancingId(null);
   };
 
-  const imprimirNF = (exp) => {
+  const imprimirDANFE = (exp) => {
+    const html = gerarDANFEHTML(exp, {
+      nome: 'RAIO DO SOL',
+      cnpj: '00000000000000',
+      endereco: 'Velas e Cosméticos - Fone: (11) 9999-9999'
+    });
+    const win = window.open('', '_blank', 'width=960,height=1200');
+    win.document.write(html);
+    win.document.close();
+  };
+
+  const imprimirNFAntigo = (exp) => {
     const win = window.open('', '_blank', 'width=960,height=1200');
     const hoje = new Date().toLocaleDateString('pt-BR');
     const totalItens = (exp.itens || []).reduce((s, i) => s + (i.quantidade || 0), 0);
@@ -673,7 +685,7 @@ export default function Expedicao() {
                        coluna={coluna}
                        advancing={advancingId === exp.id}
                        onAvancar={readonly ? null : atualizarStatus}
-                       onImprimirNF={imprimirNF}
+                       onImprimirNF={imprimirDANFE}
                        onImprimirEtiqueta={readonly ? null : (exp) => setEtiquetaExpedicao(exp)}
                        onConfirmarRecebimento={readonly ? null : (exp) => setModalConfirmacao(exp)}
                      />
