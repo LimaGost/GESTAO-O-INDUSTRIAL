@@ -21,7 +21,7 @@ import Auditoria from './pages/Auditoria';
 import SupabaseSchemas from './pages/SupabaseSchemas';
 import ConfirmarRecebimento from './pages/ConfirmarRecebimento';
 import Perdas from './pages/Perdas';
-import RastreamentoCliente from './pages/RastreamentoCliente';
+import CRM from './pages/CRM.jsx';
 import AguardandoAprovacao from './components/AguardandoAprovacao';
 import { PermissoesProvider, usePermissoes } from '@/lib/usePermissoes.jsx';
 
@@ -81,7 +81,7 @@ const AuthenticatedApp = () => {
           <Route path="/Relatorios"     element={<RotaProtegida modulo="Relatorios">     <Relatorios />     </RotaProtegida>} />
           <Route path="/Perdas"         element={<RotaProtegida modulo="Perdas">         <Perdas />         </RotaProtegida>} />
           <Route path="/Auditoria"      element={<RotaProtegida modulo="Auditoria">      <Auditoria />      </RotaProtegida>} />
-          <Route path="/RastreamentoCliente" element={<RotaProtegida modulo="Expedicao"><RastreamentoCliente /></RotaProtegida>} />
+          <Route path="/CRM" element={<RotaProtegida modulo="Clientes"><CRM /></RotaProtegida>} />
           <Route path="/SupabaseSchemas" element={<SupabaseSchemas />} />
           <Route path="/Configuracoes"  element={<RotaProtegida modulo="Configuracoes">  <Configuracoes />  </RotaProtegida>} />
         </Route>
