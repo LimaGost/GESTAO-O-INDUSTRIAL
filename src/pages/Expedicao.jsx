@@ -9,6 +9,7 @@ import { usePermissoes } from '@/lib/usePermissoes.jsx';
 import AlertaSeparacao from '@/components/expedicao/AlertaSeparacao';
 import { getExpedicaoColunasConfig } from '@/components/configuracoes/AbaExpedicao';
 import { getWhatsappKanbanConfig, getWhatsappExpedicaoConfig } from '@/components/configuracoes/AbaWhatsapp';
+import EtiquetaEndereco from '@/components/expedicao/EtiquetaEndereco';
 
 const CORES_MAP = [
   { accent: '#64748B', bg: '#F8FAFC', border: '#CBD5E1', dot: '#94A3B8' },
@@ -105,7 +106,7 @@ function OPFinalizadaCard({ op, clienteNome, onEmitirNF, emitindo }) {
 }
 
 // Card para expedições existentes
-function ExpedicaoCard({ exp, coluna, onAvancar, onImprimirNF, onConfirmarRecebimento, advancing }) {
+function ExpedicaoCard({ exp, coluna, onAvancar, onImprimirNF, onImprimirEtiqueta, onConfirmarRecebimento, advancing }) {
   const totalItens = (exp.itens || []).reduce((s, i) => s + (i.quantidade || 0), 0);
 
   return (
@@ -144,11 +145,15 @@ function ExpedicaoCard({ exp, coluna, onAvancar, onImprimirNF, onConfirmarRecebi
         </div>
       )}
 
-      <div className="flex gap-2 pt-1">
-        <button onClick={() => onImprimirNF(exp)}
+      <div className="flex gap-2 pt-1 flex-wrap">
+         <button onClick={() => onImprimirNF(exp)}
           className="flex items-center gap-1.5 text-xs border border-border px-2.5 py-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
           <Printer size={11} /> NF
-        </button>
+         </button>
+         <button onClick={() => onImprimirEtiqueta?.(exp)}
+          className="flex items-center gap-1.5 text-xs border border-border px-2.5 py-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
+          <Printer size={11} /> Etiqueta
+         </button>
 
         {exp.status !== 'entregue' && onConfirmarRecebimento && (
           <button onClick={() => onConfirmarRecebimento(exp)}
@@ -187,6 +192,7 @@ export default function Expedicao() {
   const [busca, setBusca] = useState('');
   const [advancingId, setAdvancingId] = useState(null);
   const [emitindoOpId, setEmitindoOpId] = useState(null);
+  const [etiquetaExpedicao, setEtiquetaExpedicao] = useState(null);
 
   const load = async () => {
     const [exps, ordens, pedidos] = await Promise.all([
@@ -524,14 +530,15 @@ export default function Expedicao() {
                 ) : (
                   cards.map(exp => (
                     <ExpedicaoCard
-                      key={exp.id}
-                      exp={exp}
-                      coluna={coluna}
-                      advancing={advancingId === exp.id}
-                      onAvancar={readonly ? null : atualizarStatus}
-                      onImprimirNF={imprimirNF}
-                      onConfirmarRecebimento={readonly ? null : (exp) => setModalConfirmacao(exp)}
-                    />
+                       key={exp.id}
+                       exp={exp}
+                       coluna={coluna}
+                       advancing={advancingId === exp.id}
+                       onAvancar={readonly ? null : atualizarStatus}
+                       onImprimirNF={imprimirNF}
+                       onImprimirEtiqueta={readonly ? null : (exp) => setEtiquetaExpedicao(exp)}
+                       onConfirmarRecebimento={readonly ? null : (exp) => setModalConfirmacao(exp)}
+                     />
                   ))
                 )}
               </div>
@@ -553,6 +560,12 @@ export default function Expedicao() {
           expedicao={modalConfirmacao}
           onClose={() => setModalConfirmacao(null)}
           onConfirmed={() => { setModalConfirmacao(null); load(); }}
+        />
+      )}
+      {etiquetaExpedicao && (
+        <EtiquetaEndereco
+          expedicao={etiquetaExpedicao}
+          onClose={() => setEtiquetaExpedicao(null)}
         />
       )}
     </div>
