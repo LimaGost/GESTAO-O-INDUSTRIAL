@@ -109,8 +109,14 @@ export default function Kanban() {
   const [showFilters, setShowFilters]     = useState(false);
   const [showTotal, setShowTotal]         = useState(false);
   const [colunasVisiveis, setColunasVisiveis] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('kanban_colunas')) || buildColunas().map(c => c.key); }
-    catch { return buildColunas().map(c => c.key); }
+    const todasKeys = buildColunas().map(c => c.key);
+    try {
+      const salvas = JSON.parse(localStorage.getItem('kanban_colunas'));
+      if (!salvas) return todasKeys;
+      // Garante que colunas novas (não presentes no cache) sejam adicionadas como visíveis
+      const novas = todasKeys.filter(k => !salvas.includes(k));
+      return [...salvas.filter(k => todasKeys.includes(k)), ...novas];
+    } catch { return todasKeys; }
   });
 
   useEffect(() => {
