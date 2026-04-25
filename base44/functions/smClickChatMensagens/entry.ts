@@ -8,10 +8,13 @@ Deno.serve(async (req) => {
 
     const { protocol } = await req.json();
     if (!protocol) return Response.json({ error: 'protocol é obrigatório' }, { status: 400 });
+    
+    const protocolInt = parseInt(protocol, 10);
+    if (isNaN(protocolInt)) return Response.json({ error: 'protocol deve ser um número' }, { status: 400 });
 
     const apiKey = Deno.env.get('SMCLICK_API_KEY');
 
-    const res = await fetch(`https://api.smclick.com.br/attendances/chats/message?protocol=${protocol}`, {
+    const res = await fetch(`https://api.smclick.com.br/attendances/chats/message?protocol=${protocolInt}`, {
       method: 'GET',
       headers: {
         'x-api-key': apiKey,
