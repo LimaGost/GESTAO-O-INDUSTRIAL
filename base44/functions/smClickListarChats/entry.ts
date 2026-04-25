@@ -21,11 +21,12 @@ Deno.serve(async (req) => {
       contact: {
         name: chat.contact?.name || 'Contato',
         telephone: chat.contact?.telephone,
+        photo: chat.contact?.photo,
       },
-      last_message: chat.last_message?.body || '',
+      last_message: chat.last_message?.body || chat.last_message?.message || 'Sem mensagens',
       unread_count: chat.unread_count || 0,
       is_group: chat.is_group || false,
-      updated_date: chat.updated_at || new Date().toISOString(),
+      updated_date: chat.updated_at || chat.last_message?.created_at || new Date().toISOString(),
       status: chat.status,
     }));
 

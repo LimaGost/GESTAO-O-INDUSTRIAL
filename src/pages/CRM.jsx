@@ -493,11 +493,20 @@ export default function CRM() {
               >
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary flex-shrink-0 overflow-hidden text-sm">
-                    {chat.contact?.name ? chat.contact.name.charAt(0).toUpperCase() : '?'}
+                    {chat.contact?.photo ? (
+                      <img src={chat.contact.photo} alt={chat.contact.name} className="w-full h-full object-cover" />
+                    ) : (
+                      chat.contact?.name ? chat.contact.name.charAt(0).toUpperCase() : '?'
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm text-foreground truncate">{chat.contact?.name || 'Chat'}</p>
-                    <p className="text-xs text-muted-foreground truncate line-clamp-1">{chat.last_message || 'Sem mensagens'}</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-semibold text-sm text-foreground truncate">{chat.contact?.name || 'Chat'}</p>
+                      <p className="text-xs text-muted-foreground flex-shrink-0">{timeAgo(chat.updated_date)}</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate line-clamp-1">
+                      ✓ {chat.last_message || 'Sem mensagens'}
+                    </p>
                   </div>
                   {chat.unread_count > 0 && (
                     <span className="bg-destructive text-white text-[10px] font-bold px-2 py-1 rounded-full flex-shrink-0">
@@ -515,7 +524,7 @@ export default function CRM() {
       {chatAberto ? (
         <div className="flex-1 bg-card border border-border rounded-2xl overflow-hidden flex flex-col">
           <ChatPanel
-            contato={chatAberto.contact || { name: chatAberto.contact?.name || 'Chat' }}
+            contato={chatAberto.contact || { name: 'Chat', telephone: '' }}
             chatId={chatAberto.id}
             onClose={() => setChatAberto(null)}
           />
