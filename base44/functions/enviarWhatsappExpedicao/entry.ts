@@ -1,26 +1,39 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
-const INSTANCE_ID = Deno.env.get('SMCLICK_INSTANCE_ID');
-const API_KEY = Deno.env.get('SMCLICK_API_KEY');
+const SMCLICK_API_KEY  = Deno.env.get('SMCLICK_API_KEY');
+const SMCLICK_INSTANCE = Deno.env.get('SMCLICK_INSTANCE_ID');
 
 const STATUS_LABEL = {
-  nf_emitida: '📄 NF Emitida',
-  enviada:    '🚚 Em Trânsito',
-  entregue:   '✅ Entregue',
+  nf_emitida: 'NF Emitida 📄',
+  enviada:    'Em Trânsito 🚚',
+  entregue:   'Entregue ✅',
 };
 
-function buildMsg(template, expedicao, statusLabel) {
+const DEFAULT_MSG_INTERNO = `🚚 *Atualização de Expedição*\n\nNF: *{nf}*\nCliente: {cliente}\nPedido: #{pedido}\nStatus: *{etapa}*`;
+const DEFAULT_MSG_CLIENTE = `Olá, {cliente}! Atualização sobre seu pedido #{pedido}.\n\nStatus: *{etapa}*\n\nObrigado pela preferência! 🙏`;
+
+function renderMensagem(template, vars) {
   return template
-    .replace(/{nf}/g, expedicao.numero_nf || '')
-    .replace(/{cliente}/g, expedicao.cliente_nome || '')
-    .replace(/{pedido}/g, expedicao.pedido_numero || '')
-    .replace(/{etapa}/g, statusLabel);
+    .replace(/{nf}/g, vars.nf || '')
+    .replace(/{cliente}/g, vars.cliente || '')
+    .replace(/{pedido}/g, vars.pedido || '')
+    .replace(/{etapa}/g, vars.etapa || '');
 }
 
-async function enviarSMS(telefone, mensagem) {
-  const tel = String(telefone).replace(/\D/g, '');
-  const url = `https://smclick.com.br/api/v1/send-text?instanceid=${INSTANCE_ID}&apikey=${API_KEY}&phone=${tel}&message=${encodeURIComponent(mensagem)}`;
-  const res = await fetch(url);
+async function enviarMensagem(telefone, mensagem) {
+  const telefoneFormatado = String(telefone).replace(/\D/g, '');
+  const res = await fetch('https://api.smclick.com.br/instances/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-API-KEY': SMCLICK_API_KEY },
+    body: JSON.stringify({
+      instance: SMCLICK_INSTANCE,
+      type: 'text',
+      content: {
+        telephone: telefoneFormatado,
+        message: mensagem,
+      },
+    }),
+  });
   return res.ok;
 }
 
@@ -30,28 +43,42 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { expedicao, novoStatus, clienteTelefone, numeros_internos, msg_interno, msg_cliente } = await req.json();
+    const {
+      expedicao,
+      novoStatus,
+      clienteTelefone,
+      numeros_internos = [],
+      msg_interno,
+      msg_cliente,
+    } = await req.json();
 
-    const statusLabel = STATUS_LABEL[novoStatus] || novoStatus;
+    const etapaLabel = STATUS_LABEL[novoStatus] || novoStatus;
+    const vars = {
+      nf: expedicao.numero_nf || '',
+      cliente: expedicao.cliente_nome || '',
+      pedido: expedicao.pedido_numero || '',
+      etapa: etapaLabel,
+    };
+
     const resultados = [];
 
-    // Enviar para números internos ativos
-    for (const n of (numeros_internos || [])) {
+    // Mensagem para números internos ativos
+    const msgInterna = renderMensagem(msg_interno || DEFAULT_MSG_INTERNO, vars);
+    for (const n of numeros_internos) {
       if (!n.ativo || !n.telefone) continue;
-      const msg = buildMsg(msg_interno || '🚚 Expedição {nf} — {cliente} — {etapa}', expedicao, statusLabel);
-      const ok = await enviarSMS(n.telefone, msg);
+      const ok = await enviarMensagem(n.telefone, msgInterna);
       resultados.push({ destino: 'interno', nome: n.nome, ok });
     }
 
-    // Enviar para cliente (se fornecido)
+    // Mensagem para o cliente
     if (clienteTelefone) {
-      const msg = buildMsg(msg_cliente || 'Olá {cliente}! Seu pedido #{pedido} está com status: {etapa}', expedicao, statusLabel);
-      const ok = await enviarSMS(clienteTelefone, msg);
+      const msgCliente = renderMensagem(msg_cliente || DEFAULT_MSG_CLIENTE, vars);
+      const ok = await enviarMensagem(clienteTelefone, msgCliente);
       resultados.push({ destino: 'cliente', ok });
     }
 
     return Response.json({ ok: true, resultados });
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    return Response.json({ ok: false, error: error.message }, { status: 500 });
   }
 });
