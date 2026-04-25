@@ -344,42 +344,148 @@ export default function Expedicao() {
     const win = window.open('', '_blank', 'width=900,height=1100');
     const hoje = new Date().toLocaleDateString('pt-BR');
     const totalItens = (exp.itens || []).reduce((s, i) => s + (i.quantidade || 0), 0);
-    const totalProdutos = (exp.itens || []).length;
     const valorTotal = (exp.valor_total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
     const itensRows = (exp.itens || []).map((item, idx) => `
-      <tr style="background:${idx % 2 === 0 ? '#fff' : '#f9f9f9'}">
-        <td style="border:1px solid #ccc;padding:5px 8px;font-size:11px;">${String(idx + 1).padStart(3, '0')}</td>
-        <td style="border:1px solid #ccc;padding:5px 8px;font-size:11px;">${item.produto_nome || '—'}</td>
-        <td style="border:1px solid #ccc;padding:5px 8px;font-size:11px;text-align:center;">UN</td>
-        <td style="border:1px solid #ccc;padding:5px 8px;font-size:11px;text-align:center;">${item.quantidade || 0}</td>
-        <td style="border:1px solid #ccc;padding:5px 8px;font-size:11px;text-align:right;">R$ ${(item.preco_unitario || 0).toFixed(2)}</td>
-        <td style="border:1px solid #ccc;padding:5px 8px;font-size:11px;text-align:right;font-weight:bold;">R$ ${(item.total || 0).toFixed(2)}</td>
+      <tr>
+        <td style="border:1px solid #000;padding:4px;font-size:10px;text-align:center;">${String(idx + 1).padStart(3, '0')}</td>
+        <td style="border:1px solid #000;padding:4px;font-size:10px;">${item.produto_nome || '—'}</td>
+        <td style="border:1px solid #000;padding:4px;font-size:10px;text-align:center;">UN</td>
+        <td style="border:1px solid #000;padding:4px;font-size:10px;text-align:center;">${item.quantidade || 0}</td>
+        <td style="border:1px solid #000;padding:4px;font-size:9px;text-align:right;">R$ ${(item.preco_unitario || 0).toFixed(2)}</td>
+        <td style="border:1px solid #000;padding:4px;font-size:9px;text-align:right;font-weight:bold;">R$ ${(item.total || 0).toFixed(2)}</td>
       </tr>
     `).join('');
     win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>NF-e ${exp.numero_nf}</title>
-    <style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;font-size:11px;color:#111;background:#fff;padding:20px;}.nf{border:2px solid #000;max-width:850px;margin:0 auto;}.secao{border-bottom:1.5px solid #000;padding:8px 10px;}.secao-titulo{font-size:9px;font-weight:bold;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;}.campo{border:1px solid #ccc;padding:4px 6px;}.campo-label{font-size:8px;color:#666;text-transform:uppercase;}.campo-valor{font-size:11px;font-weight:bold;color:#111;margin-top:1px;}.header{display:flex;align-items:stretch;border-bottom:2px solid #000;}.header-logo{flex:0 0 200px;padding:12px;border-right:1.5px solid #000;display:flex;flex-direction:column;justify-content:center;}.header-danfe{flex:0 0 160px;padding:10px;border-right:1.5px solid #000;text-align:center;display:flex;flex-direction:column;justify-content:center;align-items:center;}.header-chave{flex:1;padding:10px;display:flex;flex-direction:column;justify-content:center;}.empresa-nome{font-size:15px;font-weight:bold;color:#B45309;}.danfe-titulo{font-size:13px;font-weight:bold;letter-spacing:3px;border:2px solid #000;padding:4px 8px;margin-bottom:6px;}.chave-acesso{font-family:monospace;font-size:10px;background:#f5f5f5;padding:6px;border:1px solid #ccc;word-break:break-all;}.nfe-numero{font-size:13px;font-weight:bold;color:#B45309;margin-top:6px;}table.itens{width:100%;border-collapse:collapse;}table.itens th{background:#333;color:#fff;padding:5px 8px;font-size:10px;text-align:left;border:1px solid #000;}.totais{display:grid;grid-template-columns:1fr 1fr 1fr;}.total-box{border:1px solid #ccc;padding:6px 10px;}.total-label{font-size:9px;color:#666;text-transform:uppercase;}.total-valor{font-size:14px;font-weight:bold;}.total-valor.destaque{color:#B45309;font-size:16px;}</style>
-    </head><body><div class="nf">
-    <div class="header">
-      <div class="header-logo"><div class="empresa-nome">☀️ RAIO DO SOL</div><div style="font-size:9px;color:#666;margin-top:2px;">Indústria e Comércio</div></div>
-      <div class="header-danfe"><div class="danfe-titulo">DANFE</div><div style="font-size:9px;">Documento Auxiliar da<br/>Nota Fiscal Eletrônica</div><div class="nfe-numero">Nº ${exp.numero_nf}</div></div>
-      <div class="header-chave"><div style="font-size:9px;color:#666;margin-bottom:4px;text-transform:uppercase;font-weight:bold;">Chave de Acesso</div><div class="chave-acesso">${exp.numero_nf.replace(/\D/g,'').padStart(44,'0').replace(/(.{4})/g,'$1 ').trim()}</div><div style="margin-top:10px;font-size:9px;"><strong>Data de Emissão:</strong> ${exp.data_emissao || hoje}</div></div>
-    </div>
-    <div class="secao"><div class="secao-titulo">Destinatário</div>
-      <div class="campo"><div class="campo-label">Nome / Razão Social</div><div class="campo-valor">${exp.cliente_nome}</div></div>
-    </div>
-    <div class="secao"><div class="secao-titulo">Dados dos Produtos</div>
-      <table class="itens"><thead><tr><th style="width:40px;">Nº</th><th>Descrição</th><th style="width:50px;text-align:center;">UN</th><th style="width:60px;text-align:center;">Qtd</th><th style="width:90px;text-align:right;">Vlr. Unit.</th><th style="width:90px;text-align:right;">Vlr. Total</th></tr></thead>
-      <tbody>${itensRows}</tbody></table>
-    </div>
-    <div class="secao" style="border-bottom:none;"><div class="secao-titulo">Totais</div>
-      <div class="totais">
-        <div class="total-box"><div class="total-label">Total de Produtos</div><div class="total-valor">R$ ${valorTotal}</div></div>
-        <div class="total-box"><div class="total-label">Volumes</div><div class="total-valor">${totalItens} un</div></div>
-        <div class="total-box" style="background:#FEF3C7;"><div class="total-label">Valor Total NF-e</div><div class="total-valor destaque">R$ ${valorTotal}</div></div>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: Arial, sans-serif; font-size: 11px; color: #000; background: #fff; }
+      .nf { width: 21cm; height: 29.7cm; padding: 0; margin: 0 auto; background: #fff; page-break-after: always; border: 1px dashed #ccc; }
+      
+      /* HEADER - Área de identificação */
+      .header { display: flex; height: 70px; border-bottom: 3px solid #000; }
+      .header-logo { flex: 0 0 200px; padding: 8px; border-right: 2px solid #000; display: flex; flex-direction: column; justify-content: center; }
+      .logo-nome { font-size: 14px; font-weight: bold; color: #333; }
+      .logo-desc { font-size: 7px; color: #666; margin-top: 2px; line-height: 1.2; }
+      .header-danfe { flex: 0 0 150px; padding: 8px; border-right: 2px solid #000; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+      .danfe-titulo { font-size: 14px; font-weight: bold; color: #000; letter-spacing: 2px; border: 2px solid #000; padding: 3px; margin-bottom: 3px; }
+      .danfe-desc { font-size: 7px; color: #333; }
+      .header-info { flex: 1; padding: 8px; display: flex; flex-direction: column; justify-content: center; }
+      .header-chave { font-size: 12px; font-weight: bold; letter-spacing: 1px; font-family: monospace; margin-bottom: 3px; }
+      .header-nf { font-size: 14px; font-weight: bold; color: #B45309; }
+      
+      /* Seções */
+      .secao { border-bottom: 2px solid #000; padding: 6px 8px; }
+      .secao-titulo { font-size: 9px; font-weight: bold; color: #000; text-transform: uppercase; margin-bottom: 3px; }
+      .campo-linha { display: flex; gap: 8px; margin-bottom: 3px; }
+      .campo { flex: 1; font-size: 10px; }
+      .campo-label { font-size: 8px; color: #666; font-weight: bold; }
+      .campo-valor { font-size: 10px; font-weight: bold; margin-top: 1px; }
+      
+      /* Tabela de itens */
+      table.itens { width: 100%; border-collapse: collapse; margin: 4px 0; }
+      table.itens th { background: #333; color: #fff; padding: 3px 4px; font-size: 9px; border: 1px solid #000; text-align: left; }
+      table.itens td { border: 1px solid #000; padding: 3px 4px; font-size: 9px; }
+      table.itens td.num { text-align: center; width: 30px; }
+      table.itens td.qtd { text-align: center; width: 50px; }
+      table.itens td.valor { text-align: right; width: 70px; }
+      
+      /* Totais */
+      .totais { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2px; padding: 6px; }
+      .total-box { border: 1px solid #000; padding: 6px 4px; text-align: center; }
+      .total-label { font-size: 8px; font-weight: bold; margin-bottom: 2px; }
+      .total-valor { font-size: 12px; font-weight: bold; color: #000; }
+      .total-destaque { background: #FEF3C7; border: 2px solid #B45309; }
+      
+      /* Rodapé */
+      .rodape { padding: 4px 8px; font-size: 8px; color: #666; text-align: center; }
+      
+      @media print {
+        body { margin: 0; padding: 0; }
+        .nf { border: none; page-break-inside: avoid; }
+      }
+    </style>
+    </head><body>
+    
+    <div class="nf">
+      
+      <!-- HEADER -->
+      <div class="header">
+        <div class="header-logo">
+          <div class="logo-nome">☀️ RAIO DO SOL</div>
+          <div class="logo-desc">Velas e Cosméticos<br/>CNPJ: 00.000.000/0000-00<br/>Fone: (11) 9999-9999</div>
+        </div>
+        <div class="header-danfe">
+          <div class="danfe-titulo">DANFE</div>
+          <div class="danfe-desc">Documento Auxiliar<br/>NFe</div>
+        </div>
+        <div class="header-info">
+          <div class="header-chave">${exp.numero_nf}</div>
+          <div class="header-nf">NF-e nº ${exp.numero_nf}</div>
+        </div>
       </div>
-      <div style="text-align:center;font-size:9px;color:#999;margin-top:10px;padding-top:8px;border-top:1px solid #eee;">Documento emitido pelo sistema · ${hoje} · NF-e nº ${exp.numero_nf}</div>
-    </div></div>
-    <script>window.onload=()=>setTimeout(()=>window.print(),400);<\/script></body></html>`);
+      
+      <!-- DESTINATÁRIO -->
+      <div class="secao">
+        <div class="secao-titulo">Destinatário / Tomador</div>
+        <div class="campo-linha">
+          <div class="campo" style="flex: 2;">
+            <div class="campo-label">Nome / Razão Social</div>
+            <div class="campo-valor">${exp.cliente_nome || '—'}</div>
+          </div>
+          <div class="campo">
+            <div class="campo-label">Data Emissão</div>
+            <div class="campo-valor">${exp.data_emissao || hoje}</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- PRODUTOS -->
+      <div class="secao">
+        <div class="secao-titulo">Dados dos Produtos / Serviços</div>
+        <table class="itens">
+          <thead>
+            <tr>
+              <th class="num">Nº</th>
+              <th>Descrição</th>
+              <th style="width: 45px; text-align: center;">UN</th>
+              <th class="qtd">Qtd</th>
+              <th class="valor">Vlr. Unit.</th>
+              <th class="valor">Vlr. Total</th>
+            </tr>
+          </thead>
+          <tbody>${itensRows}</tbody>
+        </table>
+      </div>
+      
+      <!-- TOTAIS -->
+      <div class="secao">
+        <div class="secao-titulo">Totalizações</div>
+        <div class="totais">
+          <div class="total-box">
+            <div class="total-label">Quantidade Total</div>
+            <div class="total-valor">${totalItens}</div>
+          </div>
+          <div class="total-box">
+            <div class="total-label">Valor Total Produtos</div>
+            <div class="total-valor">R$ ${valorTotal}</div>
+          </div>
+          <div class="total-box total-destaque">
+            <div class="total-label">Valor Total NF-e</div>
+            <div class="total-valor">R$ ${valorTotal}</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- RODAPÉ -->
+      <div class="rodape">
+        <div>Documento emitido por sistema informatizado. Emissão: ${hoje}</div>
+        <div style="margin-top: 4px;">NF-e nº ${exp.numero_nf} | Série: 1 | Modelo 55</div>
+      </div>
+      
+    </div>
+    
+    <script>window.onload=()=>setTimeout(()=>window.print(),400);<\/script>
+    </body></html>`);
     win.document.close();
   };
 
