@@ -14,12 +14,13 @@ Deno.serve(async (req) => {
     const apiKey = Deno.env.get('SMCLICK_API_KEY');
 
     const body = {
-      telephone: telefone,
+      contact: {
+        name: nomeCliente || telefone,
+        telephone: telefone,
+      },
       instance: instanceId,
       department,
     };
-
-    if (nomeCliente) body.name = nomeCliente;
 
     const res = await fetch('https://api.smclick.com.br/attendances/chats', {
       method: 'POST',
@@ -36,8 +37,7 @@ Deno.serve(async (req) => {
       return Response.json({ erro: data?.message || 'Erro ao criar chat', detalhes: data }, { status: res.status });
     }
 
-    // Tenta extrair o chat_id da resposta (pode variar conforme a API)
-    const chat_id = data?.id || data?.chat_id || data?.data?.id || data?.data?.chat_id;
+    const chat_id = data?.object?.id || data?.id || data?.chat_id;
 
     return Response.json({ chat_id, raw: data });
   } catch (error) {
