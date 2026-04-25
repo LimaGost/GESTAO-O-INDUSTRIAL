@@ -117,8 +117,12 @@ export default function Kanban() {
     const onSettings = () => {
       const novas = buildColunas();
       setKanbanColunas(novas);
-      // reset colunas visíveis para incluir as novas
-      setColunasVisiveis(novas.map(c => c.key));
+      // Adiciona novas colunas à lista de visíveis (sem remover as já ocultas intencionalmente)
+      setColunasVisiveis(prev => {
+        const keysNovas = novas.map(c => c.key);
+        const adicionadas = keysNovas.filter(k => !prev.includes(k));
+        return [...prev.filter(k => keysNovas.includes(k)), ...adicionadas];
+      });
     };
     window.addEventListener('settings:saved', onSettings);
     return () => window.removeEventListener('settings:saved', onSettings);
