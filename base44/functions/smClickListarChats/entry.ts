@@ -18,6 +18,7 @@ Deno.serve(async (req) => {
 
     const chats = (data.results || []).map(chat => ({
       id: chat.id,
+      protocol: chat.protocol || chat.id,
       contact: {
         name: chat.contact?.name || 'Contato',
         telephone: chat.contact?.telephone,

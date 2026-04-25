@@ -22,7 +22,7 @@ function timeAgo(dateStr) {
 }
 
 // ── Painel de chat ────────────────────────────────────────────────────────────
-function ChatPanel({ contato, chatId, onClose }) {
+function ChatPanel({ contato, protocol, onClose }) {
   const [mensagem, setMensagem] = useState('');
   const [mensagens, setMensagens] = useState([]);
   const [enviando, setEnviando] = useState(false);
@@ -31,17 +31,19 @@ function ChatPanel({ contato, chatId, onClose }) {
 
   const carregarMensagens = async () => {
     try {
-      const res = await base44.functions.invoke('smClickChatMensagens', { chatId });
+      const res = await base44.functions.invoke('smClickChatMensagens', { protocol });
       if (res.data?.mensagens) setMensagens(res.data.mensagens);
     } catch {}
     setLoadingMsgs(false);
   };
 
   useEffect(() => {
-    carregarMensagens();
-    const interval = setInterval(carregarMensagens, 10000);
-    return () => clearInterval(interval);
-  }, [chatId]);
+    if (protocol) {
+      carregarMensagens();
+      const interval = setInterval(carregarMensagens, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [protocol]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -55,7 +57,7 @@ function ChatPanel({ contato, chatId, onClose }) {
     setMensagens(prev => [...prev, msgTemp]);
     setMensagem('');
     try {
-      await base44.functions.invoke('smClickEnviarMensagem', { chatId, mensagem: texto });
+      await base44.functions.invoke('smClickEnviarMensagem', { protocol, mensagem: texto });
       await carregarMensagens();
     } catch (e) {
       alert('Erro ao enviar mensagem: ' + e.message);
@@ -525,7 +527,7 @@ export default function CRM() {
         <div className="flex-1 bg-card border border-border rounded-2xl overflow-hidden flex flex-col">
           <ChatPanel
             contato={chatAberto.contact || { name: 'Chat', telephone: '' }}
-            chatId={chatAberto.id}
+            protocol={chatAberto.protocol}
             onClose={() => setChatAberto(null)}
           />
         </div>

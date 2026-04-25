@@ -6,12 +6,12 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { chatId } = await req.json();
-    if (!chatId) return Response.json({ error: 'chatId é obrigatório' }, { status: 400 });
+    const { protocol } = await req.json();
+    if (!protocol) return Response.json({ error: 'protocol é obrigatório' }, { status: 400 });
 
     const apiKey = Deno.env.get('SMCLICK_API_KEY');
 
-    const res = await fetch(`https://api.smclick.com.br/attendances/chats/${chatId}/messages`, {
+    const res = await fetch(`https://api.smclick.com.br/attendances/chats/message?protocol=${protocol}`, {
       method: 'GET',
       headers: {
         'x-api-key': apiKey,
