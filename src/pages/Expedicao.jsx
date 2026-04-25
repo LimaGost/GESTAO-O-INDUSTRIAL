@@ -202,10 +202,10 @@ export default function Expedicao() {
 
     const finalizadas = ordens.filter(o => {
       if (o.status !== 'finalizado') return false;
-      // Se tem pedido vinculado, só mostra se o pedido ainda não tem expedição
-      if (o.pedido_id) return !expPedidoIds.has(o.pedido_id);
-      // Se não tem pedido, só mostra se a própria OP não foi expedida
-      return !expOpIds.has(o.id);
+      // Apenas OPs vinculadas a um pedido
+      if (!o.pedido_id) return false;
+      // Só mostra se o pedido ainda não tem expedição
+      return !expPedidoIds.has(o.pedido_id);
     });
 
     setOpsFinalizadas(finalizadas);
