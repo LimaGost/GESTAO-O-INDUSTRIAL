@@ -279,11 +279,13 @@ function ModalIniciarChat({ contato, onConfirmar, onClose, iniciando }) {
 function ModalNovoContato({ onCriar, onClose, criando }) {
   const [nome, setNome] = useState('');
   const [telefone, setTelefone] = useState('');
+  const [erro, setErro] = useState(null);
 
-  const handleCriar = () => {
-    if (!nome.trim()) return alert('Nome obrigatório.');
-    if (!telefone.trim()) return alert('Telefone obrigatório.');
-    onCriar({ name: nome.trim(), telephone: fmtTelefone(telefone) });
+  const handleCriar = async () => {
+    if (!nome.trim()) return setErro('Nome obrigatório.');
+    if (!telefone.trim()) return setErro('Telefone obrigatório.');
+    setErro(null);
+    await onCriar({ name: nome.trim(), telephone: fmtTelefone(telefone), setErro, onClose });
   };
 
   return (
@@ -296,12 +298,19 @@ function ModalNovoContato({ onCriar, onClose, criando }) {
           <p className="font-bold text-foreground">Novo Contato</p>
         </div>
 
+        {erro && (
+          <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 text-sm text-destructive font-medium flex items-start gap-2">
+            <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
+            <div>{erro}</div>
+          </div>
+        )}
+
         <div className="space-y-3">
           <div>
             <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Nome *</label>
             <input
               value={nome}
-              onChange={e => setNome(e.target.value)}
+              onChange={e => { setNome(e.target.value); setErro(null); }}
               placeholder="Nome do contato"
               className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             />
@@ -310,7 +319,7 @@ function ModalNovoContato({ onCriar, onClose, criando }) {
             <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Telefone * (com DDI)</label>
             <input
               value={telefone}
-              onChange={e => setTelefone(e.target.value)}
+              onChange={e => { setTelefone(e.target.value); setErro(null); }}
               placeholder="5511999999999"
               className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             />
@@ -433,18 +442,21 @@ export default function CRM() {
     setIniciandoId(null);
   };
 
-  const criarContato = async ({ name, telephone }) => {
+  const criarContato = async ({ name, telephone, setErro, onClose }) => {
     setCriandoContato(true);
     try {
       const res = await base44.functions.invoke('smClickCriarContato', { name, telephone });
       if (res.data?.ok) {
-        setShowNovoContato(false);
+        onClose();
         await carregarContatos(buscaInput);
+      } else if (res.data?.status === 'duplicado') {
+        setErro('✓ Contato já existe. Ele aparecerá na lista abaixo.');
+        setTimeout(() => { setShowNovoContato(false); }, 2000);
       } else {
-        alert('Erro ao criar contato: ' + (res.data?.error || 'Erro desconhecido'));
+        setErro(res.data?.error || 'Erro ao criar contato');
       }
     } catch (e) {
-      alert('Erro: ' + e.message);
+      setErro(e.message);
     }
     setCriandoContato(false);
   };

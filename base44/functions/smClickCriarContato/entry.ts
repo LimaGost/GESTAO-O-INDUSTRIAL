@@ -22,9 +22,22 @@ Deno.serve(async (req) => {
     });
 
     const data = await res.json();
-    if (!res.ok) return Response.json({ error: data?.message || 'Erro ao criar contato', detalhes: data }, { status: res.status });
 
-    return Response.json({ ok: true, contato: data });
+    // Trata duplicata gracefully
+    if (!res.ok) {
+      const msg = data?.message || data?.error || '';
+      if (msg.includes('duplicate') || msg.includes('já existe')) {
+        return Response.json({
+          ok: false,
+          erro: 'Contato já existe',
+          detalhes: 'Este número de telefone já está cadastrado no sistema.',
+          status: 'duplicado'
+        }, { status: 409 });
+      }
+      return Response.json({ error: data?.message || 'Erro ao criar contato', detalhes: data }, { status: res.status });
+    }
+
+    return Response.json({ ok: true, contato: data.object || data });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
