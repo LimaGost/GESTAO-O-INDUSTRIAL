@@ -284,8 +284,10 @@ function ModalNovoContato({ onCriar, onClose, criando }) {
   const handleCriar = async () => {
     if (!nome.trim()) return setErro('Nome obrigatório.');
     if (!telefone.trim()) return setErro('Telefone obrigatório.');
+    const telLimpo = fmtTelefone(telefone);
+    if (telLimpo.length < 10) return setErro('Telefone deve ter pelo menos 10 dígitos.');
     setErro(null);
-    await onCriar({ name: nome.trim(), telephone: fmtTelefone(telefone), setErro, onClose });
+    await onCriar({ name: nome.trim(), telephone: telLimpo, setErro, onClose });
   };
 
   return (
