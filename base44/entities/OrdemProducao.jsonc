@@ -17,13 +17,6 @@
     },
     "status": {
       "type": "string",
-      "enum": [
-        "a_produzir",
-        "em_producao",
-        "produzido",
-        "em_embalagem",
-        "finalizado"
-      ],
       "default": "a_produzir"
     },
     "itens": {
