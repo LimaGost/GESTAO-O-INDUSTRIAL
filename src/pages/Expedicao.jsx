@@ -7,6 +7,7 @@ import ModalConfirmacaoRecebimento from '@/components/expedicao/ModalConfirmacao
 import NovaExpedicaoModal from '@/components/expedicao/NovaExpedicaoModal';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 import { getExpedicaoColunasConfig } from '@/components/configuracoes/AbaExpedicao';
+import { getWhatsappKanbanConfig, getWhatsappExpedicaoConfig } from '@/components/configuracoes/AbaWhatsapp';
 
 const CORES_MAP = [
   { accent: '#64748B', bg: '#F8FAFC', border: '#CBD5E1', dot: '#94A3B8' },
@@ -246,6 +247,26 @@ export default function Expedicao() {
     }
 
     await registrarLog('Expedicao', expedicao.id, 'EXPEDICAO_CRIADA', `NF ${numero_nf} emitida manualmente da OP ${op.numero}`);
+
+    // Disparo WhatsApp — NF emitida
+    const waCfg = getWhatsappExpedicaoConfig();
+    const waKanban = getWhatsappKanbanConfig();
+    if (waCfg.etapas_notificar.includes('nf_emitida')) {
+      let clienteTelefone = null;
+      if (waCfg.notificar_cliente && pedInfo?.cliente_id) {
+        const clientes = await base44.entities.Cliente.filter({ id: pedInfo.cliente_id });
+        clienteTelefone = clientes[0]?.telefone || null;
+      }
+      base44.functions.invoke('enviarWhatsappExpedicao', {
+        expedicao: { numero_nf, cliente_nome: pedInfo?.nome || op.produto_nome, pedido_numero: pedInfo?.numero || op.pedido_numero || '' },
+        novoStatus: 'nf_emitida',
+        clienteTelefone: waCfg.notificar_cliente ? clienteTelefone : null,
+        numeros_internos: waKanban.numeros_internos || [],
+        msg_interno: waCfg.msg_interno,
+        msg_cliente: waCfg.msg_cliente,
+      }).catch(() => {});
+    }
+
     await load();
     setEmitindoOpId(null);
   };
@@ -280,6 +301,27 @@ export default function Expedicao() {
     if (status === 'entregue') updates.data_entrega = new Date().toISOString().split('T')[0];
     await base44.entities.Expedicao.update(id, updates);
     await registrarLog('Expedicao', id, 'STATUS', `Status atualizado para ${status}`);
+
+    // Disparo WhatsApp — avanço de status na expedição
+    const waCfg = getWhatsappExpedicaoConfig();
+    const waKanban = getWhatsappKanbanConfig();
+    if (waCfg.etapas_notificar.includes(status)) {
+      const expAtual = expedicoes.find(e => e.id === id);
+      let clienteTelefone = null;
+      if (waCfg.notificar_cliente && expAtual?.cliente_id) {
+        const clientes = await base44.entities.Cliente.filter({ id: expAtual.cliente_id });
+        clienteTelefone = clientes[0]?.telefone || null;
+      }
+      base44.functions.invoke('enviarWhatsappExpedicao', {
+        expedicao: { numero_nf: expAtual?.numero_nf || id, cliente_nome: expAtual?.cliente_nome || '', pedido_numero: expAtual?.pedido_numero || '' },
+        novoStatus: status,
+        clienteTelefone: waCfg.notificar_cliente ? clienteTelefone : null,
+        numeros_internos: waKanban.numeros_internos || [],
+        msg_interno: waCfg.msg_interno,
+        msg_cliente: waCfg.msg_cliente,
+      }).catch(() => {});
+    }
+
     await load();
     setAdvancingId(null);
   };
