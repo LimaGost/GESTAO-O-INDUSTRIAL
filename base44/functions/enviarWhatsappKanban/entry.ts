@@ -49,15 +49,12 @@ Deno.serve(async (req) => {
       novoStatus,
       clienteNome,
       clienteTelefone,
-      notificar_interno = true,
+      numeros_internos = [],
       msg_interno,
       msg_cliente,
     } = await req.json();
 
-    const etapaLabel = ETAPA_LABELS[novoStatus];
-    if (!etapaLabel) {
-      return Response.json({ ok: false, msg: 'Etapa não configurada para notificação' });
-    }
+    const etapaLabel = ETAPA_LABELS[novoStatus] || novoStatus;
 
     const vars = {
       op: ordem.numero,
@@ -69,12 +66,13 @@ Deno.serve(async (req) => {
 
     const resultados = [];
 
-    // Mensagem para o número interno
-    if (NUMERO_INTERNO && notificar_interno) {
-      const template = msg_interno || DEFAULT_MSG_INTERNO;
-      const msgInterna = renderMensagem(template, vars);
-      const ok = await enviarMensagem(NUMERO_INTERNO, msgInterna);
-      resultados.push({ destino: 'interno', ok });
+    // Mensagem para cada número interno ativo
+    const template_interno = msg_interno || DEFAULT_MSG_INTERNO;
+    const msgInterna = renderMensagem(template_interno, vars);
+    for (const n of numeros_internos) {
+      if (!n.ativo || !n.telefone) continue;
+      const ok = await enviarMensagem(n.telefone, msgInterna);
+      resultados.push({ destino: `interno:${n.nome}`, ok });
     }
 
     // Mensagem para o cliente (se tiver telefone)

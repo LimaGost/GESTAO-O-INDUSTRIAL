@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Save, Check, MessageCircle, Phone, Bell, AlertCircle, Info } from 'lucide-react';
+import { Save, Check, MessageCircle, Phone, Bell, AlertCircle, Info, Plus, Trash2, UserCheck } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
 const STORAGE_KEY = 'whatsapp_kanban_config';
@@ -30,7 +30,7 @@ export function getWhatsappKanbanConfig() {
   return {
     etapas_notificar: ['produzido', 'finalizado'],
     notificar_cliente: true,
-    notificar_interno: true,
+    numeros_internos: [],
     msg_interno: DEFAULT_MSG_INTERNO,
     msg_cliente: DEFAULT_MSG_CLIENTE,
   };
@@ -52,7 +52,30 @@ export default function AbaWhatsapp() {
   const [testando, setTestando] = useState(false);
   const [resultadoTeste, setResultadoTeste] = useState(null);
   const [telefoneTest, setTelefoneTest] = useState('');
-  const [abaMsg, setAbaMsg] = useState('interno'); // 'interno' | 'cliente'
+  const [abaMsg, setAbaMsg] = useState('interno');
+  const [novoNome, setNovoNome] = useState('');
+  const [novoTelefone, setNovoTelefone] = useState('');
+
+  const numeros_internos = config.numeros_internos || [];
+
+  const adicionarNumero = () => {
+    if (!novoTelefone.trim()) return;
+    const numero = { nome: novoNome.trim() || 'Sem nome', telefone: novoTelefone.trim().replace(/\D/g, ''), ativo: true };
+    setConfig(prev => ({ ...prev, numeros_internos: [...(prev.numeros_internos || []), numero] }));
+    setNovoNome('');
+    setNovoTelefone('');
+  };
+
+  const removerNumero = (idx) => {
+    setConfig(prev => ({ ...prev, numeros_internos: prev.numeros_internos.filter((_, i) => i !== idx) }));
+  };
+
+  const toggleNumero = (idx) => {
+    setConfig(prev => ({
+      ...prev,
+      numeros_internos: prev.numeros_internos.map((n, i) => i === idx ? { ...n, ativo: !n.ativo } : n),
+    }));
+  };
 
   const toggleEtapa = (key) => {
     setConfig(prev => {
@@ -80,7 +103,7 @@ export default function AbaWhatsapp() {
         novoStatus: 'produzido',
         clienteNome: 'Cliente Teste',
         clienteTelefone: config.notificar_cliente ? telefoneTest.trim() : null,
-        notificar_interno: config.notificar_interno,
+        numeros_internos: config.numeros_internos || [],
         msg_interno: config.msg_interno,
         msg_cliente: config.msg_cliente,
       });
@@ -146,34 +169,78 @@ export default function AbaWhatsapp() {
         )}
       </div>
 
-      {/* Destinatários */}
+      {/* Números internos */}
+      <div className="bg-card border border-border rounded-2xl p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <UserCheck size={15} className="text-primary" />
+          <p className="font-bold text-sm text-foreground">Números Internos</p>
+        </div>
+        <p className="text-xs text-muted-foreground mb-4">Cadastre as pessoas da equipe que receberão notificações. Ative ou desative individualmente.</p>
+
+        {numeros_internos.length > 0 && (
+          <div className="space-y-2 mb-4">
+            {numeros_internos.map((n, idx) => (
+              <div key={idx} className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${n.ativo ? 'border-green-300 bg-green-50' : 'border-border bg-muted/20'}`}>
+                <button onClick={() => toggleNumero(idx)}
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${n.ativo ? 'bg-green-500 border-green-500' : 'border-muted-foreground/40'}`}>
+                  {n.ativo && <Check size={11} className="text-white" />}
+                </button>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-semibold truncate ${n.ativo ? 'text-foreground' : 'text-muted-foreground'}`}>{n.nome}</p>
+                  <p className="text-xs text-muted-foreground font-mono">{n.telefone}</p>
+                </div>
+                <button onClick={() => removerNumero(idx)}
+                  className="p-1.5 hover:bg-destructive/10 rounded-lg text-muted-foreground hover:text-destructive transition-colors flex-shrink-0">
+                  <Trash2 size={13} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {numeros_internos.length === 0 && (
+          <div className="flex flex-col items-center py-6 text-muted-foreground/50 bg-muted/30 rounded-xl mb-4">
+            <Phone size={22} className="mb-1.5 opacity-40" />
+            <p className="text-xs">Nenhum número cadastrado ainda.</p>
+          </div>
+        )}
+
+        {/* Adicionar novo */}
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground">Adicionar número</p>
+          <div className="flex gap-2">
+            <input value={novoNome} onChange={e => setNovoNome(e.target.value)}
+              placeholder="Nome (ex: Maria, Gerência)"
+              className="flex-1 border border-border rounded-xl px-3 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
+            <input value={novoTelefone} onChange={e => setNovoTelefone(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && adicionarNumero()}
+              placeholder="5511999999999"
+              className="flex-1 border border-border rounded-xl px-3 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
+            <button onClick={adicionarNumero}
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:opacity-90 flex-shrink-0">
+              <Plus size={14} /> Adicionar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Notificar cliente */}
       <div className="bg-card border border-border rounded-2xl p-5">
         <div className="flex items-center gap-2 mb-1">
           <Phone size={15} className="text-primary" />
-          <p className="font-bold text-sm text-foreground">Destinatários</p>
+          <p className="font-bold text-sm text-foreground">Notificação ao Cliente</p>
         </div>
-        <p className="text-xs text-muted-foreground mb-4">Defina quem receberá as notificações a cada disparo.</p>
-        <div className="space-y-3">
-          {[
-            { key: 'notificar_interno', label: 'Número interno da empresa', desc: 'Configurado via secret SMCLICK_NUMERO_INTERNO' },
-            { key: 'notificar_cliente', label: 'Telefone do cliente', desc: 'Enviado ao cliente vinculado ao pedido (se cadastrado)' },
-          ].map(item => {
-            const ativo = config[item.key];
-            return (
-              <button key={item.key}
-                onClick={() => setConfig(prev => ({ ...prev, [item.key]: !prev[item.key] }))}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left ${ativo ? 'border-primary/30 bg-primary/5' : 'border-border bg-background hover:bg-muted/30'}`}>
-                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${ativo ? 'bg-primary border-primary' : 'border-muted-foreground/40'}`}>
-                  {ativo && <Check size={11} className="text-white" />}
-                </div>
-                <div className="flex-1">
-                  <p className={`text-sm font-semibold ${ativo ? 'text-foreground' : 'text-muted-foreground'}`}>{item.label}</p>
-                  <p className="text-xs text-muted-foreground">{item.desc}</p>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+        <p className="text-xs text-muted-foreground mb-3">Enviar mensagem ao telefone do cliente vinculado ao pedido (se cadastrado).</p>
+        <button onClick={() => setConfig(prev => ({ ...prev, notificar_cliente: !prev.notificar_cliente }))}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left ${config.notificar_cliente ? 'border-primary/30 bg-primary/5' : 'border-border bg-background hover:bg-muted/30'}`}>
+          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${config.notificar_cliente ? 'bg-primary border-primary' : 'border-muted-foreground/40'}`}>
+            {config.notificar_cliente && <Check size={11} className="text-white" />}
+          </div>
+          <div className="flex-1">
+            <p className={`text-sm font-semibold ${config.notificar_cliente ? 'text-foreground' : 'text-muted-foreground'}`}>Notificar cliente</p>
+            <p className="text-xs text-muted-foreground">Enviado ao telefone do cliente vinculado ao pedido</p>
+          </div>
+        </button>
       </div>
 
       {/* Mensagens customizáveis */}
