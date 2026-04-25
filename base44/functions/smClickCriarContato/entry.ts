@@ -9,8 +9,12 @@ Deno.serve(async (req) => {
     const apiKey = Deno.env.get('SMCLICK_API_KEY');
     const { name, telephone, tags } = await req.json();
 
-    if (!name) return Response.json({ error: 'name obrigatório' }, { status: 400 });
-    if (!telephone) return Response.json({ error: 'telephone obrigatório' }, { status: 400 });
+    if (!name || !name.trim()) return Response.json({ error: 'Nome obrigatório e não pode estar vazio' }, { status: 400 });
+    if (!telephone || !telephone.trim()) return Response.json({ error: 'Telefone obrigatório e não pode estar vazio' }, { status: 400 });
+    
+    // Valida se telefone tem apenas números
+    const telSoNumeros = telephone.replace(/\D/g, '');
+    if (telSoNumeros.length < 10) return Response.json({ error: 'Telefone deve ter pelo menos 10 dígitos' }, { status: 400 });
 
     const body = { name, telephone };
     if (tags && tags.length > 0) body.tags = tags;
