@@ -6,6 +6,7 @@ import { registrarLog } from '@/lib/audit';
 import ModalConfirmacaoRecebimento from '@/components/expedicao/ModalConfirmacaoRecebimento';
 import NovaExpedicaoModal from '@/components/expedicao/NovaExpedicaoModal';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
+import AlertaSeparacao from '@/components/expedicao/AlertaSeparacao';
 import { getExpedicaoColunasConfig } from '@/components/configuracoes/AbaExpedicao';
 import { getWhatsappKanbanConfig, getWhatsappExpedicaoConfig } from '@/components/configuracoes/AbaWhatsapp';
 
@@ -410,6 +411,8 @@ export default function Expedicao() {
 
   return (
     <div className="flex flex-col h-full space-y-4">
+      <AlertaSeparacao />
+
       {/* Header */}
       <div className="bg-card border border-border rounded-2xl px-5 py-4 flex-shrink-0">
         <div className="flex items-center justify-between flex-wrap gap-3">
