@@ -10,9 +10,15 @@ const campos = [
   { key: 'unidade', label: 'Unidade', type: 'text', col: 1 },
   { key: 'itens_por_caixa', label: 'Itens por Caixa', type: 'number', col: 1 },
   { key: 'preco_unitario', label: 'Preço Unitário (R$)', type: 'number', col: 1 },
+  { key: 'preco_custo', label: 'Preço de Custo (R$)', type: 'number', col: 1 },
   { key: 'estoque_atual', label: 'Estoque Atual', type: 'number', col: 1 },
   { key: 'estoque_minimo', label: 'Estoque Mínimo', type: 'number', col: 1 },
   { key: 'estoque_maximo', label: 'Estoque Máximo', type: 'number', col: 1 },
+  { key: 'peso_liquido_kg', label: 'Peso Líquido (kg)', type: 'number', col: 1 },
+  { key: 'peso_bruto_kg', label: 'Peso Bruto (kg)', type: 'number', col: 1 },
+  { key: 'largura_cm', label: 'Largura (cm)', type: 'number', col: 1 },
+  { key: 'altura_cm', label: 'Altura (cm)', type: 'number', col: 1 },
+  { key: 'profundidade_cm', label: 'Profundidade (cm)', type: 'number', col: 1 },
 ];
 
 export default function ModalEditarSku({ produto, onClose, onSaved }) {
@@ -27,6 +33,12 @@ export default function ModalEditarSku({ produto, onClose, onSaved }) {
     estoque_minimo: produto.estoque_minimo || 0,
     estoque_maximo: produto.estoque_maximo || 0,
     preco_unitario: produto.preco_unitario || 0,
+    preco_custo: produto.preco_custo || 0,
+    peso_liquido_kg: produto.peso_liquido_kg || 0,
+    peso_bruto_kg: produto.peso_bruto_kg || 0,
+    largura_cm: produto.largura_cm || 0,
+    altura_cm: produto.altura_cm || 0,
+    profundidade_cm: produto.profundidade_cm || 0,
     foto_url: produto.foto_url || '',
   });
   const [loading, setLoading] = useState(false);
