@@ -30,6 +30,10 @@
       "type": "number",
       "default": 0
     },
+    "preco_custo": {
+      "type": "number",
+      "default": 0
+    },
     "estoque_atual": {
       "type": "number",
       "default": 0
@@ -64,6 +68,26 @@
     "alerta_ativo": {
       "type": "boolean",
       "default": false
+    },
+    "peso_liquido_kg": {
+      "type": "number",
+      "description": "Peso l\u00edquido em quilogramas"
+    },
+    "peso_bruto_kg": {
+      "type": "number",
+      "description": "Peso bruto em quilogramas"
+    },
+    "largura_cm": {
+      "type": "number",
+      "description": "Largura em cent\u00edmetros"
+    },
+    "altura_cm": {
+      "type": "number",
+      "description": "Altura em cent\u00edmetros"
+    },
+    "profundidade_cm": {
+      "type": "number",
+      "description": "Profundidade em cent\u00edmetros"
     }
   },
   "required": [
