@@ -6,8 +6,9 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { telefone, nomeCliente } = await req.json();
+    const { telefone, nomeCliente, department } = await req.json();
     if (!telefone) return Response.json({ error: 'Telefone obrigatório' }, { status: 400 });
+    if (!department) return Response.json({ error: 'Departamento obrigatório' }, { status: 400 });
 
     const instanceId = Deno.env.get('SMCLICK_INSTANCE_ID');
     const apiKey = Deno.env.get('SMCLICK_API_KEY');
@@ -15,6 +16,7 @@ Deno.serve(async (req) => {
     const body = {
       telephone: telefone,
       instance: instanceId,
+      department,
     };
 
     if (nomeCliente) body.name = nomeCliente;

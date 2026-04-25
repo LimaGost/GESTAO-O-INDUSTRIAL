@@ -203,6 +203,58 @@ function ClienteCard({ cliente, chatAtivo, onIniciarChat, onAbrirChat, iniciando
   );
 }
 
+// ── Modal para iniciar chat ───────────────────────────────────────────────────
+function ModalIniciarChat({ cliente, onConfirmar, onClose, iniciando }) {
+  const [departmentId, setDepartmentId] = useState(() => localStorage.getItem('crm_department_id') || '');
+
+  const handleConfirmar = () => {
+    if (!departmentId.trim()) return alert('Informe o ID do departamento.');
+    localStorage.setItem('crm_department_id', departmentId.trim());
+    onConfirmar(departmentId.trim());
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="bg-card border border-border rounded-2xl w-full max-w-sm shadow-2xl p-6 space-y-4" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center font-bold text-green-700 flex-shrink-0">
+            {(cliente.nome || 'C').charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <p className="font-bold text-foreground">{cliente.nome}</p>
+            <p className="text-xs text-muted-foreground">{cliente.telefone}</p>
+          </div>
+        </div>
+
+        <div>
+          <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">ID do Departamento (SM Click) *</label>
+          <input
+            value={departmentId}
+            onChange={e => setDepartmentId(e.target.value)}
+            placeholder="ex: uuid-do-departamento"
+            className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary font-mono"
+          />
+          <p className="text-[11px] text-muted-foreground mt-1">Encontre o ID na plataforma SM Click → Departamentos. O valor é salvo automaticamente.</p>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={handleConfirmar}
+            disabled={iniciando || !departmentId.trim()}
+            className="flex-1 flex items-center justify-center gap-2 bg-green-500 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-green-600 disabled:opacity-50 transition-colors"
+          >
+            {iniciando ? <Loader2 size={15} className="animate-spin" /> : <MessageCircle size={15} />}
+            {iniciando ? 'Iniciando...' : 'Iniciar Chat'}
+          </button>
+          <button onClick={onClose} className="px-4 border border-border rounded-xl text-sm text-muted-foreground hover:bg-muted transition-colors">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Página principal CRM ─────────────────────────────────────────────────────
 export default function CRM() {
   const [clientes, setClientes] = useState([]);
@@ -211,6 +263,7 @@ export default function CRM() {
   const [iniciandoId, setIniciandoId] = useState(null);
   const [chatAberto, setChatAberto] = useState(null); // { cliente, chat_id }
   const [loading, setLoading] = useState(true);
+  const [modalCliente, setModalCliente] = useState(null); // cliente aguardando department
 
   useEffect(() => {
     base44.entities.Cliente.list().then(data => {
@@ -218,7 +271,6 @@ export default function CRM() {
       setLoading(false);
     });
 
-    // Carrega chats salvos do localStorage
     try {
       const saved = JSON.parse(localStorage.getItem('crm_chats_ativos') || '{}');
       setChatsAtivos(saved);
@@ -231,20 +283,26 @@ export default function CRM() {
   };
 
   const iniciarChat = async (cliente) => {
+    setModalCliente(cliente);
+  };
+
+  const confirmarIniciarChat = async (departmentId) => {
+    const cliente = modalCliente;
     const tel = fmtTelefone(cliente.telefone);
-    if (!tel) return alert('Cliente sem telefone cadastrado.');
     setIniciandoId(cliente.id);
     try {
       const res = await base44.functions.invoke('smClickCriarChat', {
         telefone: tel,
         nomeCliente: cliente.nome,
+        department: departmentId,
       });
       if (res.data?.chat_id) {
         const novos = { ...chatsAtivos, [cliente.id]: { chat_id: res.data.chat_id } };
         salvarChats(novos);
+        setModalCliente(null);
         setChatAberto({ cliente, chat_id: res.data.chat_id });
       } else {
-        alert('Erro ao criar chat: ' + (res.data?.erro || 'Resposta inesperada'));
+        alert('Erro ao criar chat: ' + (res.data?.erro || JSON.stringify(res.data)));
       }
     } catch (e) {
       alert('Erro ao iniciar chat: ' + e.message);
@@ -259,6 +317,14 @@ export default function CRM() {
 
   return (
     <div className="flex h-full gap-4" style={{ minHeight: 'calc(100vh - 140px)' }}>
+      {modalCliente && (
+        <ModalIniciarChat
+          cliente={modalCliente}
+          iniciando={iniciandoId === modalCliente.id}
+          onConfirmar={confirmarIniciarChat}
+          onClose={() => setModalCliente(null)}
+        />
+      )}
       {/* Lista de clientes */}
       <div className={`flex flex-col ${chatAberto ? 'hidden md:flex md:w-80 flex-shrink-0' : 'flex-1'}`}>
         {/* Header */}
