@@ -11,6 +11,9 @@
     "pedido_numero": {
       "type": "string"
     },
+    "ordem_producao_id": {
+      "type": "string"
+    },
     "cliente_id": {
       "type": "string"
     },
@@ -36,12 +39,26 @@
     "data_entrega": {
       "type": "string"
     },
+    "transportadora": {
+      "type": "string"
+    },
     "confirmado_pelo_cliente": {
       "type": "boolean",
       "default": false
     },
     "data_confirmacao": {
       "type": "string"
+    },
+    "valor_total": {
+      "type": "number",
+      "default": 0
+    },
+    "itens": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "default": []
     },
     "observacoes": {
       "type": "string"
