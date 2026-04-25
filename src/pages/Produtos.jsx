@@ -57,6 +57,7 @@ function exportarProdutos(produtos) {
 export default function Produtos() {
   const { somenteLeitura } = usePermissoes();
   const readonly = somenteLeitura('Produtos');
+  const [user, setUser] = useState(null);
   const [produtos, setProdutos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [showFamilia, setShowFamilia] = useState(false);
@@ -107,7 +108,10 @@ export default function Produtos() {
     return String(codigos.length > 0 ? Math.max(...codigos) + 1 : 1);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    base44.auth.me().then(u => setUser(u)).catch(() => {});
+    load();
+  }, []);
 
   useEffect(() => {
     const cats = [...new Set(produtos.map(p => p.categoria || 'Sem Categoria'))];
@@ -213,14 +217,18 @@ export default function Produtos() {
         </div>
         {!readonly ? (
           <div className="flex gap-2 flex-wrap">
-            <button onClick={() => exportarProdutos(produtos)}
-              className="flex items-center gap-2 border border-border bg-card text-foreground px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-muted transition-colors">
-              <FileSpreadsheet size={16} className="text-blue-600" /> Exportar Planilha
-            </button>
-            <button onClick={() => setShowImportar(true)}
-              className="flex items-center gap-2 border border-border bg-card text-foreground px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-muted transition-colors">
-              <FileSpreadsheet size={16} className="text-green-600" /> Atualizar via Planilha
-            </button>
+            {user?.role === 'admin' && (
+              <>
+                <button onClick={() => exportarProdutos(produtos)}
+                  className="flex items-center gap-2 border border-border bg-card text-foreground px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-muted transition-colors">
+                  <FileSpreadsheet size={16} className="text-blue-600" /> Exportar Planilha
+                </button>
+                <button onClick={() => setShowImportar(true)}
+                  className="flex items-center gap-2 border border-border bg-card text-foreground px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-muted transition-colors">
+                  <FileSpreadsheet size={16} className="text-green-600" /> Atualizar via Planilha
+                </button>
+              </>
+            )}
             <button onClick={() => { setShowFamilia(true); setFamilia({ ...emptyFamilia, codigoBase: gerarCodigoSku(produtos) }); setNovaVariacao(''); }}
               className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-amber-500 transition-colors shadow-sm">
               <Plus size={16} /> Novo Produto
