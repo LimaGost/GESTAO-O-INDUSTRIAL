@@ -253,9 +253,12 @@ export default function Expedicao() {
     const waKanban = getWhatsappKanbanConfig();
     if (waCfg.etapas_notificar.includes('nf_emitida')) {
       let clienteTelefone = null;
-      if (waCfg.notificar_cliente && pedInfo?.cliente_id) {
-        const clientes = await base44.entities.Cliente.filter({ id: pedInfo.cliente_id });
-        clienteTelefone = clientes[0]?.telefone || null;
+      if (waCfg.notificar_cliente) {
+        const clienteId = pedInfo?.cliente_id || op.cliente_id || null;
+        if (clienteId) {
+          const clientes = await base44.entities.Cliente.filter({ id: clienteId });
+          clienteTelefone = clientes[0]?.telefone || null;
+        }
       }
       base44.functions.invoke('enviarWhatsappExpedicao', {
         expedicao: { numero_nf, cliente_nome: pedInfo?.nome || op.produto_nome, pedido_numero: pedInfo?.numero || op.pedido_numero || '' },
@@ -308,9 +311,13 @@ export default function Expedicao() {
     if (waCfg.etapas_notificar.includes(status)) {
       const expAtual = expedicoes.find(e => e.id === id);
       let clienteTelefone = null;
-      if (waCfg.notificar_cliente && expAtual?.cliente_id) {
-        const clientes = await base44.entities.Cliente.filter({ id: expAtual.cliente_id });
-        clienteTelefone = clientes[0]?.telefone || null;
+      if (waCfg.notificar_cliente) {
+        // Tenta pelo cliente_id da expedição, senão busca pelo pedido
+        const clienteId = expAtual?.cliente_id || (expAtual?.pedido_id ? pedidoMap[expAtual.pedido_id]?.cliente_id : null);
+        if (clienteId) {
+          const clientes = await base44.entities.Cliente.filter({ id: clienteId });
+          clienteTelefone = clientes[0]?.telefone || null;
+        }
       }
       base44.functions.invoke('enviarWhatsappExpedicao', {
         expedicao: { numero_nf: expAtual?.numero_nf || id, cliente_nome: expAtual?.cliente_nome || '', pedido_numero: expAtual?.pedido_numero || '' },
