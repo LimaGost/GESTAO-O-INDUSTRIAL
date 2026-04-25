@@ -205,7 +205,7 @@ function ClienteCard({ cliente, chatAtivo, onIniciarChat, onAbrirChat, iniciando
 
 // ── Modal para iniciar chat ───────────────────────────────────────────────────
 function ModalIniciarChat({ cliente, onConfirmar, onClose, iniciando }) {
-  const [departmentId, setDepartmentId] = useState(() => localStorage.getItem('crm_department_id') || '');
+  const [departmentId, setDepartmentId] = useState(() => localStorage.getItem('crm_department_id') || '053414c2-ccf5-4c41-9d1b-10a6163accbf');
 
   const handleConfirmar = () => {
     if (!departmentId.trim()) return alert('Informe o ID do departamento.');
