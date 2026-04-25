@@ -31,7 +31,8 @@ const COLUNAS_DEFAULT = [
   { key: 'em_producao',  label: 'Em Produção',  cor: 1, icone: 'Factory',     acao: 'registrar_data_inicio' },
   { key: 'produzido',    label: 'Produzido',    cor: 2, icone: 'CheckCircle', acao: 'registrar_data_fim_producao' },
   { key: 'em_embalagem', label: 'Em Embalagem', cor: 3, icone: 'Package',     acao: 'registrar_data_embalagem' },
-  { key: 'finalizado',   label: 'Finalizado',   cor: 4, icone: 'Flag',        acao: 'entrada_estoque' },
+  { key: 'em_separacao', label: 'Em Separação', cor: 7, icone: 'Layers',      acao: 'saida_estoque' },
+  { key: 'finalizado',   label: 'Finalizado',   cor: 4, icone: 'Flag',        acao: 'finalizar_expedicao' },
 ];
 
 function buildColunas() {
@@ -184,14 +185,36 @@ export default function Kanban() {
     const colunaProximo = kanbanColunas.find(c => c.key === proximo);
     const acaoProximo = colunaProximo?.acao || '';
 
-    if (acaoProximo === 'registrar_data_inicio' || proximo === 'em_producao') updates.data_inicio = agora;
-    if (acaoProximo === 'registrar_data_fim_producao' || proximo === 'produzido') {
+    // ── Registrar data de início ────────────────────────────────────────────
+    if (acaoProximo === 'registrar_data_inicio') updates.data_inicio = agora;
+
+    // ── Produzido: finaliza produção + entrada no estoque ──────────────────
+    if (acaoProximo === 'registrar_data_fim_producao') {
       updates.data_fim_producao = agora;
       updates.lote = ordem.lote || gerarLote(ordem.produto_id);
+      // Entrada no estoque
+      cacheInvalidate('Produto');
+      const produtosFrescos = await cachedFetch('Produto', () => base44.entities.Produto.list(), 0);
+      const itensOP = (ordem.itens && ordem.itens.length > 0)
+        ? ordem.itens
+        : (ordem.produto_id ? [{ produto_id: ordem.produto_id, produto_nome: ordem.produto_nome, quantidade: ordem.quantidade }] : []);
+      for (const item of itensOP) {
+        const prod = produtosFrescos.find(p => p.id === item.produto_id);
+        const descarteItem = Array.isArray(descarte) ? descarte.find(d => d.produto_id === item.produto_id) : null;
+        const qtdDescartada = descarteItem?.quantidade || 0;
+        const qtdFinal = item.quantidade - qtdDescartada;
+        if (prod) {
+          await base44.entities.Produto.update(prod.id, { estoque_atual: (prod.estoque_atual || 0) + qtdFinal });
+          await registrarLog('Produto', prod.id, 'ENTRADA_ESTOQUE', `Entrada de ${qtdFinal} un de ${prod.nome} via OP ${ordem.numero}${qtdDescartada > 0 ? ` (${qtdDescartada} un descartadas)` : ''}`);
+        }
+      }
     }
-    if (acaoProximo === 'registrar_data_embalagem' || proximo === 'em_embalagem') updates.data_embalagem = agora;
-    if (acaoProximo === 'entrada_estoque' || proximo === 'finalizado') {
-      updates.data_finalizacao = agora;
+
+    // ── Embalagem: registrar data ───────────────────────────────────────────
+    if (acaoProximo === 'registrar_data_embalagem') updates.data_embalagem = agora;
+
+    // ── Em Separação: gerar etiqueta + saída do estoque ────────────────────
+    if (acaoProximo === 'saida_estoque') {
       const lote = ordem.lote || gerarLote(ordem.id);
       const dataProducao = hojeData();
       cacheInvalidate('Produto');
@@ -199,38 +222,37 @@ export default function Kanban() {
       const itensOP = (ordem.itens && ordem.itens.length > 0)
         ? ordem.itens
         : (ordem.produto_id ? [{ produto_id: ordem.produto_id, produto_nome: ordem.produto_nome, quantidade: ordem.quantidade }] : []);
-
       for (const item of itensOP) {
         const prod = produtosFrescos.find(p => p.id === item.produto_id);
-        const descarteItem = Array.isArray(descarte) ? descarte.find(d => d.produto_id === item.produto_id) : null;
-        const qtdDescartada = descarteItem?.quantidade || 0;
-        const qtdFinal = item.quantidade - qtdDescartada;
         const sku = prod?.codigo ? String(prod.codigo) : '';
+        // Saída do estoque
         if (prod) {
-          const clAtual = prod.checklist_producao;
-          const clMigrado = (!clAtual || Array.isArray(clAtual))
-            ? { a_produzir: [], em_producao: Array.isArray(clAtual) ? clAtual : [], produzido: [], em_embalagem: [] }
-            : clAtual;
-          await base44.entities.Produto.update(prod.id, { estoque_atual: (prod.estoque_atual || 0) + qtdFinal, checklist_producao: clMigrado });
-          await registrarLog('Produto', prod.id, 'ENTRADA_ESTOQUE', `Entrada de ${qtdFinal} un de ${prod.nome} via OP ${ordem.numero}${qtdDescartada > 0 ? ` (${qtdDescartada} un descartadas: ${descarteItem.motivo})` : ''}`);
+          await base44.entities.Produto.update(prod.id, { estoque_atual: Math.max(0, (prod.estoque_atual || 0) - item.quantidade) });
+          await registrarLog('Produto', prod.id, 'SAIDA_ESTOQUE', `Saída de ${item.quantidade} un de ${prod.nome} via separação OP ${ordem.numero}`);
         }
+        // Gerar etiqueta
         await base44.entities.Etiqueta.create({
           ordem_producao_id: ordem.id, produto_id: item.produto_id,
-          produto_nome: item.produto_nome, quantidade: qtdFinal,
+          produto_nome: item.produto_nome, quantidade: item.quantidade,
           lote, data_producao: dataProducao, codigo_barras: sku, impresso: false,
         });
       }
+    }
 
+    // ── Finalizado: cai no Kanban de Expedição ─────────────────────────────
+    if (acaoProximo === 'finalizar_expedicao') {
+      updates.data_finalizacao = agora;
+      // Libera pedido vinculado para separação/expedição se todas as OPs finalizaram
       if (ordem.pedido_id) {
         const todosPedidos = await base44.entities.Pedido.list();
         const ped = todosPedidos.find(p => p.id === ordem.pedido_id);
-        if (ped && ped.status === 'aguardando_estoque') {
+        if (ped) {
           const todasOrdens = await base44.entities.OrdemProducao.list();
           const ordens_pedido = todasOrdens.filter(o => o.pedido_id === ordem.pedido_id);
-          const todasFin = ordens_pedido.every(o => o.id === ordem.id ? true : o.status === 'finalizado');
+          const todasFin = ordens_pedido.every(o => o.id === ordem.id ? true : o.status === proximo);
           if (todasFin) {
             await base44.entities.Pedido.update(ped.id, { status: 'separacao' });
-            await registrarLog('Pedido', ped.id, 'STATUS', `Pedido ${ped.numero} liberado para separação.`);
+            await registrarLog('Pedido', ped.id, 'STATUS', `Pedido ${ped.numero} liberado para expedição.`);
           }
         }
       }
@@ -498,6 +520,7 @@ export default function Kanban() {
                     loading={loadingId === ordem.id}
                     onOpenModal={() => setOrdemSelecionada(ordem)}
                     labelBotao={PROXIMOS[key] ? `→ ${kanbanColunas.find(c => c.key === PROXIMOS[key])?.label || ''}` : null}
+                    acaoAtual={kanbanColunas.find(c => c.key === key)?.acao || ''}
                   />
                 ))}
               </div>

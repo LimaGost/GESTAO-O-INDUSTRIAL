@@ -1,4 +1,5 @@
-import { ArrowRight, Clock, Package, AlertTriangle, CheckCircle, User, Calendar, ExternalLink } from 'lucide-react';
+import { ArrowRight, Clock, Package, AlertTriangle, CheckCircle, User, Calendar, ExternalLink, Printer } from 'lucide-react';
+import { imprimirEtiquetaProduto } from '@/lib/imprimirEtiquetaProduto';
 import CardChecklist from './CardChecklist';
 
 function fmtData(iso) {
@@ -40,7 +41,7 @@ function tempoDecorrido(dataISO) {
   return { text: `${m}min`, hours };
 }
 
-export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, checklistOk, setChecklistOk, onAvancar, loading, onOpenModal, labelBotao }) {
+export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, checklistOk, setChecklistOk, onAvancar, loading, onOpenModal, labelBotao, acaoAtual }) {
   const origem = ordem.origem || 'manual';
   const origemCfg = ORIGEM_CONFIG[origem] || ORIGEM_CONFIG.manual;
   const checkKey = `${ordem.id}_${ordem.status}`;
@@ -167,6 +168,24 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
             onClick={onOpenModal}
             className="w-full py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 border border-border text-muted-foreground hover:bg-muted hover:text-foreground">
             <ExternalLink size={11} /> Ver Detalhes
+          </button>
+        )}
+
+        {/* Imprimir Etiqueta — visível na coluna de separação */}
+        {acaoAtual === 'saida_estoque' && (
+          <button
+            onClick={() => {
+              const itensOP = ordem.itens?.length > 0 ? ordem.itens : (ordem.produto_id ? [{ produto_id: ordem.produto_id, produto_nome: ordem.produto_nome, quantidade: ordem.quantidade }] : []);
+              itensOP.forEach(item => imprimirEtiquetaProduto({
+                produto_nome: item.produto_nome,
+                quantidade: item.quantidade,
+                lote: ordem.lote || '—',
+                data_producao: new Date().toISOString().slice(0, 10),
+                codigo_barras: item.produto_id || item.produto_nome,
+              }));
+            }}
+            className="w-full py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 border border-primary/30 text-primary hover:bg-primary/10">
+            <Printer size={11} /> Imprimir Etiqueta
           </button>
         )}
 

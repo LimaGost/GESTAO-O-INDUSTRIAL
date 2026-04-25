@@ -3,13 +3,7 @@
   "type": "object",
   "properties": {
     "etapa": {
-      "type": "string",
-      "enum": [
-        "a_produzir",
-        "em_producao",
-        "produzido",
-        "em_embalagem"
-      ]
+      "type": "string"
     },
     "itens": {
       "type": "array",

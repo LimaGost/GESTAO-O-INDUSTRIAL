@@ -13,20 +13,29 @@ import AbaKanban from '@/components/configuracoes/AbaKanban';
 import AbaWhatsapp from '@/components/configuracoes/AbaWhatsapp';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 
-const ETAPAS_BASE = [
-  { key: 'a_produzir',   defaultLabel: 'A Produzir',   badge: 'bg-slate-100 text-slate-600' },
-  { key: 'em_producao',  defaultLabel: 'Em Produção',  badge: 'bg-sky-blue/10 text-sky-blue' },
-  { key: 'produzido',    defaultLabel: 'Produzido',    badge: 'bg-rainbow-green/10 text-rainbow-green' },
-  { key: 'em_embalagem', defaultLabel: 'Em Embalagem', badge: 'bg-sun-yellow/10 text-sun-yellow' },
+const BADGE_CORES = [
+  'bg-slate-100 text-slate-600', 'bg-sky-blue/10 text-sky-blue',
+  'bg-rainbow-green/10 text-rainbow-green', 'bg-sun-yellow/10 text-sun-yellow',
+  'bg-rainbow-purple/10 text-rainbow-purple', 'bg-rainbow-orange/10 text-rainbow-orange',
+  'bg-rainbow-indigo/10 text-rainbow-indigo', 'bg-muted text-muted-foreground',
 ];
 
-function getKanbanLabels() {
-  try { return JSON.parse(localStorage.getItem('kanban_labels') || '{}'); } catch { return {}; }
-}
-
 function buildEtapas() {
-  const labels = getKanbanLabels();
-  return ETAPAS_BASE.map(e => ({ ...e, label: labels[e.key] || e.defaultLabel }));
+  try {
+    const saved = JSON.parse(localStorage.getItem('kanban_colunas_config') || 'null');
+    if (saved && Array.isArray(saved) && saved.length > 0) {
+      return saved.map((c, i) => ({ key: c.key, label: c.label, badge: BADGE_CORES[i % BADGE_CORES.length] }));
+    }
+  } catch {}
+  // fallback padrão
+  return [
+    { key: 'a_produzir',   label: 'A Produzir',   badge: BADGE_CORES[0] },
+    { key: 'em_producao',  label: 'Em Produção',  badge: BADGE_CORES[1] },
+    { key: 'produzido',    label: 'Produzido',    badge: BADGE_CORES[2] },
+    { key: 'em_embalagem', label: 'Em Embalagem', badge: BADGE_CORES[3] },
+    { key: 'em_separacao', label: 'Em Separação', badge: BADGE_CORES[7] },
+    { key: 'finalizado',   label: 'Finalizado',   badge: BADGE_CORES[4] },
+  ];
 }
 
 const ENTIDADES = ['Todas', 'Pedido', 'OrdemProducao', 'Produto', 'Estoque', 'Expedicao', 'Cliente', 'Etiqueta'];

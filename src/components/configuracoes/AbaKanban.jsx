@@ -24,21 +24,21 @@ const CORES_OPCOES = [
 ];
 
 const ACOES_DISPONIVEIS = [
-  { key: 'nenhuma', label: 'Nenhuma ação automática' },
-  { key: 'registrar_data_inicio', label: 'Registrar data de início' },
-  { key: 'registrar_data_fim_producao', label: 'Registrar data fim de produção' },
-  { key: 'registrar_data_embalagem', label: 'Registrar data de embalagem' },
-  { key: 'gerar_lote', label: 'Gerar número de lote' },
-  { key: 'entrada_estoque', label: 'Dar entrada no estoque + gerar etiqueta' },
-  { key: 'liberar_pedido', label: 'Liberar pedido vinculado para separação' },
+  { key: 'nenhuma',                    label: 'Nenhuma ação automática' },
+  { key: 'registrar_data_inicio',      label: 'Registrar data de início' },
+  { key: 'registrar_data_fim_producao',label: 'Registrar data fim de produção + entrada no estoque' },
+  { key: 'registrar_data_embalagem',   label: 'Registrar data de embalagem' },
+  { key: 'saida_estoque',              label: 'Gerar etiqueta + saída do estoque (separação)' },
+  { key: 'finalizar_expedicao',        label: 'Finalizar — cai no Kanban de Expedição' },
 ];
 
 const COLUNAS_DEFAULT = [
-  { key: 'a_produzir',   label: 'A Produzir',   icone: 'Clock',       cor: 0, acao: 'nenhuma',                   fixo: true },
-  { key: 'em_producao',  label: 'Em Produção',  icone: 'Factory',     cor: 1, acao: 'registrar_data_inicio',     fixo: true },
-  { key: 'produzido',    label: 'Produzido',    icone: 'CheckCircle', cor: 2, acao: 'registrar_data_fim_producao', fixo: true },
-  { key: 'em_embalagem', label: 'Em Embalagem', icone: 'Package',     cor: 3, acao: 'registrar_data_embalagem',  fixo: true },
-  { key: 'finalizado',   label: 'Finalizado',   icone: 'Flag',        cor: 4, acao: 'entrada_estoque',           fixo: true },
+  { key: 'a_produzir',    label: 'A Produzir',    icone: 'Clock',       cor: 0, acao: 'nenhuma',                     fixo: true },
+  { key: 'em_producao',   label: 'Em Produção',   icone: 'Factory',     cor: 1, acao: 'registrar_data_inicio',       fixo: true },
+  { key: 'produzido',     label: 'Produzido',     icone: 'CheckCircle', cor: 2, acao: 'registrar_data_fim_producao', fixo: true },
+  { key: 'em_embalagem',  label: 'Em Embalagem',  icone: 'Package',     cor: 3, acao: 'registrar_data_embalagem',   fixo: true },
+  { key: 'em_separacao',  label: 'Em Separação',  icone: 'Layers',      cor: 7, acao: 'saida_estoque',              fixo: true },
+  { key: 'finalizado',    label: 'Finalizado',    icone: 'Flag',        cor: 4, acao: 'finalizar_expedicao',        fixo: true },
 ];
 
 function gerarKey(label) {
@@ -48,7 +48,16 @@ function gerarKey(label) {
 function loadColunas() {
   try {
     const saved = JSON.parse(localStorage.getItem('kanban_colunas_config') || 'null');
-    if (saved && Array.isArray(saved) && saved.length > 0) return saved;
+    if (saved && Array.isArray(saved) && saved.length > 0) {
+      // Migração: se ainda usa 'entrada_estoque' no finalizado (fluxo antigo), resetar para o padrão novo
+      const temFluxoAntigo = saved.some(c => c.key === 'finalizado' && c.acao === 'entrada_estoque');
+      if (temFluxoAntigo) {
+        localStorage.setItem('kanban_colunas_config', JSON.stringify(COLUNAS_DEFAULT));
+        localStorage.removeItem('kanban_colunas');
+        return COLUNAS_DEFAULT;
+      }
+      return saved;
+    }
   } catch {}
   return COLUNAS_DEFAULT;
 }
@@ -65,15 +74,24 @@ export default function AbaKanban() {
 
   const salvar = () => {
     localStorage.setItem('kanban_colunas_config', JSON.stringify(colunas));
-
-    // Compatibilidade: também salvar kanban_labels para o Kanban existente
+    localStorage.removeItem('kanban_colunas'); // força re-cálculo das visíveis
     const labels = {};
     colunas.forEach(c => { labels[c.key] = c.label; });
     localStorage.setItem('kanban_labels', JSON.stringify(labels));
-
     window.dispatchEvent(new Event('settings:saved'));
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const restaurarPadrao = () => {
+    if (!window.confirm('Restaurar o fluxo padrão? Isso sobrescreverá as colunas atuais.')) return;
+    setColunas(COLUNAS_DEFAULT);
+    localStorage.setItem('kanban_colunas_config', JSON.stringify(COLUNAS_DEFAULT));
+    localStorage.removeItem('kanban_colunas');
+    const labels = {};
+    COLUNAS_DEFAULT.forEach(c => { labels[c.key] = c.label; });
+    localStorage.setItem('kanban_labels', JSON.stringify(labels));
+    window.dispatchEvent(new Event('settings:saved'));
   };
 
   const adicionarColuna = () => {
@@ -251,11 +269,17 @@ export default function AbaKanban() {
         </div>
       </div>
 
-      {/* Salvar */}
-      <button onClick={salvar}
-        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${saved ? 'bg-green-500 text-white' : 'bg-primary text-primary-foreground hover:opacity-90'}`}>
-        {saved ? <><Check size={14} /> Configuração salva!</> : <><Save size={14} /> Salvar configuração</>}
-      </button>
+      {/* Salvar + Restaurar */}
+      <div className="flex items-center gap-3">
+        <button onClick={salvar}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${saved ? 'bg-green-500 text-white' : 'bg-primary text-primary-foreground hover:opacity-90'}`}>
+          {saved ? <><Check size={14} /> Configuração salva!</> : <><Save size={14} /> Salvar configuração</>}
+        </button>
+        <button onClick={restaurarPadrao}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-all">
+          Restaurar padrão
+        </button>
+      </div>
     </div>
   );
 }
