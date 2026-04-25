@@ -22,11 +22,12 @@ function timeAgo(dateStr) {
 }
 
 // ── Painel de chat ────────────────────────────────────────────────────────────
-function ChatPanel({ contato, protocol, onClose }) {
+function ChatPanel({ contato, protocol, chatId, status, onClose }) {
   const [mensagem, setMensagem] = useState('');
   const [mensagens, setMensagens] = useState([]);
   const [enviando, setEnviando] = useState(false);
   const [loadingMsgs, setLoadingMsgs] = useState(true);
+  const [iniciandoAtendimento, setIniciandoAtendimento] = useState(false);
   const bottomRef = useRef(null);
 
   const carregarMensagens = async () => {
@@ -65,6 +66,30 @@ function ChatPanel({ contato, protocol, onClose }) {
     setEnviando(false);
   };
 
+  const iniciarAtendimento = async () => {
+    const departmentId = localStorage.getItem('crm_department_id');
+    const attendantId = localStorage.getItem('crm_attendant_id');
+
+    if (!departmentId || !attendantId) {
+      alert('Configure o ID do departamento e atendente nas configurações.');
+      return;
+    }
+
+    setIniciandoAtendimento(true);
+    try {
+      await base44.functions.invoke('smClickIniciarAtendimento', {
+        chatId,
+        attendantId,
+        departmentId: status === 'screening' ? departmentId : undefined,
+      });
+      alert('Atendimento iniciado com sucesso!');
+      onClose();
+    } catch (e) {
+      alert('Erro ao iniciar atendimento: ' + e.message);
+    }
+    setIniciandoAtendimento(false);
+  };
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card flex-shrink-0">
@@ -84,6 +109,16 @@ function ChatPanel({ contato, protocol, onClose }) {
         <button onClick={carregarMensagens} className="p-1.5 hover:bg-muted rounded-lg">
           <RefreshCw size={14} className="text-muted-foreground" />
         </button>
+        {status && status !== 'active' && (
+          <button
+            onClick={iniciarAtendimento}
+            disabled={iniciandoAtendimento}
+            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-green-500 text-white hover:bg-green-600 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+          >
+            {iniciandoAtendimento ? <Loader2 size={12} className="animate-spin" /> : <MessageCircle size={12} />}
+            Iniciar
+          </button>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ background: '#ECE5DD' }}>
@@ -528,6 +563,8 @@ export default function CRM() {
           <ChatPanel
             contato={chatAberto.contact || { name: 'Chat', telephone: '' }}
             protocol={chatAberto.protocol}
+            chatId={chatAberto.id}
+            status={chatAberto.status}
             onClose={() => setChatAberto(null)}
           />
         </div>
