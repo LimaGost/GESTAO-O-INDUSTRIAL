@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import {
   MessageCircle, Search, X, Send, Phone, User, RefreshCw,
-  ChevronLeft, AlertCircle, Loader2, CheckCheck, Plus, UserPlus
+  ChevronLeft, AlertCircle, Loader2, CheckCheck, Plus, UserPlus, Bell, Users
 } from 'lucide-react';
 
 function fmtTelefone(tel) {
@@ -394,21 +394,23 @@ export default function CRM() {
     <div className="flex h-full gap-4" style={{ minHeight: 'calc(100vh - 140px)' }}>
       {/* Sidebar de chats */}
       <div className={`flex flex-col ${chatAberto ? 'hidden md:flex md:w-96 flex-shrink-0' : 'flex-1'}`}>
-        {/* Header */}
-        <div className="bg-card border border-border rounded-2xl px-4 py-4 mb-4 flex-shrink-0">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-2xl bg-green-100 flex items-center justify-center">
-              <MessageCircle size={19} className="text-green-600" />
+        {/* Header com perfil */}
+        <div className="bg-card border border-border rounded-2xl px-4 py-3 mb-3 flex-shrink-0">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+              <MessageCircle size={16} className="text-primary" />
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="text-lg font-bold text-foreground">Conversas</h2>
-              <p className="text-xs text-muted-foreground">{chats.length} ativa(s)</p>
+              <p className="text-xs font-bold text-muted-foreground">Status</p>
+              <p className="text-sm text-foreground">Disponível</p>
             </div>
-            <button onClick={carregarChats} className="p-1.5 hover:bg-muted rounded-lg">
-              <RefreshCw size={16} className="text-muted-foreground" />
+            <button className="text-muted-foreground hover:text-foreground">
+              <ChevronLeft size={16} />
             </button>
           </div>
-          <div className="flex items-center gap-2 bg-muted/40 border border-border rounded-xl px-3 py-2">
+
+          {/* Barra de busca */}
+          <div className="flex items-center gap-2 bg-muted/40 border border-border rounded-xl px-3 py-2.5">
             <Search size={14} className="text-muted-foreground flex-shrink-0" />
             <input
               placeholder="Procure sua conversa..."
@@ -417,37 +419,53 @@ export default function CRM() {
           </div>
         </div>
 
-        {/* Abas */}
+        {/* Status pills */}
+        <div className="flex gap-2 px-2 mb-4 flex-shrink-0 overflow-x-auto pb-1">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-muted/60 whitespace-nowrap">
+            <span className="text-xs font-bold text-foreground">Ativos</span>
+            <span className="text-xs font-bold text-muted-foreground">{chats.filter(c => c.status === 'attending').length}</span>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-muted/60 whitespace-nowrap">
+            <span className="text-xs font-bold text-foreground">Aguardando</span>
+            <span className="text-xs font-bold text-muted-foreground">{chats.filter(c => c.status === 'waiting').length}</span>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-cyan-500/20 whitespace-nowrap">
+            <span className="text-xs font-bold text-cyan-600">Leads</span>
+            <span className="text-xs font-bold bg-cyan-500 text-white px-1.5 rounded-md">{chats.filter(c => c.is_lead).length}</span>
+          </div>
+        </div>
+
+        {/* Abas de filtro */}
         <div className="flex gap-2 px-2 mb-4 flex-shrink-0 overflow-x-auto pb-2">
           <button
             onClick={() => setAbaSelecionada('todas')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
+            className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors flex items-center gap-1.5 ${
               abaSelecionada === 'todas'
-                ? 'bg-primary text-primary-foreground'
+                ? 'bg-cyan-500 text-white'
                 : 'bg-muted text-muted-foreground hover:bg-muted/80'
             }`}
           >
-            Todas
+            <MessageCircle size={13} /> Todas
           </button>
           <button
             onClick={() => setAbaSelecionada('nao_lidas')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
+            className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors flex items-center gap-1.5 ${
               abaSelecionada === 'nao_lidas'
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-muted text-muted-foreground hover:bg-muted/80'
             }`}
           >
-            Não lidas
+            <Bell size={13} /> Não lidas
           </button>
           <button
             onClick={() => setAbaSelecionada('grupos')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
+            className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors flex items-center gap-1.5 ${
               abaSelecionada === 'grupos'
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-muted text-muted-foreground hover:bg-muted/80'
             }`}
           >
-            Grupos
+            <Users size={13} /> Grupos
           </button>
         </div>
 
