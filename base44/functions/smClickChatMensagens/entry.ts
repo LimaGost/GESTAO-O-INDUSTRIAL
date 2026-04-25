@@ -27,15 +27,25 @@ Deno.serve(async (req) => {
       return Response.json({ erro: data?.message || 'Erro ao buscar mensagens', detalhes: data }, { status: res.status });
     }
 
-    // Normaliza o array de mensagens (a estrutura pode variar conforme a API do SM Click)
-    const raw = data?.data || data?.messages || data || [];
-    const mensagens = Array.isArray(raw) ? raw.map(m => ({
-      id: m.id,
+    // Tenta extrair o array de mensagens de várias possíveis estruturas
+    let raw = [];
+    if (Array.isArray(data)) {
+      raw = data;
+    } else if (data?.data && Array.isArray(data.data)) {
+      raw = data.data;
+    } else if (data?.messages && Array.isArray(data.messages)) {
+      raw = data.messages;
+    } else if (data?.results && Array.isArray(data.results)) {
+      raw = data.results;
+    }
+
+    const mensagens = raw.map(m => ({
+      id: m.id || m._id || Math.random(),
       texto: m.message || m.body || m.content || m.text || '',
       de: m.fromMe ? 'sistema' : 'cliente',
       fromMe: m.fromMe,
-      created_date: m.createdAt || m.created_at || m.timestamp,
-    })) : [];
+      created_date: m.createdAt || m.created_at || m.timestamp || new Date().toISOString(),
+    }));
 
     return Response.json({ mensagens });
   } catch (error) {
