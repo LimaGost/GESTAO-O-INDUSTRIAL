@@ -18,6 +18,7 @@ import {
 import ExportableChart from '@/components/dashboard/ExportableChart';
 import CustomTooltip from '@/components/dashboard/CustomTooltip';
 import PeriodFilter from '@/components/dashboard/PeriodFilter';
+import { usePermissoes } from '@/lib/usePermissoes.jsx';
 
 const COLORS = ['#F59E0B', '#3B82F6', '#22C55E', '#F97316', '#A855F7', '#EC4899', '#14B8A6'];
 
@@ -35,7 +36,12 @@ function isInRange(dateStr, from, to) {
   return true;
 }
 
+const VALOR_OCULTO = '••••••';
+
 export default function Dashboard() {
+  const { somenteLeitura, ocultarFinanceiro } = usePermissoes();
+  const readonly = somenteLeitura('Dashboard');
+  const ocultarValores = ocultarFinanceiro('Dashboard');
   const [rawData, setRawData]     = useState(null);
   const [loading, setLoading]     = useState(true);
   const [criandoOP, setCriandoOP] = useState({});
@@ -115,7 +121,11 @@ export default function Dashboard() {
   }, [rawData, period]);
 
   const fmt  = (v) => loading ? '—' : String(v ?? '—');
-  const fmtR = (v) => loading ? '—' : `R$ ${(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+  const fmtR = (v) => {
+    if (loading) return '—';
+    if (ocultarValores) return VALOR_OCULTO;
+    return `R$ ${(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+  };
 
   const criarOPReposicao = async (produto) => {
     const jaTemOP = (data?.ordensAbertasLista || []).some(o => o.produto_id === produto.id && o.origem === 'estoque_minimo');
@@ -227,13 +237,13 @@ export default function Dashboard() {
                     <div className="flex items-center gap-1.5 text-xs font-semibold text-green-600">
                       <CheckCircle size={12} /> OP já criada
                     </div>
-                  ) : (
+                  ) : !readonly ? (
                     <button onClick={() => criarOPReposicao(p)} disabled={criando}
                       className="flex items-center justify-center gap-1.5 w-full py-1.5 rounded-lg text-xs font-bold bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50">
                       {criando ? <RefreshCw size={12} className="animate-spin" /> : <Zap size={12} />}
                       {criando ? 'Criando...' : `Criar OP (+${qtd} un)`}
                     </button>
-                  )}
+                  ) : null}
                 </div>
               );
             })}
@@ -337,7 +347,9 @@ export default function Dashboard() {
         <div className="bg-card border border-border rounded-2xl p-5">
           <p className="text-xs text-muted-foreground mb-1">Faturamento Pendente</p>
           <p className="text-2xl font-bold text-foreground">{fmtR(data?.faturamentoPendente)}</p>
-          <p className="text-xs text-muted-foreground mt-1">em {fmt(data?.pedidosAtivos)} pedido(s) não expedidos</p>
+          {!ocultarValores && (
+            <p className="text-xs text-muted-foreground mt-1">em {fmt(data?.pedidosAtivos)} pedido(s) não expedidos</p>
+          )}
           <div className="mt-4 flex items-center gap-1 text-xs text-green-600 font-medium">
             <ArrowUpRight size={13} />
             Total expedido: {fmtR(data?.faturamentoExpedido)}

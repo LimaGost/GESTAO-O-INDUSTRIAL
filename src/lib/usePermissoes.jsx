@@ -20,7 +20,7 @@ export const MODULO_PATH = {
 };
 
 // Módulos cujos valores monetários ficam ocultos em modo "view"
-export const MODULOS_FINANCEIROS = ['Relatorios', 'Faturamento', 'Precos'];
+export const MODULOS_FINANCEIROS = ['Relatorios', 'Faturamento', 'Precos', 'Dashboard', 'Pedidos'];
 
 const DEFAULTS = {
   admin:            null,

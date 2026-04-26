@@ -6,6 +6,8 @@ import { gerarNumero, gerarLote } from '@/lib/numeracao';
 import { registrarLog } from '@/lib/audit';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 
+const VALOR_OCULTO = '••••••';
+
 const STATUS_LABELS = {
   rascunho:          { label: 'Rascunho',       color: 'bg-slate-100 text-slate-600',     border: 'border-l-slate-300',   icon: FileText },
   aguardando_estoque:{ label: 'Ag. Estoque',    color: 'bg-amber-100 text-amber-700',     border: 'border-l-amber-400',   icon: Clock },
@@ -17,8 +19,9 @@ const STATUS_LABELS = {
 };
 
 export default function Pedidos() {
-  const { somenteLeitura } = usePermissoes();
+  const { somenteLeitura, ocultarFinanceiro } = usePermissoes();
   const readonly = somenteLeitura('Pedidos');
+  const ocultarValores = ocultarFinanceiro('Pedidos');
   const [pedidos, setPedidos] = useState([]);
   const [clientes, setClientes] = useState([]);
   const [produtos, setProdutos] = useState([]);
@@ -357,7 +360,7 @@ export default function Pedidos() {
                   <div className="flex items-center gap-3 text-xs text-muted-foreground ml-auto flex-wrap">
                     <span className="flex items-center gap-1"><Clock size={11} /> {p.data_pedido}</span>
                     <span className="flex items-center gap-1"><Package size={11} /> {(p.itens || []).length} item(s)</span>
-                    <span className="font-bold text-foreground text-sm">R$ {(p.valor_total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    <span className="font-bold text-foreground text-sm">{ocultarValores ? VALOR_OCULTO : `R$ ${(p.valor_total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}</span>
                   </div>
                 </div>
                 {p.status === 'aguardando_estoque' && (
@@ -403,7 +406,7 @@ export default function Pedidos() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total</span>
-                  <span className="font-bold text-foreground">R$ {(pedidoConfirmado.valorTotal || 0).toFixed(2)}</span>
+                  <span className="font-bold text-foreground">{ocultarValores ? VALOR_OCULTO : `R$ ${(pedidoConfirmado.valorTotal || 0).toFixed(2)}`}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Status</span>
