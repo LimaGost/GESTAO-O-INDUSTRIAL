@@ -15,9 +15,12 @@ export const MODULO_PATH = {
   Perdas:       '/Perdas',
   Auditoria:    '/Auditoria',
   Configuracoes: '/Configuracoes',
-  Faturamento:  null,
-  Precos:       null,
+  Faturamento:  '/Relatorios',
+  Precos:       '/Produtos',
 };
+
+// Módulos cujos valores monetários ficam ocultos em modo "view"
+export const MODULOS_FINANCEIROS = ['Relatorios', 'Faturamento', 'Precos'];
 
 const DEFAULTS = {
   admin:            null,
@@ -58,15 +61,17 @@ export function PermissoesProvider({ user, children }) {
 
   const temAcesso = (modulo) => getNivel(modulo) !== 'none';
   const somenteLeitura = (modulo) => getNivel(modulo) === 'view';
+  // Retorna true se o usuário NÃO pode ver valores financeiros (nível 'view' em módulo financeiro)
+  const ocultarFinanceiro = (modulo) => MODULOS_FINANCEIROS.includes(modulo) && getNivel(modulo) === 'view';
   const isLoading = modulos === undefined && user?.role !== 'admin';
 
   return (
-    <PermissoesContext.Provider value={{ getNivel, temAcesso, somenteLeitura, modulos, isLoading }}>
+    <PermissoesContext.Provider value={{ getNivel, temAcesso, somenteLeitura, ocultarFinanceiro, modulos, isLoading }}>
       {children}
     </PermissoesContext.Provider>
   );
 }
 
 export function usePermissoes() {
-  return useContext(PermissoesContext) || { getNivel: () => 'full', temAcesso: () => true, somenteLeitura: () => false, isLoading: false };
+  return useContext(PermissoesContext) || { getNivel: () => 'full', temAcesso: () => true, somenteLeitura: () => false, ocultarFinanceiro: () => false, isLoading: false };
 }
