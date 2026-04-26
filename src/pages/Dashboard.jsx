@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { cachedFetch, cacheInvalidate } from '@/lib/entityCache';
+import { cachedFetch, cacheInvalidate, cacheInvalidateMany, cacheGet, cacheSet } from '@/lib/entityCache';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { registrarLog } from '@/lib/audit';
@@ -52,7 +52,7 @@ export default function Dashboard() {
   async function load(invalidate = false) {
     setLoading(true);
     if (invalidate) {
-      ['Pedido','OrdemProducao','Produto','Expedicao','Etiqueta'].forEach(cacheInvalidate);
+      cacheInvalidateMany(['Pedido','OrdemProducao','Produto','Expedicao','Etiqueta']);
     }
     const [pedidos, ordens, produtos, expedicoes, etiquetas] = await Promise.all([
       cachedFetch('Pedido',        () => base44.entities.Pedido.list(),        60_000),
@@ -136,7 +136,10 @@ export default function Dashboard() {
       numero: gerarNumero('OP'), produto_id: produto.id, produto_nome: produto.nome,
       quantidade: qtd, status: 'a_produzir', origem: 'estoque_minimo', lote: gerarLote(produto.id),
     });
-    await registrarLog('OrdemProducao', op.id, 'CRIACAO_REPOSICAO', `OP de reposição via Dashboard — ${produto.nome} — qtd ${qtd}`);
+    registrarLog('OrdemProducao', op.id, 'CRIACAO_REPOSICAO', `OP de reposição via Dashboard — ${produto.nome} — qtd ${qtd}`).catch(() => {});
+    // Atualiza cache e estado local sem re-fetch
+    const cachedOrdens = cacheGet('OrdemProducao');
+    if (cachedOrdens) cacheSet('OrdemProducao', [...cachedOrdens, op]);
     setRawData(d => ({ ...d, ordens: [...(d.ordens || []), op] }));
     setCriandoOP(p => ({ ...p, [produto.id]: false }));
   };

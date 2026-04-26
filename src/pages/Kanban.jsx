@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { cachedFetch, cacheInvalidate } from '@/lib/entityCache';
+import { cachedFetch, cacheInvalidate, cacheSet, cacheGet } from '@/lib/entityCache';
 import { base44 } from '@/api/base44Client';
 import { registrarLog } from '@/lib/audit';
 import { gerarLote, gerarNumero } from '@/lib/numeracao';
@@ -159,12 +159,12 @@ export default function Kanban() {
   const WHATSAPP_NUMEROS_INTERNOS = waCfgGlobal.numeros_internos || [];
 
   const load = async (invalidate = false) => {
-    if (invalidate) { cacheInvalidate('OrdemProducao'); cacheInvalidate('Produto'); }
+    if (invalidate) { cacheInvalidate('OrdemProducao'); cacheInvalidate('Produto'); cacheInvalidate('Pedido'); }
     const [ords, prods, checklists, peds] = await Promise.all([
       cachedFetch('OrdemProducao', () => base44.entities.OrdemProducao.list('-created_date'), 30_000),
       cachedFetch('Produto', () => base44.entities.Produto.list(), 120_000),
       cachedFetch('ChecklistConfig', () => base44.entities.ChecklistConfig.list(), 300_000),
-      base44.entities.Pedido.list(),
+      cachedFetch('Pedido', () => base44.entities.Pedido.list(), 60_000),
     ]);
     setOrdens(ords);
     setProdutos(prods);
@@ -201,22 +201,21 @@ export default function Kanban() {
     if (acaoProximo === 'registrar_data_fim_producao') {
       updates.data_fim_producao = agora;
       updates.lote = ordem.lote || gerarLote(ordem.produto_id);
-      // Entrada no estoque
       cacheInvalidate('Produto');
       const produtosFrescos = await cachedFetch('Produto', () => base44.entities.Produto.list(), 0);
       const itensOP = (ordem.itens && ordem.itens.length > 0)
         ? ordem.itens
         : (ordem.produto_id ? [{ produto_id: ordem.produto_id, produto_nome: ordem.produto_nome, quantidade: ordem.quantidade }] : []);
-      for (const item of itensOP) {
+      // Paralelo: atualiza estoque de todos os itens ao mesmo tempo
+      await Promise.all(itensOP.map(async item => {
         const prod = produtosFrescos.find(p => p.id === item.produto_id);
+        if (!prod) return;
         const descarteItem = Array.isArray(descarte) ? descarte.find(d => d.produto_id === item.produto_id) : null;
         const qtdDescartada = descarteItem?.quantidade || 0;
         const qtdFinal = item.quantidade - qtdDescartada;
-        if (prod) {
-          await base44.entities.Produto.update(prod.id, { estoque_atual: (prod.estoque_atual || 0) + qtdFinal });
-          await registrarLog('Produto', prod.id, 'ENTRADA_ESTOQUE', `Entrada de ${qtdFinal} un de ${prod.nome} via OP ${ordem.numero}${qtdDescartada > 0 ? ` (${qtdDescartada} un descartadas)` : ''}`);
-        }
-      }
+        await base44.entities.Produto.update(prod.id, { estoque_atual: (prod.estoque_atual || 0) + qtdFinal });
+        registrarLog('Produto', prod.id, 'ENTRADA_ESTOQUE', `Entrada de ${qtdFinal} un de ${prod.nome} via OP ${ordem.numero}${qtdDescartada > 0 ? ` (${qtdDescartada} un descartadas)` : ''}`).catch(() => {});
+      }));
     }
 
     // ── Embalagem: registrar data ───────────────────────────────────────────
@@ -231,21 +230,22 @@ export default function Kanban() {
       const itensOP = (ordem.itens && ordem.itens.length > 0)
         ? ordem.itens
         : (ordem.produto_id ? [{ produto_id: ordem.produto_id, produto_nome: ordem.produto_nome, quantidade: ordem.quantidade }] : []);
-      for (const item of itensOP) {
+      // Paralelo: atualiza estoque e cria etiquetas ao mesmo tempo
+      await Promise.all(itensOP.map(async item => {
         const prod = produtosFrescos.find(p => p.id === item.produto_id);
         const sku = prod?.codigo ? String(prod.codigo) : '';
-        // Saída do estoque
-        if (prod) {
-          await base44.entities.Produto.update(prod.id, { estoque_atual: Math.max(0, (prod.estoque_atual || 0) - item.quantidade) });
-          await registrarLog('Produto', prod.id, 'SAIDA_ESTOQUE', `Saída de ${item.quantidade} un de ${prod.nome} via separação OP ${ordem.numero}`);
-        }
-        // Gerar etiqueta
-        await base44.entities.Etiqueta.create({
-          ordem_producao_id: ordem.id, produto_id: item.produto_id,
-          produto_nome: item.produto_nome, quantidade: item.quantidade,
-          lote, data_producao: dataProducao, codigo_barras: sku, impresso: false,
-        });
-      }
+        const [,] = await Promise.all([
+          prod
+            ? base44.entities.Produto.update(prod.id, { estoque_atual: Math.max(0, (prod.estoque_atual || 0) - item.quantidade) })
+              .then(() => registrarLog('Produto', prod.id, 'SAIDA_ESTOQUE', `Saída de ${item.quantidade} un de ${prod.nome} via separação OP ${ordem.numero}`).catch(() => {}))
+            : Promise.resolve(),
+          base44.entities.Etiqueta.create({
+            ordem_producao_id: ordem.id, produto_id: item.produto_id,
+            produto_nome: item.produto_nome, quantidade: item.quantidade,
+            lote, data_producao: dataProducao, codigo_barras: sku, impresso: false,
+          }),
+        ]);
+      }));
     }
 
     // ── Finalizado: cria expedição automaticamente ─────────────────────────
@@ -305,32 +305,42 @@ export default function Kanban() {
     try {
       // ── Chamada à API (otimistic já aconteceu acima) ──
       await base44.entities.OrdemProducao.update(ordem.id, updates);
-      const labelProximo = kanbanColunas.find(c => c.key === proximo)?.label || proximo;
-      await registrarLog('OrdemProducao', ordem.id, 'AVANCO_STATUS', `OP ${ordem.numero} (${ordem.produto_nome || ''}) avançou para "${labelProximo}" por ${usuarioAtual}`, usuarioAtual);
 
-      // Disparo WhatsApp nas etapas configuradas
-      if (ETAPAS_WHATSAPP.includes(proximo)) {
-        try {
-          const pedInfo = ordem.pedido_id ? pedidoMap[ordem.pedido_id] : null;
-          const clienteNome = pedInfo?.nome || null;
-          let clienteTelefone = null;
-          if (pedInfo?.cliente_id) {
-            const clientes = await base44.entities.Cliente.filter({ id: pedInfo.cliente_id });
-            clienteTelefone = clientes[0]?.telefone || null;
-          }
-          base44.functions.invoke('enviarWhatsappKanban', {
-            ordem: { numero: ordem.numero, produto_nome: ordem.produto_nome, quantidade: ordem.quantidade },
-            novoStatus: proximo,
-            clienteNome,
-            clienteTelefone: WHATSAPP_NOTIFICAR_CLIENTE ? clienteTelefone : null,
-            numeros_internos: WHATSAPP_NUMEROS_INTERNOS,
-            msg_interno: waCfgGlobal.msg_interno || null,
-            msg_cliente: waCfgGlobal.msg_cliente || null,
-          }).catch(() => {}); // fire-and-forget
-        } catch {}
+      // Atualiza o cache sem re-fetch bloqueante
+      const cachedOrdens = cacheGet('OrdemProducao');
+      if (cachedOrdens) {
+        cacheSet('OrdemProducao', cachedOrdens.map(o => o.id === ordem.id ? { ...o, ...updates } : o));
       }
 
-      await load(true);
+      const labelProximo = kanbanColunas.find(c => c.key === proximo)?.label || proximo;
+      // Log e WhatsApp são fire-and-forget — não bloqueiam a UI
+      registrarLog('OrdemProducao', ordem.id, 'AVANCO_STATUS', `OP ${ordem.numero} (${ordem.produto_nome || ''}) avançou para "${labelProximo}" por ${usuarioAtual}`, usuarioAtual).catch(() => {});
+
+      if (ETAPAS_WHATSAPP.includes(proximo)) {
+        (async () => {
+          try {
+            const pedInfo = ordem.pedido_id ? pedidoMap[ordem.pedido_id] : null;
+            const clienteNome = pedInfo?.nome || null;
+            let clienteTelefone = null;
+            if (pedInfo?.cliente_id) {
+              const clientes = await base44.entities.Cliente.filter({ id: pedInfo.cliente_id });
+              clienteTelefone = clientes[0]?.telefone || null;
+            }
+            base44.functions.invoke('enviarWhatsappKanban', {
+              ordem: { numero: ordem.numero, produto_nome: ordem.produto_nome, quantidade: ordem.quantidade },
+              novoStatus: proximo,
+              clienteNome,
+              clienteTelefone: WHATSAPP_NOTIFICAR_CLIENTE ? clienteTelefone : null,
+              numeros_internos: WHATSAPP_NUMEROS_INTERNOS,
+              msg_interno: waCfgGlobal.msg_interno || null,
+              msg_cliente: waCfgGlobal.msg_cliente || null,
+            }).catch(() => {});
+          } catch {}
+        })();
+      }
+
+      // Background refresh sem bloquear a UI
+      load(true).catch(() => {});
     } catch (error) {
       // Se a API falhar, desfazer a mudança otimista
       setOrdens(prev => prev.map(o => o.id === ordem.id ? { ...o, status: ordem.status } : o));
