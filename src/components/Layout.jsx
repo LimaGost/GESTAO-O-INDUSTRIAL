@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
+import GlobalSearch from '@/components/GlobalSearch';
 
 const bottomTabs = [
   { path: '/Dashboard',    label: 'Dashboard',  icon: LayoutDashboard },
@@ -238,15 +239,18 @@ export default function Layout() {
       <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* Topbar desktop */}
-        <header className="hidden md:flex bg-white border-b px-6 py-4 items-center justify-between flex-shrink-0"
+        <header className="hidden md:flex bg-white border-b px-6 py-3.5 items-center justify-between gap-4 flex-shrink-0"
           style={{ borderColor: '#E8DDD0' }}>
-          <div>
-            <h1 className="text-lg font-bold" style={{ color: '#1C1917' }}>
+          <div className="flex-shrink-0">
+            <h1 className="text-lg font-bold leading-tight" style={{ color: '#1C1917' }}>
               {currentItem?.label || 'Raio do Sol'}
             </h1>
             <p className="text-xs" style={{ color: '#A8937E' }}>Sistema de Gestão Industrial</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex-1 flex justify-center">
+            <GlobalSearch />
+          </div>
+          <div className="flex items-center gap-3 flex-shrink-0">
             <NotificacoesPanel />
             <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm"
               style={{ background: '#F59E0B', color: '#1C1917' }}>RS</div>
