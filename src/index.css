@@ -53,43 +53,7 @@
     --sidebar-ring: 38 92% 50%;
   }
 
-  /* ── Auto Dark Mode (prefers-color-scheme) ── */
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --background: 30 10% 8%;
-      --foreground: 40 20% 92%;
-      --card: 30 10% 11%;
-      --card-foreground: 40 20% 92%;
-      --popover: 30 10% 11%;
-      --popover-foreground: 40 20% 92%;
-      --primary: 38 92% 50%;
-      --primary-foreground: 0 0% 5%;
-      --secondary: 30 10% 16%;
-      --secondary-foreground: 40 20% 85%;
-      --muted: 30 10% 16%;
-      --muted-foreground: 30 8% 55%;
-      --accent: 38 92% 50%;
-      --accent-foreground: 0 0% 5%;
-      --destructive: 0 62.8% 30.6%;
-      --destructive-foreground: 0 0% 98%;
-      --border: 30 10% 20%;
-      --input: 30 10% 20%;
-      --ring: 38 92% 50%;
-      --chart-1: 38 92% 55%;
-      --chart-2: 200 65% 50%;
-      --chart-3: 145 50% 45%;
-      --chart-4: 25 80% 55%;
-      --chart-5: 280 55% 60%;
-      --sidebar-background: 30 10% 9%;
-      --sidebar-foreground: 40 20% 88%;
-      --sidebar-primary: 38 92% 50%;
-      --sidebar-primary-foreground: 0 0% 5%;
-      --sidebar-accent: 30 10% 14%;
-      --sidebar-accent-foreground: 40 20% 88%;
-      --sidebar-border: 30 10% 16%;
-      --sidebar-ring: 38 92% 50%;
-    }
-  }
+
 
   .dark {
     --background: 30 10% 8%;
