@@ -14,6 +14,7 @@ import ExportButtons from '@/components/relatorios/ExportButtons';
 import ExportableChart from '@/components/dashboard/ExportableChart';
 import PeriodFilter from '@/components/dashboard/PeriodFilter';
 import { diffHoras, fmtHoras } from '@/lib/brasilia';
+import { usePermissoes } from '@/lib/usePermissoes.jsx';
 
 const COLORS = ['#F59E0B', '#3B82F6', '#22C55E', '#F97316', '#A855F7', '#EC4899', '#14B8A6', '#EF4444'];
 
@@ -90,6 +91,7 @@ function SectionTitle({ children }) {
 
 /* ──────────────────────────────────────────────────────────────────────────── */
 export default function Relatorios() {
+  const { ocultarFinanceiro } = usePermissoes();
   const [tab, setTab] = useState('visao_geral');
   const [loading, setLoading] = useState(true);
   const [ordens, setOrdens] = useState([]);
@@ -97,12 +99,15 @@ export default function Relatorios() {
   const [produtos, setProdutos] = useState([]);
   const [clientes, setClientes] = useState([]);
   const [period, setPeriod] = useState({ preset: 'month', from: '', to: '' });
-  const [ocultarValores, setOcultarValores] = useState(() => {
+  const [ocultarManual, setOcultarManual] = useState(() => {
     try { return localStorage.getItem('relatorios_ocultar_valores') === 'true'; } catch { return false; }
   });
 
+  // Ocultar se permissão é 'view' no módulo financeiro OU se o usuário ativou manualmente
+  const ocultarValores = ocultarFinanceiro('Relatorios') || ocultarManual;
+
   const toggleOcultar = () => {
-    setOcultarValores(v => {
+    setOcultarManual(v => {
       const next = !v;
       try { localStorage.setItem('relatorios_ocultar_valores', String(next)); } catch {}
       return next;
@@ -152,11 +157,17 @@ export default function Relatorios() {
             <p className="text-xs text-muted-foreground hidden md:block">
               {new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
             </p>
-            <button onClick={toggleOcultar}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${ocultarValores ? 'bg-amber-100 border-amber-300 text-amber-700' : 'bg-card border-border text-muted-foreground hover:bg-muted'}`}>
-              {ocultarValores ? <EyeOff size={13} /> : <Eye size={13} />}
-              {ocultarValores ? 'Valores ocultos' : 'Ocultar valores'}
-            </button>
+            {ocultarFinanceiro('Relatorios') ? (
+              <span className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold border bg-amber-100 border-amber-300 text-amber-700">
+                <EyeOff size={13} /> Valores restritos
+              </span>
+            ) : (
+              <button onClick={toggleOcultar}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${ocultarManual ? 'bg-amber-100 border-amber-300 text-amber-700' : 'bg-card border-border text-muted-foreground hover:bg-muted'}`}>
+                {ocultarManual ? <EyeOff size={13} /> : <Eye size={13} />}
+                {ocultarManual ? 'Valores ocultos' : 'Ocultar valores'}
+              </button>
+            )}
           </div>
         </div>
       </div>
