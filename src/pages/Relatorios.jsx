@@ -8,7 +8,7 @@ import {
 import {
   BarChart2, Factory, ShoppingCart, Calendar, Zap,
   TrendingUp, Users, Package, DollarSign, Clock,
-  ArrowUpRight, ArrowDownRight, Award, AlertTriangle
+  ArrowUpRight, ArrowDownRight, Award, AlertTriangle, EyeOff, Eye
 } from 'lucide-react';
 import ExportButtons from '@/components/relatorios/ExportButtons';
 import ExportableChart from '@/components/dashboard/ExportableChart';
@@ -33,6 +33,7 @@ const fmtRShort = (v) => {
   if (v >= 1000) return `R$ ${(v / 1000).toFixed(1)}k`;
   return fmtR(v);
 };
+const VALOR_OCULTO = '••••••';
 
 function startOfWeek(d) {
   const dt = new Date(d); dt.setDate(dt.getDate() - dt.getDay()); dt.setHours(0, 0, 0, 0); return dt;
@@ -96,6 +97,17 @@ export default function Relatorios() {
   const [produtos, setProdutos] = useState([]);
   const [clientes, setClientes] = useState([]);
   const [period, setPeriod] = useState({ preset: 'month', from: '', to: '' });
+  const [ocultarValores, setOcultarValores] = useState(() => {
+    try { return localStorage.getItem('relatorios_ocultar_valores') === 'true'; } catch { return false; }
+  });
+
+  const toggleOcultar = () => {
+    setOcultarValores(v => {
+      const next = !v;
+      try { localStorage.setItem('relatorios_ocultar_valores', String(next)); } catch {}
+      return next;
+    });
+  };
 
   useEffect(() => {
     async function load() {
@@ -136,9 +148,16 @@ export default function Relatorios() {
               <p className="text-xs text-muted-foreground">Análise completa de vendas, produção e clientes</p>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground self-center">
-            {new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-muted-foreground hidden md:block">
+              {new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+            </p>
+            <button onClick={toggleOcultar}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${ocultarValores ? 'bg-amber-100 border-amber-300 text-amber-700' : 'bg-card border-border text-muted-foreground hover:bg-muted'}`}>
+              {ocultarValores ? <EyeOff size={13} /> : <Eye size={13} />}
+              {ocultarValores ? 'Valores ocultos' : 'Ocultar valores'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -163,9 +182,9 @@ export default function Relatorios() {
         </div>
       ) : (
         <>
-          {tab === 'visao_geral' && <TabVisaoGeral pedidos={filteredPedidos} ordens={filteredOrdens} produtos={produtos} clientes={clientes} />}
-          {tab === 'clientes' && <TabClientes pedidos={filteredPedidos} clientes={clientes} />}
-          {tab === 'produtos' && <TabProdutos pedidos={filteredPedidos} ordens={filteredOrdens} produtos={produtos} />}
+          {tab === 'visao_geral' && <TabVisaoGeral pedidos={filteredPedidos} ordens={filteredOrdens} produtos={produtos} clientes={clientes} ocultar={ocultarValores} />}
+          {tab === 'clientes' && <TabClientes pedidos={filteredPedidos} clientes={clientes} ocultar={ocultarValores} />}
+          {tab === 'produtos' && <TabProdutos pedidos={filteredPedidos} ordens={filteredOrdens} produtos={produtos} ocultar={ocultarValores} />}
           {tab === 'producao' && <TabProducao ordens={filteredOrdens} />}
           {tab === 'produtividade' && <TabProdutividade ordens={filteredOrdens} produtos={produtos} />}
         </>
@@ -175,7 +194,7 @@ export default function Relatorios() {
 }
 
 /* ── VISÃO GERAL ──────────────────────────────────────────────────────────── */
-function TabVisaoGeral({ pedidos, ordens, produtos, clientes }) {
+function TabVisaoGeral({ pedidos, ordens, produtos, clientes, ocultar }) {
   const ativos = pedidos.filter(p => p.status !== 'cancelado');
   const faturamento = ativos.reduce((s, p) => s + (p.valor_total || 0), 0);
   const expedidos = pedidos.filter(p => p.status === 'expedido' || p.status === 'entregue');
@@ -210,9 +229,9 @@ function TabVisaoGeral({ pedidos, ordens, produtos, clientes }) {
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard label="Faturamento" value={fmtRShort(faturamento)} sub={`${ativos.length} pedidos`} icon={DollarSign} color="bg-green-500" />
-        <KpiCard label="Faturamento Expedido" value={fmtRShort(faturamentoExpedido)} sub={`${expedidos.length} expedidos`} icon={TrendingUp} color="bg-sky-500" />
-        <KpiCard label="Ticket Médio" value={fmtRShort(ticketMedio)} sub="por pedido" icon={ShoppingCart} color="bg-purple-500" />
+        <KpiCard label="Faturamento" value={ocultar ? VALOR_OCULTO : fmtRShort(faturamento)} sub={`${ativos.length} pedidos`} icon={DollarSign} color="bg-green-500" />
+        <KpiCard label="Faturamento Expedido" value={ocultar ? VALOR_OCULTO : fmtRShort(faturamentoExpedido)} sub={`${expedidos.length} expedidos`} icon={TrendingUp} color="bg-sky-500" />
+        <KpiCard label="Ticket Médio" value={ocultar ? VALOR_OCULTO : fmtRShort(ticketMedio)} sub="por pedido" icon={ShoppingCart} color="bg-purple-500" />
         <KpiCard label="Unidades Produzidas" value={fmt(totalProduzido)} sub={`${ops.length} OPs finalizadas`} icon={Factory} color="bg-amber-500" />
       </div>
 
@@ -227,7 +246,12 @@ function TabVisaoGeral({ pedidos, ordens, produtos, clientes }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <ExportableChart title="Evolução de Faturamento (Semanal)">
-          {semanasList.length === 0 ? <EmptyState /> : (
+          {ocultar ? (
+            <div className="flex flex-col items-center justify-center h-[220px] text-muted-foreground gap-2">
+              <EyeOff size={28} className="opacity-30" />
+              <p className="text-sm">Valores ocultos</p>
+            </div>
+          ) : semanasList.length === 0 ? <EmptyState /> : (
             <ResponsiveContainer width="100%" height={220}>
               <AreaChart data={semanasList}>
                 <defs>
@@ -270,9 +294,9 @@ function TabVisaoGeral({ pedidos, ordens, produtos, clientes }) {
               { header: 'Valor', key: 'valor', width: 60 },
             ]}
             rows={[
-              { metrica: 'Faturamento Total', valor: fmtR(faturamento) },
-              { metrica: 'Faturamento Expedido', valor: fmtR(faturamentoExpedido) },
-              { metrica: 'Ticket Médio', valor: fmtR(ticketMedio) },
+              { metrica: 'Faturamento Total', valor: ocultar ? '—' : fmtR(faturamento) },
+              { metrica: 'Faturamento Expedido', valor: ocultar ? '—' : fmtR(faturamentoExpedido) },
+              { metrica: 'Ticket Médio', valor: ocultar ? '—' : fmtR(ticketMedio) },
               { metrica: 'Total de Pedidos', valor: ativos.length },
               { metrica: 'OPs Finalizadas', valor: ops.length },
               { metrica: 'Unidades Produzidas', valor: totalProduzido },
@@ -299,7 +323,7 @@ function TabVisaoGeral({ pedidos, ordens, produtos, clientes }) {
 }
 
 /* ── CLIENTES ─────────────────────────────────────────────────────────────── */
-function TabClientes({ pedidos, clientes }) {
+function TabClientes({ pedidos, clientes, ocultar }) {
   const [ordenar, setOrdenar] = useState('faturamento');
 
   const clienteMetricas = useMemo(() => {
@@ -326,13 +350,18 @@ function TabClientes({ pedidos, clientes }) {
     <div className="space-y-5">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <KpiCard label="Clientes com Pedidos" value={clienteMetricas.length} sub="no período" icon={Users} color="bg-sky-500" />
-        <KpiCard label="Faturamento Total" value={fmtRShort(totalFat)} sub="pedidos ativos" icon={DollarSign} color="bg-green-500" />
-        <KpiCard label="Ticket Médio/Cliente" value={fmtRShort(clienteMetricas.length > 0 ? totalFat / clienteMetricas.length : 0)} icon={TrendingUp} color="bg-purple-500" />
+        <KpiCard label="Faturamento Total" value={ocultar ? VALOR_OCULTO : fmtRShort(totalFat)} sub="pedidos ativos" icon={DollarSign} color="bg-green-500" />
+        <KpiCard label="Ticket Médio/Cliente" value={ocultar ? VALOR_OCULTO : fmtRShort(clienteMetricas.length > 0 ? totalFat / clienteMetricas.length : 0)} icon={TrendingUp} color="bg-purple-500" />
         <KpiCard label="Concentração Top 3" value={`${concentracao}%`} sub="do faturamento" icon={Award} color="bg-amber-500" />
       </div>
 
       <ExportableChart title="Top 10 Clientes por Faturamento">
-        {topClientes.length === 0 ? <EmptyState /> : (
+        {ocultar ? (
+          <div className="flex flex-col items-center justify-center h-[260px] text-muted-foreground gap-2">
+            <EyeOff size={28} className="opacity-30" />
+            <p className="text-sm">Valores ocultos</p>
+          </div>
+        ) : topClientes.length === 0 ? <EmptyState /> : (
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={chartData} layout="vertical" barSize={14}>
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0e8dc" />
@@ -381,7 +410,7 @@ function TabClientes({ pedidos, clientes }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
                     <p className="text-sm font-medium text-foreground truncate">{c.nome}</p>
-                    <p className="text-sm font-bold text-foreground ml-2 flex-shrink-0">{fmtR(c.faturamento)}</p>
+                    <p className="text-sm font-bold text-foreground ml-2 flex-shrink-0">{ocultar ? VALOR_OCULTO : fmtR(c.faturamento)}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
@@ -401,7 +430,7 @@ function TabClientes({ pedidos, clientes }) {
 }
 
 /* ── PRODUTOS ─────────────────────────────────────────────────────────────── */
-function TabProdutos({ pedidos, ordens, produtos }) {
+function TabProdutos({ pedidos, ordens, produtos, ocultar }) {
   const vendidos = useMemo(() => {
     const map = {};
     for (const ped of pedidos.filter(p => p.status !== 'cancelado')) {
