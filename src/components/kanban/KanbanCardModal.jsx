@@ -270,51 +270,61 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
 
           {/* Botões de ação */}
           <div className="space-y-2 pt-1">
-            {/* Imprimir Etiquetas (qualquer etapa) */}
-            {onAvancar && (
-              <button onClick={() => {
-                itensNormalizados.forEach(item => {
-                  imprimirEtiquetaProduto({
-                    produto_nome: item.produto_nome,
-                    quantidade: item.quantidade,
-                    lote: ordem.lote || '—',
-                    data_producao: ordem.data_embalagem?.slice(0, 10) || new Date().toISOString().slice(0, 10),
-                    codigo_barras: item.produto_id || item.produto_nome,
-                  });
-                });
-              }} className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold border border-primary/30 text-primary hover:bg-primary/10 transition-colors">
-                <Printer size={13} /> Imprimir Etiquetas
-              </button>
-            )}
-
-            {/* Descarte avulso (além do obrigatório) */}
-            {onAvancar && (
-              <button onClick={() => setShowDescarte(true)}
-                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold border border-red-200 text-red-600 hover:bg-red-50 transition-colors">
-                <Trash2 size={13} /> Registrar Descarte Avulso
-              </button>
-            )}
-
-            <div className="flex gap-3">
-              {PROXIMOS[ordem.status] && onAvancar && (
-                <button
-                  onClick={handleAvancar}
-                  disabled={loading || !tudoCompleto}
-                  title={!tudoCompleto ? 'Complete o checklist e informe o descarte para avançar' : ''}
-                  className="flex-1 bg-primary text-primary-foreground py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity flex items-center justify-center gap-2">
-                  <ArrowRight size={15} />
-                  {loading ? 'Avançando...' : `→ ${kanbanColunas.find(c => c.key === PROXIMOS[ordem.status])?.label || 'Avançar'}`}
-                </button>
-              )}
-              {ordem.status === 'finalizado' && (
-                <div className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-green-100 text-green-700">
-                  <CheckCircle size={15} /> Finalizado
+            {!onAvancar ? (
+              /* Modo somente leitura */
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold bg-muted text-muted-foreground border border-border">
+                  🔒 Somente visualização — sem permissão para avançar
                 </div>
-              )}
-              <button onClick={onClose} className="px-4 border border-border rounded-xl text-sm text-muted-foreground hover:bg-muted transition-colors">
-                Fechar
-              </button>
-            </div>
+                <button onClick={onClose} className="w-full border border-border rounded-xl py-2.5 text-sm text-muted-foreground hover:bg-muted transition-colors">
+                  Fechar
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* Imprimir Etiquetas (qualquer etapa) */}
+                <button onClick={() => {
+                  itensNormalizados.forEach(item => {
+                    imprimirEtiquetaProduto({
+                      produto_nome: item.produto_nome,
+                      quantidade: item.quantidade,
+                      lote: ordem.lote || '—',
+                      data_producao: ordem.data_embalagem?.slice(0, 10) || new Date().toISOString().slice(0, 10),
+                      codigo_barras: item.produto_id || item.produto_nome,
+                    });
+                  });
+                }} className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold border border-primary/30 text-primary hover:bg-primary/10 transition-colors">
+                  <Printer size={13} /> Imprimir Etiquetas
+                </button>
+
+                {/* Descarte avulso */}
+                <button onClick={() => setShowDescarte(true)}
+                  className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold border border-red-200 text-red-600 hover:bg-red-50 transition-colors">
+                  <Trash2 size={13} /> Registrar Descarte Avulso
+                </button>
+
+                <div className="flex gap-3">
+                  {PROXIMOS[ordem.status] && (
+                    <button
+                      onClick={handleAvancar}
+                      disabled={loading || !tudoCompleto}
+                      title={!tudoCompleto ? 'Complete o checklist e informe o descarte para avançar' : ''}
+                      className="flex-1 bg-primary text-primary-foreground py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity flex items-center justify-center gap-2">
+                      <ArrowRight size={15} />
+                      {loading ? 'Avançando...' : `→ ${kanbanColunas.find(c => c.key === PROXIMOS[ordem.status])?.label || 'Avançar'}`}
+                    </button>
+                  )}
+                  {ordem.status === 'finalizado' && (
+                    <div className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-green-100 text-green-700">
+                      <CheckCircle size={15} /> Finalizado
+                    </div>
+                  )}
+                  <button onClick={onClose} className="px-4 border border-border rounded-xl text-sm text-muted-foreground hover:bg-muted transition-colors">
+                    Fechar
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

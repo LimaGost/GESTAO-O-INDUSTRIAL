@@ -669,7 +669,7 @@ export default function Kanban() {
           produtos={produtos}
           kanbanColunas={kanbanColunas}
           clienteNome={ordemSelecionada.pedido_id ? pedidoMap[ordemSelecionada.pedido_id]?.nome : null}
-          onAvancar={async (ordem, descarte) => { await avancarStatus(ordem, descarte); setOrdemSelecionada(null); }}
+          onAvancar={readonly ? null : async (ordem, descarte) => { await avancarStatus(ordem, descarte); setOrdemSelecionada(null); }}
           loading={loadingId === ordemSelecionada.id}
           onClose={() => setOrdemSelecionada(null)}
         />
