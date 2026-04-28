@@ -1,25 +1,41 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
-import { AlertTriangle, TrendingUp, TrendingDown, Archive, Plus, X, Check, Search, Eye } from 'lucide-react';
+import { AlertTriangle, TrendingUp, Archive, Plus, X, Check, Search, Eye, Package, RefreshCw, SlidersHorizontal } from 'lucide-react';
 import { registrarLog } from '@/lib/audit';
 import { gerarNumero } from '@/lib/numeracao';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
+
+function StatusBadge({ zerado, alertaMax, alerta }) {
+  if (zerado)    return <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-100 text-red-600 font-semibold">Zerado</span>;
+  if (alertaMax) return <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 text-purple-600 font-semibold">Excesso</span>;
+  if (alerta)    return <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">Abaixo mín.</span>;
+  return          <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-600 font-semibold">OK</span>;
+}
+
+function BarraEstoque({ pct, zerado, alerta }) {
+  const cor = zerado ? 'bg-red-400' : alerta ? 'bg-amber-400' : 'bg-green-500';
+  return (
+    <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
+      <div className={`h-full rounded-full transition-all duration-500 ${cor}`} style={{ width: `${Math.max(pct, 2)}%` }} />
+    </div>
+  );
+}
 
 export default function Estoque() {
   const { somenteLeitura } = usePermissoes();
   const readonly = somenteLeitura('Estoque');
   const [produtos, setProdutos] = useState([]);
+  const [carregando, setCarregando] = useState(true);
   const [showAjuste, setShowAjuste] = useState(false);
-  const [ajuste, setAjuste] = useState({ produto_id: '', tipo: 'entrada', quantidade: 0, motivo: '' });
+  const [ajuste, setAjuste] = useState({ produto_id: '', tipo: 'entrada', quantidade: 1, motivo: '' });
   const [loading, setLoading] = useState(false);
   const [busca, setBusca] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('todos');
   const [filtroCategoria, setFiltroCategoria] = useState('todas');
   const buscaRef = useRef(null);
 
-  // Autofoco ao montar + atalho "/" para focar busca
   useEffect(() => {
-    buscaRef.current?.focus();
+    setTimeout(() => buscaRef.current?.focus(), 100);
     const handler = (e) => {
       if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
         e.preventDefault();
@@ -31,8 +47,10 @@ export default function Estoque() {
   }, []);
 
   const load = async () => {
+    setCarregando(true);
     const data = await base44.entities.Produto.list();
     setProdutos(data);
+    setCarregando(false);
   };
 
   useEffect(() => { load(); }, []);
@@ -42,16 +60,11 @@ export default function Estoque() {
     const prod = produtos.find(p => p.id === ajuste.produto_id);
     if (!prod) return;
 
-    let novoEstoque;
-    if (ajuste.tipo === 'entrada') {
-      novoEstoque = (prod.estoque_atual || 0) + ajuste.quantidade;
-    } else {
-      novoEstoque = (prod.estoque_atual || 0) - ajuste.quantidade;
-      if (novoEstoque < 0) {
-        alert('❌ Operação bloqueada! Estoque não pode ficar negativo.');
-        return;
-      }
-    }
+    let novoEstoque = ajuste.tipo === 'entrada'
+      ? (prod.estoque_atual || 0) + ajuste.quantidade
+      : (prod.estoque_atual || 0) - ajuste.quantidade;
+
+    if (novoEstoque < 0) { alert('❌ Estoque não pode ficar negativo.'); return; }
 
     setLoading(true);
     await base44.entities.Produto.update(ajuste.produto_id, { estoque_atual: novoEstoque });
@@ -67,23 +80,24 @@ export default function Estoque() {
         origem: 'estoque_minimo',
       });
       await registrarLog('OrdemProducao', op.id, 'ALERTA_ESTOQUE_MINIMO', `OP automática criada por estoque mínimo — ${prod.nome}`);
-      alert(`⚠️ Estoque abaixo do mínimo! Ordem de produção criada automaticamente no Kanban.`);
+      alert(`⚠️ Estoque abaixo do mínimo! OP criada automaticamente no Kanban.`);
     }
 
     setShowAjuste(false);
-    setAjuste({ produto_id: '', tipo: 'entrada', quantidade: 0, motivo: '' });
+    setAjuste({ produto_id: '', tipo: 'entrada', quantidade: 1, motivo: '' });
     await load();
     setLoading(false);
   };
 
   const totalProdutos = produtos.length;
   const alertas = produtos.filter(p => (p.estoque_atual || 0) <= (p.estoque_minimo || 0)).length;
+  const zerados = produtos.filter(p => (p.estoque_atual || 0) === 0).length;
   const totalUnidades = produtos.reduce((s, p) => s + (p.estoque_atual || 0), 0);
+  const categorias = useMemo(() => [...new Set(produtos.map(p => p.categoria).filter(Boolean))].sort(), [produtos]);
 
-  const categorias = [...new Set(produtos.map(p => p.categoria).filter(Boolean))].sort();
-
-  const produtosFiltrados = produtos.filter(p => {
-    const matchBusca = !busca || (p.nome || '').toLowerCase().includes(busca.toLowerCase()) || (p.codigo || '').toLowerCase().includes(busca.toLowerCase());
+  const produtosFiltrados = useMemo(() => produtos.filter(p => {
+    const b = busca.toLowerCase();
+    const matchBusca = !busca || (p.nome || '').toLowerCase().includes(b) || (p.codigo || '').toLowerCase().includes(b) || (p.categoria || '').toLowerCase().includes(b);
     const est = p.estoque_atual || 0;
     const alerta = est <= (p.estoque_minimo || 0);
     const zerado = est === 0;
@@ -92,173 +106,280 @@ export default function Estoque() {
     if (filtroStatus === 'alerta') return matchBusca && matchCategoria && alerta && !zerado;
     if (filtroStatus === 'ok') return matchBusca && matchCategoria && !alerta;
     return matchBusca && matchCategoria;
-  });
+  }), [produtos, busca, filtroStatus, filtroCategoria]);
+
+  // Produto selecionado no ajuste
+  const produtoAjuste = produtos.find(p => p.id === ajuste.produto_id);
 
   return (
     <div className="space-y-5">
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        {[
-          { label: 'Produtos Cadastrados', value: totalProdutos, icon: Archive, color: 'text-sky-blue' },
-          { label: 'Total em Estoque', value: totalUnidades, icon: TrendingUp, color: 'text-rainbow-green' },
-          { label: 'Alertas de Mínimo', value: alertas, icon: AlertTriangle, color: alertas > 0 ? 'text-rainbow-red' : 'text-muted-foreground' },
-        ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="bg-card border border-border rounded-2xl p-4 flex items-center gap-4">
-            <Icon size={22} className={color} />
-            <div>
-              <p className="text-xs text-muted-foreground">{label}</p>
-              <p className="text-2xl font-bold text-foreground">{value}</p>
-            </div>
+
+      {/* Header */}
+      <div className="bg-card border border-border rounded-2xl px-5 py-4 flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-green-500/10 flex items-center justify-center">
+            <Archive size={19} className="text-green-600" />
           </div>
-        ))}
-      </div>
-
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h2 className="text-lg font-bold text-foreground">Estoque de Produtos Acabados</h2>
-          <p className="text-xs text-muted-foreground">{produtos.length} SKUs cadastrados</p>
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Estoque</h2>
+            <p className="text-xs text-muted-foreground">{totalProdutos} SKUs · {totalUnidades.toLocaleString('pt-BR')} unidades</p>
+          </div>
         </div>
-        {!readonly ? (
-          <button onClick={() => setShowAjuste(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-amber-500 transition-colors shadow-sm">
-            <Plus size={16} /> Ajuste Manual
+        <div className="flex items-center gap-2">
+          <button onClick={() => load()} disabled={carregando}
+            className="p-2.5 border border-border rounded-xl hover:bg-muted transition-colors text-muted-foreground disabled:opacity-40">
+            <RefreshCw size={14} className={carregando ? 'animate-spin' : ''} />
           </button>
-        ) : (
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted px-3 py-2 rounded-xl">
-            <Eye size={13} /> Somente visualização
-          </span>
-        )}
+          {!readonly ? (
+            <button onClick={() => setShowAjuste(true)}
+              className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm">
+              <Plus size={16} /> Ajuste Manual
+            </button>
+          ) : (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted px-3 py-2 rounded-xl">
+              <Eye size={13} /> Somente visualização
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* Search + Filtros */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2.5 bg-card border border-border rounded-xl px-3.5 py-2.5">
-          <Search size={14} className="text-muted-foreground" />
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div onClick={() => setFiltroStatus('todos')} className="bg-card border border-border rounded-2xl p-4 cursor-pointer hover:border-sky-400 transition-colors group">
+          <div className="flex items-center gap-2 mb-2">
+            <Archive size={15} className="text-sky-500" />
+            <span className="text-xs text-muted-foreground">Total de SKUs</span>
+          </div>
+          <p className="text-2xl font-bold text-foreground">{totalProdutos}</p>
+        </div>
+        <div onClick={() => setFiltroStatus('todos')} className="bg-card border border-border rounded-2xl p-4 cursor-pointer hover:border-green-400 transition-colors">
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingUp size={15} className="text-green-500" />
+            <span className="text-xs text-muted-foreground">Total em Estoque</span>
+          </div>
+          <p className="text-2xl font-bold text-foreground">{totalUnidades.toLocaleString('pt-BR')}</p>
+          <p className="text-[10px] text-muted-foreground">unidades</p>
+        </div>
+        <div onClick={() => setFiltroStatus('alerta')} className={`rounded-2xl p-4 cursor-pointer transition-colors border ${alertas > 0 ? 'bg-amber-50 border-amber-200 hover:border-amber-400' : 'bg-card border-border'}`}>
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle size={15} className={alertas > 0 ? 'text-amber-500' : 'text-muted-foreground'} />
+            <span className="text-xs text-muted-foreground">Alertas Mínimo</span>
+          </div>
+          <p className={`text-2xl font-bold ${alertas > 0 ? 'text-amber-600' : 'text-foreground'}`}>{alertas}</p>
+          {alertas > 0 && <p className="text-[10px] text-amber-500">clique para filtrar</p>}
+        </div>
+        <div onClick={() => setFiltroStatus('zerado')} className={`rounded-2xl p-4 cursor-pointer transition-colors border ${zerados > 0 ? 'bg-red-50 border-red-200 hover:border-red-400' : 'bg-card border-border'}`}>
+          <div className="flex items-center gap-2 mb-2">
+            <Package size={15} className={zerados > 0 ? 'text-red-500' : 'text-muted-foreground'} />
+            <span className="text-xs text-muted-foreground">Zerados</span>
+          </div>
+          <p className={`text-2xl font-bold ${zerados > 0 ? 'text-red-600' : 'text-foreground'}`}>{zerados}</p>
+          {zerados > 0 && <p className="text-[10px] text-red-400">clique para filtrar</p>}
+        </div>
+      </div>
+
+      {/* Busca + Filtros */}
+      <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+        {/* Campo busca */}
+        <div className="flex items-center gap-2.5 border border-border rounded-xl px-3.5 py-2.5 focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/20 transition-all bg-background">
+          <Search size={15} className="text-muted-foreground flex-shrink-0" />
           <input ref={buscaRef} value={busca} onChange={e => setBusca(e.target.value)}
-            placeholder="Buscar por nome ou código... (tecle / para focar)"
+            placeholder="Buscar por nome, código ou categoria..."
             className="bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground w-full" />
-          {busca && <button onClick={() => setBusca('')} className="text-muted-foreground hover:text-foreground"><X size={13} /></button>}
+          {busca
+            ? <button onClick={() => { setBusca(''); buscaRef.current?.focus(); }} className="text-muted-foreground hover:text-foreground flex-shrink-0"><X size={14} /></button>
+            : <kbd className="hidden sm:block text-[10px] text-muted-foreground/60 bg-muted px-1.5 py-0.5 rounded font-mono">/</kbd>
+          }
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {[{k:'todos',l:'Todos'},{k:'zerado',l:'Zerados'},{k:'alerta',l:'Alerta'},{k:'ok',l:'OK'}].map(f => (
+        {/* Filtros status */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <SlidersHorizontal size={13} className="text-muted-foreground flex-shrink-0" />
+          {[
+            { k: 'todos', l: 'Todos', count: produtos.length },
+            { k: 'ok', l: 'OK', count: produtos.filter(p => (p.estoque_atual||0) > (p.estoque_minimo||0)).length },
+            { k: 'alerta', l: 'Alerta', count: alertas - zerados },
+            { k: 'zerado', l: 'Zerado', count: zerados },
+          ].map(f => (
             <button key={f.k} onClick={() => setFiltroStatus(f.k)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                filtroStatus === f.k ? 'bg-primary text-primary-foreground' : 'bg-card border border-border text-muted-foreground hover:text-foreground'
-              }`}>{f.l}</button>
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                filtroStatus === f.k ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-muted text-muted-foreground hover:text-foreground'
+              }`}>
+              {f.l}
+              <span className={`text-[10px] rounded-full px-1.5 py-0.5 font-bold ${filtroStatus === f.k ? 'bg-white/20' : 'bg-border'}`}>{f.count}</span>
+            </button>
           ))}
         </div>
 
+        {/* Filtros categoria */}
         {categorias.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             <button onClick={() => setFiltroCategoria('todas')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                filtroCategoria === 'todas' ? 'bg-rainbow-purple text-white' : 'bg-card border border-border text-muted-foreground hover:text-foreground'
-              }`}>Todas Categorias</button>
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${filtroCategoria === 'todas' ? 'bg-purple-600 text-white' : 'bg-muted text-muted-foreground hover:text-foreground'}`}>
+              Todas
+            </button>
             {categorias.map(cat => (
               <button key={cat} onClick={() => setFiltroCategoria(cat)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  filtroCategoria === cat ? 'bg-rainbow-purple text-white' : 'bg-card border border-border text-muted-foreground hover:text-foreground'
-                }`}>{cat}</button>
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${filtroCategoria === cat ? 'bg-purple-600 text-white' : 'bg-muted text-muted-foreground hover:text-foreground'}`}>
+                {cat}
+              </button>
             ))}
           </div>
         )}
       </div>
 
-      {showAjuste && !readonly && (
-        <div className="bg-white border border-border rounded-xl p-5 space-y-4 shadow-sm">
-          <h3 className="font-semibold text-foreground">Ajuste de Estoque</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Produto *</label>
-              <select value={ajuste.produto_id} onChange={e => setAjuste(a => ({ ...a, produto_id: e.target.value }))}
-                className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
-                <option value="">Selecione...</option>
-                {produtos.map(p => <option key={p.id} value={p.id}>{p.nome} (Atual: {p.estoque_atual || 0})</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Tipo</label>
-              <select value={ajuste.tipo} onChange={e => setAjuste(a => ({ ...a, tipo: e.target.value }))}
-                className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
-                <option value="entrada">Entrada</option>
-                <option value="saida">Saída</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Quantidade *</label>
-              <input type="number" min="1" value={ajuste.quantidade} onChange={e => setAjuste(a => ({ ...a, quantidade: Number(e.target.value) }))}
-                className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Motivo</label>
-              <input value={ajuste.motivo} onChange={e => setAjuste(a => ({ ...a, motivo: e.target.value }))}
-                placeholder="Ex: inventário, devolução..."
-                className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
-            </div>
+      {/* Tabela */}
+      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+        {/* Contador de resultados */}
+        <div className="px-4 py-2.5 border-b border-border flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">
+            {busca || filtroStatus !== 'todos' || filtroCategoria !== 'todas'
+              ? <><strong className="text-foreground">{produtosFiltrados.length}</strong> de {totalProdutos} produtos</>
+              : <><strong className="text-foreground">{totalProdutos}</strong> produtos</>
+            }
+          </p>
+          {(busca || filtroStatus !== 'todos' || filtroCategoria !== 'todas') && (
+            <button onClick={() => { setBusca(''); setFiltroStatus('todos'); setFiltroCategoria('todas'); }}
+              className="text-xs text-muted-foreground hover:text-destructive transition-colors">Limpar filtros</button>
+          )}
+        </div>
+
+        {carregando ? (
+          <div className="py-16 flex flex-col items-center gap-3 text-muted-foreground">
+            <RefreshCw size={22} className="animate-spin opacity-40" />
+            <p className="text-sm">Carregando estoque...</p>
           </div>
-          <div className="flex gap-3">
-            <button onClick={ajustarEstoque} disabled={loading}
-              className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2 rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50">
-              <Check size={15} /> {loading ? 'Salvando...' : 'Confirmar Ajuste'}
-            </button>
-            <button onClick={() => setShowAjuste(false)} className="border border-border px-5 py-2 rounded-xl text-sm text-muted-foreground hover:bg-muted transition-colors">
-              Cancelar
-            </button>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/30">
+                <tr>
+                  {['Produto', 'Código', 'Unidade', 'Atual', 'Mín', 'Máx', 'Status'].map(h => (
+                    <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60">
+                {produtosFiltrados.map(p => {
+                  const est = p.estoque_atual || 0;
+                  const alerta = est <= (p.estoque_minimo || 0);
+                  const zerado = est === 0;
+                  const alertaMax = (p.estoque_maximo || 0) > 0 && est >= p.estoque_maximo;
+                  const pct = p.estoque_minimo > 0 ? Math.min(100, Math.round((est / (p.estoque_minimo * 2)) * 100)) : 100;
+                  return (
+                    <tr key={p.id} className={`hover:bg-muted/20 transition-colors ${zerado ? 'bg-red-50/40' : alerta ? 'bg-amber-50/30' : ''}`}>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col gap-1 min-w-[140px]">
+                          <span className="font-medium text-foreground leading-tight">{p.nome}</span>
+                          {p.categoria && <span className="text-[10px] text-muted-foreground">{p.categoria}</span>}
+                          <BarraEstoque pct={pct} zerado={zerado} alerta={alerta} />
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground whitespace-nowrap">{p.codigo || '—'}</td>
+                      <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{p.unidade || '—'}</td>
+                      <td className="px-4 py-3">
+                        <span className={`text-base font-bold ${zerado ? 'text-red-500' : alerta ? 'text-amber-600' : 'text-foreground'}`}>
+                          {est.toLocaleString('pt-BR')}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground text-sm">{p.estoque_minimo || 0}</td>
+                      <td className="px-4 py-3 text-muted-foreground text-sm">{p.estoque_maximo || '—'}</td>
+                      <td className="px-4 py-3">
+                        <StatusBadge zerado={zerado} alertaMax={alertaMax} alerta={alerta} />
+                      </td>
+                    </tr>
+                  );
+                })}
+                {produtosFiltrados.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="text-center py-14 text-muted-foreground">
+                      <Package size={28} className="mx-auto mb-2 opacity-20" />
+                      <p className="text-sm">{busca ? `Nenhum produto encontrado para "${busca}"` : 'Nenhum produto encontrado.'}</p>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Modal Ajuste */}
+      {showAjuste && !readonly && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          onClick={() => setShowAjuste(false)}>
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h3 className="font-bold text-foreground">Ajuste de Estoque</h3>
+              <button onClick={() => setShowAjuste(false)} className="p-1.5 hover:bg-muted rounded-lg">
+                <X size={15} className="text-muted-foreground" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              {/* Tipo entrada/saida */}
+              <div className="grid grid-cols-2 gap-2">
+                {[{ v: 'entrada', l: '+ Entrada', cor: 'border-green-400 bg-green-50 text-green-700' }, { v: 'saida', l: '− Saída', cor: 'border-red-400 bg-red-50 text-red-600' }].map(t => (
+                  <button key={t.v} onClick={() => setAjuste(a => ({ ...a, tipo: t.v }))}
+                    className={`py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${ajuste.tipo === t.v ? t.cor : 'border-border text-muted-foreground hover:border-border'}`}>
+                    {t.l}
+                  </button>
+                ))}
+              </div>
+
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block font-semibold">Produto *</label>
+                <select value={ajuste.produto_id} onChange={e => setAjuste(a => ({ ...a, produto_id: e.target.value }))}
+                  className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
+                  <option value="">Selecione...</option>
+                  {produtos.map(p => <option key={p.id} value={p.id}>{p.nome} — Atual: {p.estoque_atual || 0}</option>)}
+                </select>
+                {produtoAjuste && (
+                  <div className="mt-2 flex items-center gap-3 bg-muted/40 rounded-xl px-3 py-2">
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground">Estoque atual</p>
+                      <p className="text-lg font-bold text-foreground">{produtoAjuste.estoque_atual || 0} <span className="text-xs font-normal text-muted-foreground">{produtoAjuste.unidade || 'un'}</span></p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Após ajuste</p>
+                      <p className={`text-lg font-bold ${ajuste.tipo === 'entrada' ? 'text-green-600' : 'text-red-500'}`}>
+                        {ajuste.tipo === 'entrada'
+                          ? (produtoAjuste.estoque_atual || 0) + (ajuste.quantidade || 0)
+                          : Math.max(0, (produtoAjuste.estoque_atual || 0) - (ajuste.quantidade || 0))
+                        }
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block font-semibold">Quantidade *</label>
+                <input type="number" min="1" value={ajuste.quantidade}
+                  onChange={e => setAjuste(a => ({ ...a, quantidade: Number(e.target.value) }))}
+                  className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
+              </div>
+
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block font-semibold">Motivo</label>
+                <input value={ajuste.motivo} onChange={e => setAjuste(a => ({ ...a, motivo: e.target.value }))}
+                  placeholder="Ex: inventário, devolução, quebra..."
+                  className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <button onClick={ajustarEstoque} disabled={loading}
+                  className="flex-1 flex items-center justify-center gap-2 bg-primary text-primary-foreground py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity">
+                  <Check size={15} /> {loading ? 'Salvando...' : 'Confirmar Ajuste'}
+                </button>
+                <button onClick={() => setShowAjuste(false)}
+                  className="px-5 border border-border rounded-xl text-sm text-muted-foreground hover:bg-muted transition-colors">
+                  Cancelar
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
-
-      <div className="bg-white border border-border rounded-xl overflow-hidden shadow-sm">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/40">
-            <tr>
-              {['Produto','Código','Unidade','Estoque Atual','Mínimo','Máximo','Status'].map(h => (
-                <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {produtosFiltrados.map(p => {
-              const alerta = (p.estoque_atual || 0) <= (p.estoque_minimo || 0);
-              const zerado = (p.estoque_atual || 0) === 0;
-              const alertaMax = (p.estoque_maximo || 0) > 0 && (p.estoque_atual || 0) >= p.estoque_maximo;
-              const pct = p.estoque_minimo > 0 ? Math.min(100, Math.round(((p.estoque_atual || 0) / (p.estoque_minimo * 2)) * 100)) : 100;
-              return (
-                <tr key={p.id} className="border-t border-border hover:bg-muted/20 transition-colors">
-                  <td className="px-4 py-3 font-medium text-foreground">
-                    <div>
-                      <p>{p.nome}</p>
-                      <div className="mt-1 h-1.5 rounded-full bg-muted overflow-hidden w-24">
-                        <div className={`h-full rounded-full ${zerado ? 'bg-rainbow-red' : alerta ? 'bg-sun-yellow' : 'bg-rainbow-green'}`}
-                          style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground font-mono text-xs">{p.codigo || '—'}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{p.unidade || '—'}</td>
-                  <td className="px-4 py-3 font-bold text-foreground">{p.estoque_atual || 0}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{p.estoque_minimo || 0}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{p.estoque_maximo || '—'}</td>
-                  <td className="px-4 py-3">
-                    {zerado ? (
-                      <span className="text-xs px-2 py-1 rounded-full bg-rainbow-red/10 text-rainbow-red font-semibold">Zerado</span>
-                    ) : alertaMax ? (
-                      <span className="text-xs px-2 py-1 rounded-full bg-rainbow-purple/10 text-rainbow-purple font-semibold">Excesso</span>
-                    ) : alerta ? (
-                      <span className="text-xs px-2 py-1 rounded-full bg-sun-yellow/10 text-sun-yellow font-semibold">Abaixo do mínimo</span>
-                    ) : (
-                      <span className="text-xs px-2 py-1 rounded-full bg-rainbow-green/10 text-rainbow-green font-semibold">OK</span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-            {produtosFiltrados.length === 0 && (
-              <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">Nenhum produto encontrado.</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
     </div>
   );
 }
