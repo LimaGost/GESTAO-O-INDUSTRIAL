@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { AlertTriangle, TrendingUp, TrendingDown, Archive, Plus, X, Check, Search, Eye } from 'lucide-react';
 import { registrarLog } from '@/lib/audit';
@@ -15,6 +15,20 @@ export default function Estoque() {
   const [busca, setBusca] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('todos');
   const [filtroCategoria, setFiltroCategoria] = useState('todas');
+  const buscaRef = useRef(null);
+
+  // Autofoco ao montar + atalho "/" para focar busca
+  useEffect(() => {
+    buscaRef.current?.focus();
+    const handler = (e) => {
+      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        buscaRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   const load = async () => {
     const data = await base44.entities.Produto.list();
@@ -119,8 +133,8 @@ export default function Estoque() {
       <div className="space-y-2">
         <div className="flex items-center gap-2.5 bg-card border border-border rounded-xl px-3.5 py-2.5">
           <Search size={14} className="text-muted-foreground" />
-          <input value={busca} onChange={e => setBusca(e.target.value)}
-            placeholder="Buscar por nome ou código..."
+          <input ref={buscaRef} value={busca} onChange={e => setBusca(e.target.value)}
+            placeholder="Buscar por nome ou código... (tecle / para focar)"
             className="bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground w-full" />
           {busca && <button onClick={() => setBusca('')} className="text-muted-foreground hover:text-foreground"><X size={13} /></button>}
         </div>
