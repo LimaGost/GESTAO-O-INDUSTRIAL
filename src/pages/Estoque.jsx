@@ -267,7 +267,9 @@ export default function Estoque() {
                   const alertaMax = (p.estoque_maximo || 0) > 0 && est >= p.estoque_maximo;
                   const pct = p.estoque_minimo > 0 ? Math.min(100, Math.round((est / (p.estoque_minimo * 2)) * 100)) : 100;
                   return (
-                    <tr key={p.id} className={`hover:bg-muted/20 transition-colors ${zerado ? 'bg-red-50/40' : alerta ? 'bg-amber-50/30' : ''}`}>
+                    <tr key={p.id}
+                      onClick={() => { if (!readonly) { setAjuste({ produto_id: p.id, tipo: 'entrada', quantidade: 1, motivo: '' }); setShowAjuste(true); } }}
+                      className={`transition-colors ${readonly ? '' : 'cursor-pointer hover:bg-primary/5'} ${zerado ? 'bg-red-50/40' : alerta ? 'bg-amber-50/30' : ''}`}>
                       <td className="px-4 py-3">
                         <div className="flex flex-col gap-1 min-w-[140px]">
                           <span className="font-medium text-foreground leading-tight">{p.nome}</span>
