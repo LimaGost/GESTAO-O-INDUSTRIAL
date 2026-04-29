@@ -31,6 +31,7 @@ async function enviarMensagem(telefone, mensagem) {
     body: JSON.stringify({
       instance: SMCLICK_INSTANCE,
       type: 'text',
+      no_ticket: true,
       content: {
         telephone: telefoneFormatado,
         message: mensagem,
