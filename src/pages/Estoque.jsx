@@ -48,7 +48,7 @@ export default function Estoque() {
 
   const load = async () => {
     setCarregando(true);
-    const data = await base44.entities.Produto.list();
+    const data = await base44.entities.Produto.list('-updated_date');
     setProdutos(data);
     setCarregando(false);
   };
