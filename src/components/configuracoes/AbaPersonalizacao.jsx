@@ -30,19 +30,34 @@ function SaveButton({ onClick, saved, saving }) {
 }
 
 function SecaoEmpresa() {
-  const [form, setForm] = useState(() => ({
-    nome: 'Raio do Sol',
-    subtitulo: 'Artigos de Umbanda e Candomblé',
-    cnpj: '',
-    endereco: '',
-    telefone: '',
-    email: '',
-    logo_url: '',
-    ...getEmpresa(),
-  }));
+  const DEFAULT_LOGO = 'https://media.base44.com/images/public/69ece9d5634df8be56451712/43d0f422a_454646495_1576721726386277_6990662151677958976_n.jpg';
+
+  const [form, setForm] = useState(() => {
+    const saved = getEmpresa();
+    return {
+      nome: 'Raio do Sol',
+      subtitulo: 'Artigos de Umbanda e Candomblé',
+      cnpj: '',
+      endereco: '',
+      telefone: '',
+      email: '',
+      logo_url: DEFAULT_LOGO,
+      ...saved,
+      // Se não tiver logo salva ainda, usa o default
+      logo_url: saved.logo_url || DEFAULT_LOGO,
+    };
+  });
   const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef();
+
+  // Persiste o default logo na primeira vez
+  useState(() => {
+    const current = getEmpresa();
+    if (!current.logo_url) {
+      localStorage.setItem('empresa_config', JSON.stringify({ ...current, logo_url: DEFAULT_LOGO }));
+    }
+  });
 
   const salvar = () => {
     localStorage.setItem('empresa_config', JSON.stringify(form));
