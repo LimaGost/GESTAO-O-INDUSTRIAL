@@ -302,53 +302,55 @@ export default function EtiquetaEndereco({ expedicao, onClose }) {
   <title>Etiqueta ${expedicao.numero_nf}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    @page { size: A4; margin: 0; }
-    html, body { font-family: Arial, Helvetica, sans-serif; background: #fff; }
+    @page { size: 100mm 150mm; margin: 0; }
+    html, body { font-family: Arial, Helvetica, sans-serif; background: #fff; color: #000; }
     .pagina {
-      width: 210mm; height: 297mm;
-      display: flex; flex-direction: column;
+      width: 100mm;
+      height: 150mm;
+      display: flex;
+      flex-direction: column;
       page-break-after: always;
       overflow: hidden;
     }
     .header {
       display: flex; align-items: center;
-      border-bottom: 3px solid #000;
-      padding: 14mm 12mm; gap: 10mm;
+      border-bottom: 2px solid #000;
+      padding: 3mm 3mm; gap: 3mm;
       flex: 0 0 auto;
     }
-    .header-logo img { width: 44mm; height: 44mm; object-fit: contain; }
+    .header-logo img { width: 18mm; height: 18mm; object-fit: contain; }
     .header-logo-placeholder {
-      width: 44mm; height: 44mm; background: #f5f5f5;
-      border: 2px solid #ccc; display: flex; align-items: center;
-      justify-content: center; font-size: 18pt; font-weight: bold;
+      width: 18mm; height: 18mm; background: #f0f0f0;
+      border: 1px solid #ccc; display: flex; align-items: center;
+      justify-content: center; font-size: 10pt; font-weight: bold;
       color: #555; text-align: center;
     }
-    .header-info { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 2mm; }
-    .header-info .empresa-nome { font-size: 16pt; font-weight: bold; }
-    .header-info .empresa-detalhe { font-size: 9pt; color: #333; line-height: 1.6; }
+    .header-info { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+    .header-info .empresa-nome { font-size: 7pt; font-weight: bold; }
+    .header-info .empresa-detalhe { font-size: 5.5pt; color: #333; line-height: 1.5; margin-top: 0.5mm; }
 
     .corpo { flex: 1; display: flex; flex-direction: column; }
     .bloco {
       flex: 1; display: flex; flex-direction: column;
-      justify-content: center; border-bottom: 3px solid #000;
-      padding: 0 12mm;
+      justify-content: center; border-bottom: 1.5px solid #000;
+      padding: 0 3mm;
     }
     .bloco:last-child { border-bottom: none; }
-    .bloco-label { font-size: 9pt; font-weight: bold; color: #555; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3mm; }
-    .bloco-produto { flex-direction: row !important; align-items: center; justify-content: space-between; gap: 8mm; }
+    .bloco-label { font-size: 5pt; font-weight: bold; color: #555; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 1mm; }
+    .bloco-produto { flex-direction: row !important; align-items: center; justify-content: space-between; gap: 2mm; }
     .bloco-produto .produto-texto { flex: 1; }
-    .bloco-produto .produto-nome { font-size: 22pt; font-weight: bold; color: #000; line-height: 1.2; }
-    .bloco-produto .qrcode img { width: 36mm; height: 36mm; display: block; }
-    .bloco-cliente .cliente-nome { font-size: 18pt; font-weight: bold; color: #000; line-height: 1.3; }
-    .bloco-cliente .cliente-sub { font-size: 12pt; color: #444; margin-top: 2mm; }
-    .bloco-nf { flex-direction: row !important; align-items: center; }
-    .bloco-nf .nf-label { font-size: 20pt; font-weight: bold; min-width: 50mm; }
-    .bloco-nf .nf-valor { font-size: 40pt; font-weight: bold; letter-spacing: 2px; }
+    .bloco-produto .produto-nome { font-size: 9pt; font-weight: bold; color: #000; line-height: 1.2; }
+    .bloco-produto .qrcode img { width: 20mm; height: 20mm; display: block; }
+    .bloco-cliente .cliente-nome { font-size: 8pt; font-weight: bold; color: #000; line-height: 1.3; }
+    .bloco-cliente .cliente-sub { font-size: 6pt; color: #444; margin-top: 0.5mm; }
+    .bloco-nf { flex-direction: row !important; align-items: center; gap: 2mm; }
+    .bloco-nf .nf-label { font-size: 9pt; font-weight: bold; min-width: 16mm; }
+    .bloco-nf .nf-valor { font-size: 16pt; font-weight: bold; letter-spacing: 1px; }
     .bloco-data { flex-direction: row !important; align-items: center; }
-    .bloco-data .data-valor { font-size: 32pt; font-weight: bold; letter-spacing: 2px; }
-    .bloco-volume { flex-direction: row !important; align-items: center; }
-    .bloco-volume .vol-label { font-size: 20pt; font-weight: bold; min-width: 50mm; }
-    .bloco-volume .vol-valor { font-size: 40pt; font-weight: bold; letter-spacing: 2px; }
+    .bloco-data .data-valor { font-size: 13pt; font-weight: bold; letter-spacing: 1px; }
+    .bloco-volume { flex-direction: row !important; align-items: center; gap: 2mm; }
+    .bloco-volume .vol-label { font-size: 9pt; font-weight: bold; min-width: 16mm; }
+    .bloco-volume .vol-valor { font-size: 16pt; font-weight: bold; letter-spacing: 1px; }
     @media print { .pagina { page-break-after: always; } }
   </style>
 </head>
@@ -419,7 +421,7 @@ export default function EtiquetaEndereco({ expedicao, onClose }) {
         {/* Preview */}
         <div className="p-5 space-y-4">
           {/* Preview simplificado */}
-          <div className="border border-border rounded-xl overflow-hidden text-xs bg-white" style={{ fontFamily: 'Arial, sans-serif' }}>
+          <div className="border border-border rounded-xl overflow-hidden bg-white" style={{ fontFamily: 'Arial, sans-serif', width: '200px', margin: '0 auto' }}>
             {/* Header preview */}
             <div className="flex items-center gap-3 p-3 border-b-2 border-gray-800">
               {logoUrl
