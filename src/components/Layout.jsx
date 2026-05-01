@@ -148,7 +148,7 @@ export default function Layout() {
       {/* SIDEBAR (desktop) */}
       <aside
         className={cn("hidden md:flex flex-col transition-all duration-300 flex-shrink-0", collapsed ? "w-16" : "w-60")}
-        style={{ background: '#0D3D4A' }}
+        style={{ background: '#1C1917' }}
       >
         {(() => {
           let vc = {}; try { vc = JSON.parse(localStorage.getItem('visual_config') || '{}'); } catch {}
@@ -183,9 +183,9 @@ export default function Layout() {
               return (
                 <Link key={path} to={path} title={label}
                   className="flex items-center justify-center mx-2 p-2.5 rounded-xl mb-0.5 transition-all min-h-[44px]"
-                  style={active ? { background: '#C9920A', color: '#fff' } : { color: 'rgba(255,255,255,0.6)' }}
-                  onMouseEnter={e => { if (!active) { e.currentTarget.style.background = 'rgba(201,146,10,0.15)'; e.currentTarget.style.color = '#fff'; } }}
-                  onMouseLeave={e => { if (!active) { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'rgba(255,255,255,0.6)'; } }}
+                  style={active ? { background: '#F59E0B', color: '#1C1917' } : { color: 'rgba(255,255,255,0.55)' }}
+                  onMouseEnter={e => { if (!active) { e.currentTarget.style.background = 'rgba(245,158,11,0.12)'; e.currentTarget.style.color = '#fff'; } }}
+                  onMouseLeave={e => { if (!active) { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; } }}
                 >
                   <Icon size={18} />
                 </Link>
@@ -203,14 +203,14 @@ export default function Layout() {
                     <Link key={path} to={path}
                       className="flex items-center gap-3 mx-2 px-3 py-2.5 rounded-xl mb-0.5 transition-all text-sm font-semibold min-h-[44px] relative"
                       style={active
-                        ? { background: 'rgba(201,146,10,0.18)', color: '#C9920A' }
-                        : { color: 'rgba(255,255,255,0.6)' }
+                        ? { background: 'rgba(245,158,11,0.15)', color: '#F59E0B' }
+                        : { color: 'rgba(255,255,255,0.55)' }
                       }
-                      onMouseEnter={e => { if (!active) { e.currentTarget.style.background = 'rgba(201,146,10,0.1)'; e.currentTarget.style.color = '#fff'; } }}
-                      onMouseLeave={e => { if (!active) { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'rgba(255,255,255,0.6)'; } }}
+                      onMouseEnter={e => { if (!active) { e.currentTarget.style.background = 'rgba(245,158,11,0.08)'; e.currentTarget.style.color = '#fff'; } }}
+                      onMouseLeave={e => { if (!active) { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; } }}
                     >
                       {active && (
-                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full" style={{ background: '#C9920A' }} />
+                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full" style={{ background: '#F59E0B' }} />
                       )}
                       <Icon size={17} className="flex-shrink-0" />
                       <span>{label}</span>
@@ -260,7 +260,7 @@ export default function Layout() {
         {/* Topbar mobile */}
         <header
           className="md:hidden flex px-4 items-center justify-between flex-shrink-0"
-          style={{ height: 'calc(52px + env(safe-area-inset-top))', paddingTop: 'env(safe-area-inset-top)', background: '#0D3D4A' }}
+          style={{ height: 'calc(52px + env(safe-area-inset-top))', paddingTop: 'env(safe-area-inset-top)', background: '#1C1917' }}
         >
           {!isBottomTab ? (
             <button onClick={() => navigate(-1)}
@@ -302,7 +302,7 @@ export default function Layout() {
         <nav
           className="md:hidden flex-shrink-0 flex items-center"
           style={{
-            background: '#0D3D4A',
+            background: '#1C1917',
             borderTop: '1px solid rgba(255,255,255,0.08)',
             height: 'calc(60px + env(safe-area-inset-bottom))',
             paddingBottom: 'env(safe-area-inset-bottom)',
@@ -313,7 +313,7 @@ export default function Layout() {
             return (
               <Link key={path} to={path}
                 className="flex-1 flex flex-col items-center justify-center gap-0.5 min-h-[44px] transition-all"
-                style={{ color: active ? '#C9920A' : 'rgba(255,255,255,0.6)' }}
+                style={{ color: active ? '#F59E0B' : 'rgba(255,255,255,0.45)' }}
               >
                 <Icon size={20} className="flex-shrink-0" />
                 <span className="text-[10px] font-medium leading-tight">{label}</span>
@@ -324,7 +324,7 @@ export default function Layout() {
           <button
             onClick={() => setMoreOpen(true)}
             className="flex-1 flex flex-col items-center justify-center gap-0.5 min-h-[44px] transition-all"
-            style={{ color: isMoreActive ? '#C9920A' : 'rgba(255,255,255,0.6)' }}
+            style={{ color: isMoreActive ? '#F59E0B' : 'rgba(255,255,255,0.45)' }}
           >
             <MoreHorizontal size={20} />
             <span className="text-[10px] font-medium leading-tight">Mais</span>
@@ -337,7 +337,7 @@ export default function Layout() {
         <>
           <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => setMoreOpen(false)} />
           <div className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl"
-            style={{ background: '#0D3D4A', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+            style={{ background: '#1C1917', paddingBottom: 'env(safe-area-inset-bottom)' }}>
             <div className="flex justify-center pt-3 pb-1">
               <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.2)' }} />
             </div>
@@ -357,8 +357,8 @@ export default function Layout() {
                   <Link key={path} to={path}
                     className="flex flex-col items-center gap-2 p-3 rounded-xl transition-all min-h-[70px] justify-center"
                     style={active
-                      ? { background: 'rgba(201,146,10,0.25)', color: '#C9920A' }
-                      : { color: 'rgba(255,255,255,0.6)' }
+                      ? { background: 'rgba(245,158,11,0.2)', color: '#F59E0B' }
+                      : { color: 'rgba(255,255,255,0.55)' }
                     }
                   >
                     <Icon size={22} />
