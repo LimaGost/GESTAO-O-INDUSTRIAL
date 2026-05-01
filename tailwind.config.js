@@ -61,7 +61,8 @@ module.exports = {
           ring: 'hsl(var(--sidebar-ring))'
         },
         /* ── Cores semânticas do sistema ── */
-        'sun-yellow':      '#F59E0B',
+        'sun-gold':        '#C9A227',
+        'teal-dark':       '#0D3B45',
         'sky-blue':        '#3B82F6',
         'rainbow-green':   '#22C55E',
         'rainbow-red':     '#EF4444',
@@ -93,6 +94,7 @@ module.exports = {
     'bg-rainbow-orange', 'text-rainbow-orange',
     'bg-rainbow-indigo', 'text-rainbow-indigo',
     'bg-sky-blue', 'text-sky-blue',
-    'bg-sun-yellow', 'text-sun-yellow',
+    'bg-sun-gold', 'text-sun-gold',
+    'bg-teal-dark', 'text-teal-dark',
   ]
 }

@@ -4,38 +4,38 @@
 
 @layer base {
   :root {
-    /* ── Cores base — fundo bege/creme, cards brancos ── */
-    --background: 40 30% 96%;        /* bege claro #F5F2EC */
-    --foreground: 30 15% 15%;        /* marrom escuro quase preto */
+    /* ── Paleta Raio do Sol: Petróleo escuro + Dourado + Branco ── */
+    --background: 200 15% 97%;        /* branco levemente azulado */
+    --foreground: 200 40% 12%;        /* azul-petróleo muito escuro */
 
-    --card: 0 0% 100%;               /* branco puro */
-    --card-foreground: 30 15% 15%;
+    --card: 0 0% 100%;                /* branco puro */
+    --card-foreground: 200 40% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 30 15% 15%;
+    --popover-foreground: 200 40% 12%;
 
-    /* ── Primário: âmbar/dourado — botões de ação ── */
-    --primary: 38 92% 50%;           /* #F59E0B âmbar */
-    --primary-foreground: 0 0% 100%; /* branco */
+    /* ── Primário: dourado da logo ── */
+    --primary: 43 72% 47%;            /* #C9A227 dourado */
+    --primary-foreground: 0 0% 100%;  /* branco */
 
-    --secondary: 40 20% 92%;         /* bege médio */
-    --secondary-foreground: 30 15% 20%;
+    --secondary: 200 25% 92%;         /* azul-petróleo suavíssimo */
+    --secondary-foreground: 200 40% 18%;
 
-    --muted: 40 20% 93%;             /* bege suave */
-    --muted-foreground: 30 10% 45%;
+    --muted: 200 15% 94%;
+    --muted-foreground: 200 20% 45%;
 
-    --accent: 38 92% 50%;
+    --accent: 43 72% 47%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 38 20% 85%;            /* borda levemente dourada */
-    --input: 38 20% 85%;
-    --ring: 38 92% 50%;              /* foco âmbar */
+    --border: 200 20% 88%;
+    --input: 200 20% 88%;
+    --ring: 43 72% 47%;
 
-    --chart-1: 38 92% 50%;
-    --chart-2: 200 72% 45%;
+    --chart-1: 43 72% 47%;
+    --chart-2: 200 55% 35%;
     --chart-3: 145 55% 42%;
     --chart-4: 25 85% 55%;
     --chart-5: 280 55% 55%;
@@ -43,51 +43,49 @@
     --radius: 0.625rem;
 
     /* ── Sidebar ── */
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 30 15% 20%;
-    --sidebar-primary: 38 92% 50%;
+    --sidebar-background: 200 42% 14%;  /* petróleo escuro */
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 43 72% 47%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 40 25% 95%;
-    --sidebar-accent-foreground: 30 15% 20%;
-    --sidebar-border: 38 20% 88%;
-    --sidebar-ring: 38 92% 50%;
+    --sidebar-accent: 200 35% 20%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 200 30% 20%;
+    --sidebar-ring: 43 72% 47%;
   }
 
-
-
   .dark {
-    --background: 30 10% 8%;
-    --foreground: 40 20% 92%;
-    --card: 30 10% 11%;
-    --card-foreground: 40 20% 92%;
-    --popover: 30 10% 11%;
-    --popover-foreground: 40 20% 92%;
-    --primary: 38 92% 50%;
+    --background: 200 40% 8%;
+    --foreground: 200 10% 92%;
+    --card: 200 38% 11%;
+    --card-foreground: 200 10% 92%;
+    --popover: 200 38% 11%;
+    --popover-foreground: 200 10% 92%;
+    --primary: 43 72% 50%;
     --primary-foreground: 0 0% 5%;
-    --secondary: 30 10% 16%;
-    --secondary-foreground: 40 20% 85%;
-    --muted: 30 10% 16%;
-    --muted-foreground: 30 8% 55%;
-    --accent: 38 92% 50%;
+    --secondary: 200 30% 16%;
+    --secondary-foreground: 200 10% 85%;
+    --muted: 200 30% 16%;
+    --muted-foreground: 200 15% 55%;
+    --accent: 43 72% 50%;
     --accent-foreground: 0 0% 5%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 30 10% 20%;
-    --input: 30 10% 20%;
-    --ring: 38 92% 50%;
-    --chart-1: 38 92% 55%;
-    --chart-2: 200 65% 50%;
+    --border: 200 30% 20%;
+    --input: 200 30% 20%;
+    --ring: 43 72% 47%;
+    --chart-1: 43 72% 55%;
+    --chart-2: 200 55% 45%;
     --chart-3: 145 50% 45%;
     --chart-4: 25 80% 55%;
     --chart-5: 280 55% 60%;
-    --sidebar-background: 30 10% 9%;
-    --sidebar-foreground: 40 20% 88%;
-    --sidebar-primary: 38 92% 50%;
+    --sidebar-background: 200 42% 9%;
+    --sidebar-foreground: 200 10% 88%;
+    --sidebar-primary: 43 72% 50%;
     --sidebar-primary-foreground: 0 0% 5%;
-    --sidebar-accent: 30 10% 14%;
-    --sidebar-accent-foreground: 40 20% 88%;
-    --sidebar-border: 30 10% 16%;
-    --sidebar-ring: 38 92% 50%;
+    --sidebar-accent: 200 35% 14%;
+    --sidebar-accent-foreground: 200 10% 88%;
+    --sidebar-border: 200 30% 16%;
+    --sidebar-ring: 43 72% 47%;
   }
 }
 
@@ -108,14 +106,12 @@
     overscroll-behavior-y: none;
   }
 
-  /* ── Mobile-friendly: Remove tap highlight + disable select on interactive elements ── */
   button, [role="tab"], [role="navigation"], a[role="button"] {
     -webkit-tap-highlight-color: transparent;
     -webkit-user-select: none;
     user-select: none;
   }
 
-  /* ── Inputs globais com estilo padrão bege ── */
   input, textarea, select {
     @apply bg-white border border-border rounded-lg text-foreground placeholder:text-muted-foreground;
     -webkit-user-select: text;
@@ -128,48 +124,27 @@
 }
 
 /* ── Scrollbar personalizada ── */
-::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: hsl(38 20% 78% / 0.6);
-  border-radius: 99px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: hsl(38 92% 50% / 0.55);
-}
-
-* {
-  scrollbar-width: thin;
-  scrollbar-color: hsl(38 20% 78% / 0.6) transparent;
-}
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: hsl(200 20% 78% / 0.6); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(43 72% 47% / 0.55); }
+* { scrollbar-width: thin; scrollbar-color: hsl(200 20% 78% / 0.6) transparent; }
 
 @layer components {
-  /* ── Botão primário âmbar ── */
   .btn-primary {
     @apply bg-primary text-primary-foreground font-semibold px-4 py-2.5 rounded-xl
-           hover:bg-amber-500 active:bg-amber-600 transition-colors shadow-sm
+           hover:opacity-90 active:opacity-80 transition-all shadow-sm
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
-  /* ── Card padrão ── */
   .card-base {
     @apply bg-card border border-border rounded-2xl shadow-sm;
   }
 
-  /* ── Label de campo ── */
   .field-label {
     @apply text-xs text-muted-foreground mb-1 block font-medium;
   }
 
-  /* ── Input padrão ── */
   .field-input {
     @apply w-full bg-white border border-border rounded-lg px-3 py-2 text-sm
            text-foreground placeholder:text-muted-foreground
@@ -177,14 +152,8 @@
            transition-colors;
   }
 
-  /* ── Mobile minimum font sizes (14px on mobile) ── */
   @media (max-width: 768px) {
-    /* Base text */
-    p, span, div, li, button, a, label {
-      @apply text-sm; /* 14px */
-    }
-
-    /* Headings */
+    p, span, div, li, button, a, label { @apply text-sm; }
     h1 { @apply text-2xl; }
     h2 { @apply text-xl; }
     h3 { @apply text-lg; }

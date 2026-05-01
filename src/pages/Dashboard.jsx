@@ -154,7 +154,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-5">
-      <div className="rounded-2xl px-6 py-4 flex items-center justify-between flex-wrap gap-3" style={{ background: '#2D2420' }}>
+      <div className="rounded-2xl px-6 py-4 flex items-center justify-between flex-wrap gap-3" style={{ background: '#0D3B45' }}>
         <div className="flex items-center gap-3">
           <span className="text-2xl">☀️</span>
           <div>
