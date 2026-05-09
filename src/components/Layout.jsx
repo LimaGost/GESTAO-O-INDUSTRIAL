@@ -34,7 +34,6 @@ const navGroups = [
     items: [
       { path: '/Etiquetas',  label: 'Etiquetas',  icon: Tag },
       { path: '/Expedicao',  label: 'Expedição',  icon: Truck },
-      { path: '/CRM',        label: 'CRM',        icon: MessageCircle },
       { path: '/Clientes',   label: 'Clientes',   icon: Users },
       { path: '/Produtos',   label: 'Produtos',   icon: Settings },
     ],
@@ -61,7 +60,6 @@ const allNavItems = [
   { path: '/Estoque',        label: 'Estoque',           icon: Archive },
   { path: '/Etiquetas',      label: 'Etiquetas',         icon: Tag },
   { path: '/Expedicao',      label: 'Expedição',         icon: Truck },
-  { path: '/CRM',            label: 'CRM',               icon: MessageCircle },
   { path: '/Clientes',       label: 'Clientes',          icon: Users },
   { path: '/Produtos',       label: 'Produtos',          icon: Settings },
   { path: '/Relatorios',     label: 'Relatórios',        icon: BarChart2 },
