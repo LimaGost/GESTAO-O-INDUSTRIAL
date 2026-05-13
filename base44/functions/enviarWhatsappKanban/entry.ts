@@ -2,7 +2,6 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 const SMCLICK_API_KEY   = Deno.env.get('SMCLICK_API_KEY');
 const SMCLICK_INSTANCE  = Deno.env.get('SMCLICK_INSTANCE_ID');
-const NUMERO_INTERNO    = Deno.env.get('SMCLICK_NUMERO_INTERNO');
 
 const ETAPA_LABELS = {
   em_producao:  'Em Produção 🏭',
@@ -38,6 +37,8 @@ async function enviarMensagem(telefone, mensagem) {
       },
     }),
   });
+  const body = await res.text();
+  console.log(`SMClick response [${res.status}]:`, body);
   return res.ok;
 }
 
