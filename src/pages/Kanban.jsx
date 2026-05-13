@@ -552,16 +552,16 @@ export default function Kanban() {
       )}
 
       {/* Colunas Kanban */}
-      <div className={`flex gap-3 overflow-x-auto pb-4 flex-1 items-start ${isMobile ? 'snap-x snap-mandatory' : ''}`}>
+      <div className={`flex gap-3 overflow-x-auto pb-4 flex-1 min-h-0 items-start ${isMobile ? 'snap-x snap-mandatory' : ''}`}>
         {COLUNAS.map(({ key, label, icon: Icon, accent, bg, border, dot }) => {
           const colOrdens = ordensFiltradas.filter(o => o.status === key);
           const total = ordens.filter(o => o.status === key).length;
           const colWidth = isMobile ? 'w-80 sm:w-96' : 'w-72';
-          const minHeight = isMobile ? '50vh' : '60vh';
+          const colHeight = isMobile ? 'calc(100vh - 280px)' : 'calc(100vh - 260px)';
 
           return (
             <div key={key} className={`flex-shrink-0 ${colWidth} rounded-2xl flex flex-col overflow-hidden ${isMobile ? 'snap-center' : ''}`}
-              style={{ minHeight, background: bg, border: `1.5px solid ${border}` }}>
+              style={{ height: colHeight, background: bg, border: `1.5px solid ${border}` }}>
               <div className="px-4 py-3 flex items-center justify-between sticky top-0 z-10"
                 style={{ background: bg, borderBottom: `1px solid ${border}` }}>
                 <div className="flex items-center gap-2">
