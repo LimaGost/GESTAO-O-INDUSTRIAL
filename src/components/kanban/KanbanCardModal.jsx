@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { X, ArrowRight, CheckCircle, CheckSquare, Square, Trash2, Printer, User, AlertTriangle } from 'lucide-react';
+import { X, ArrowRight, CheckCircle, CheckSquare, Square, Trash2, Printer, User, AlertTriangle, Plus, Minus, PackagePlus } from 'lucide-react';
 import ModalDescarte from './ModalDescarte';
 import { imprimirEtiquetaProduto } from '@/lib/imprimirEtiquetaProduto';
 
@@ -45,6 +45,12 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
   const PROXIMOS = buildProximos(kanbanColunas);
   const checkKey = `${ordem.id}_${ordem.status}`;
 
+  // Edição de itens na etapa "em_separacao"
+  const isSeparacao = ordem.status === 'em_separacao';
+  const [itensEditados, setItensEditados] = useState(null); // null = não editado ainda
+  const [novoItem, setNovoItem] = useState({ produto_id: '', produto_nome: '', quantidade: 1 });
+  const [showAdicionarItem, setShowAdicionarItem] = useState(false);
+
   // Checklist da etapa com persistência
   const itensEtapa = checklistConfigs[ordem.status]?.itens || [];
   const [checkEtapa, setCheckEtapa] = useState(() => loadStorage(getStorageKey(checkKey, 'etapa')));
@@ -58,10 +64,38 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
   const [showDescarte, setShowDescarte] = useState(false);
 
   const itensNormalizados = useMemo(() => {
+    if (itensEditados !== null) return itensEditados;
     if (ordem.itens?.length > 0) return ordem.itens;
     if (ordem.produto_id) return [{ produto_id: ordem.produto_id, produto_nome: ordem.produto_nome, quantidade: ordem.quantidade || 0 }];
     return [];
-  }, [ordem]);
+  }, [ordem, itensEditados]);
+
+  const adicionarItem = () => {
+    if (!novoItem.produto_id) return;
+    const base = itensEditados !== null ? itensEditados : (ordem.itens?.length > 0 ? ordem.itens : [{ produto_id: ordem.produto_id, produto_nome: ordem.produto_nome, quantidade: ordem.quantidade || 0 }]);
+    const existente = base.findIndex(i => i.produto_id === novoItem.produto_id);
+    let novos;
+    if (existente >= 0) {
+      novos = base.map((i, idx) => idx === existente ? { ...i, quantidade: i.quantidade + novoItem.quantidade } : i);
+    } else {
+      novos = [...base, { produto_id: novoItem.produto_id, produto_nome: novoItem.produto_nome, quantidade: novoItem.quantidade }];
+    }
+    setItensEditados(novos);
+    setNovoItem({ produto_id: '', produto_nome: '', quantidade: 1 });
+    setShowAdicionarItem(false);
+  };
+
+  const alterarQuantidade = (idx, delta) => {
+    const base = itensEditados !== null ? itensEditados : (ordem.itens?.length > 0 ? ordem.itens : [{ produto_id: ordem.produto_id, produto_nome: ordem.produto_nome, quantidade: ordem.quantidade || 0 }]);
+    const novos = base.map((item, i) => i === idx ? { ...item, quantidade: Math.max(1, item.quantidade + delta) } : item);
+    setItensEditados(novos);
+  };
+
+  const removerItem = (idx) => {
+    const base = itensEditados !== null ? itensEditados : (ordem.itens?.length > 0 ? ordem.itens : [{ produto_id: ordem.produto_id, produto_nome: ordem.produto_nome, quantidade: ordem.quantidade || 0 }]);
+    if (base.length <= 1) return alert('A OP precisa ter ao menos 1 item.');
+    setItensEditados(base.filter((_, i) => i !== idx));
+  };
 
   const porFamilia = useMemo(() => agruparPorCategoria(itensNormalizados, produtos), [itensNormalizados, produtos]);
 
@@ -92,12 +126,17 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
     saveStorage(getStorageKey(checkKey, 'prod'), next);
   };
 
+  const itensComQuantidadeValida = itensNormalizados.every(i => i.quantidade > 0);
+
   const handleAvancar = () => {
     if (!etapaCompleto) { alert('⚠️ Complete todos os itens do checklist da etapa antes de avançar!'); return; }
     if (!itensOPCompleto) { alert('⚠️ Confirme todos os itens da ordem de produção antes de avançar!'); return; }
+    if (isSeparacao && !itensComQuantidadeValida) { alert('⚠️ Todos os itens precisam ter quantidade maior que zero.'); return; }
     if (!descarteRespondido) { alert('⚠️ Informe se houve descarte nesta etapa antes de avançar.'); return; }
     if (descartarAtivo === true && !descarteRegistrado) { alert('Preencha o formulário de descarte antes de continuar.'); return; }
-    onAvancar(ordem, descarteRegistrado?.length > 0 ? descarteRegistrado : null);
+    // Passa itens editados para o onAvancar (o Kanban.jsx usa para saida_estoque)
+    const ordemFinal = itensEditados !== null ? { ...ordem, itens: itensEditados } : ordem;
+    onAvancar(ordemFinal, descarteRegistrado?.length > 0 ? descarteRegistrado : null);
   };
 
   // Indicador de progresso do checklist
@@ -137,8 +176,85 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
 
         <div className="p-5 space-y-4">
 
+          {/* ── Edição de itens (apenas em_separacao) ── */}
+          {isSeparacao && onAvancar && (
+            <div className="border border-border rounded-xl overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-2.5 bg-muted/30 border-b border-border">
+                <div className="flex items-center gap-1.5">
+                  <PackagePlus size={13} className="text-primary" />
+                  <p className="text-xs font-semibold text-foreground">Itens para Separação</p>
+                  {itensEditados !== null && <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-bold">editado</span>}
+                </div>
+                <button onClick={() => setShowAdicionarItem(v => !v)}
+                  className="flex items-center gap-1 text-xs font-semibold text-primary hover:bg-primary/10 px-2 py-1 rounded-lg transition-colors">
+                  <Plus size={12} /> Adicionar
+                </button>
+              </div>
+
+              {/* Lista de itens editável */}
+              {itensNormalizados.map((item, idx) => (
+                <div key={idx} className="flex items-center gap-3 px-4 py-2.5 border-b border-border/40">
+                  <span className="text-sm flex-1 text-foreground truncate">{item.produto_nome}</span>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <button onClick={() => alterarQuantidade(idx, -1)}
+                      className="w-6 h-6 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/70 transition-colors">
+                      <Minus size={11} className="text-foreground" />
+                    </button>
+                    <span className="text-sm font-bold text-foreground w-8 text-center">{item.quantidade}</span>
+                    <button onClick={() => alterarQuantidade(idx, 1)}
+                      className="w-6 h-6 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/70 transition-colors">
+                      <Plus size={11} className="text-foreground" />
+                    </button>
+                    <button onClick={() => removerItem(idx)}
+                      className="w-6 h-6 rounded-lg hover:bg-red-50 flex items-center justify-center transition-colors ml-1">
+                      <Trash2 size={11} className="text-red-400" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {/* Adicionar novo item */}
+              {showAdicionarItem && (
+                <div className="px-4 py-3 bg-muted/20 border-t border-border space-y-2">
+                  <select value={novoItem.produto_id}
+                    onChange={e => {
+                      const p = produtos.find(pr => pr.id === e.target.value);
+                      setNovoItem(n => ({ ...n, produto_id: e.target.value, produto_nome: p?.nome || '' }));
+                    }}
+                    className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
+                    <option value="">Selecione um produto...</option>
+                    {produtos.map(p => <option key={p.id} value={p.id}>{p.nome} (est: {p.estoque_atual || 0})</option>)}
+                  </select>
+                  <div className="flex gap-2">
+                    <div className="flex items-center gap-1.5 border border-border rounded-xl px-2 py-1.5 bg-background">
+                      <button onClick={() => setNovoItem(n => ({ ...n, quantidade: Math.max(1, n.quantidade - 1) }))}
+                        className="w-6 h-6 rounded flex items-center justify-center hover:bg-muted"><Minus size={11} /></button>
+                      <span className="text-sm font-bold w-6 text-center">{novoItem.quantidade}</span>
+                      <button onClick={() => setNovoItem(n => ({ ...n, quantidade: n.quantidade + 1 }))}
+                        className="w-6 h-6 rounded flex items-center justify-center hover:bg-muted"><Plus size={11} /></button>
+                    </div>
+                    <button onClick={adicionarItem} disabled={!novoItem.produto_id}
+                      className="flex-1 bg-primary text-primary-foreground rounded-xl text-xs font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity">
+                      Confirmar
+                    </button>
+                    <button onClick={() => setShowAdicionarItem(false)}
+                      className="px-3 border border-border rounded-xl text-xs text-muted-foreground hover:bg-muted">
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!itensComQuantidadeValida && (
+                <div className="px-4 py-2.5 bg-red-50 text-red-700 text-xs flex items-center gap-1.5">
+                  <AlertTriangle size={12} /> Todos os itens precisam ter quantidade maior que zero
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Itens da OP agrupados por família */}
-          {itensNormalizados.length > 0 && (
+          {!isSeparacao && itensNormalizados.length > 0 && (
             <div className="border border-border rounded-xl overflow-hidden">
               <div className="flex items-center justify-between px-4 py-2.5 bg-muted/30 border-b border-border">
                 <p className="text-xs font-semibold text-foreground">Itens da Ordem</p>
@@ -181,6 +297,8 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
               )}
             </div>
           )}
+
+          {/* Itens para confirmar (separação usa a seção editável acima) */}
 
           {/* Checklist da Etapa com persistência */}
           {itensEtapa.length > 0 && (
