@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import {
   Plus, Trash2, Save, CheckSquare, ChevronDown,
   Settings2, GripVertical, Shield, Search,
-  RefreshCw, User, Tag, Activity, AlertTriangle, Users, Factory, Paintbrush, Printer, Database, Columns, MessageCircle, Truck
+  RefreshCw, User, LogOut, Tag, Activity, AlertTriangle, Users, Factory, Paintbrush, Printer, Database, Columns, MessageCircle, Truck
 } from 'lucide-react';
 import SupabaseSchemas from '@/pages/SupabaseSchemas';
 import AbaUsuarios from '@/components/configuracoes/AbaUsuarios';
@@ -329,7 +329,10 @@ function AbaAuditoria() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    if (!mounted) { setMounted(true); load(); }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const usuarios = [...new Set(logs.map(l => l.usuario).filter(Boolean))];
   const acoes    = [...new Set(logs.map(l => l.acao).filter(Boolean))];
@@ -586,6 +589,25 @@ function AbaConta() {
 
   return (
     <div className="space-y-4">
+      {/* Botão de logout */}
+      <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
+            <User size={18} className="text-muted-foreground" />
+          </div>
+          <div>
+            <p className="font-bold text-sm text-foreground">Sessão</p>
+            <p className="text-xs text-muted-foreground">Encerrar sua sessão atual no sistema</p>
+          </div>
+        </div>
+        <button
+          onClick={() => base44.auth.logout('/')}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-border text-foreground text-sm font-semibold hover:bg-muted transition-colors min-h-[44px]"
+        >
+          <AlertTriangle size={15} className="text-destructive" /> Sair / Deslogar
+        </button>
+      </div>
+
       <div className="bg-card border border-destructive/30 rounded-2xl p-5 space-y-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center flex-shrink-0">

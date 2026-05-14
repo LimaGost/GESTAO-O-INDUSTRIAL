@@ -5,11 +5,13 @@ import {
   LayoutDashboard, ShoppingCart, Factory, Package,
   Truck, Settings, ChevronLeft, ChevronRight, ChevronUp,
   Bell, Tag, Users, Archive, SlidersHorizontal, BarChart2,
-  Database, MoreHorizontal, RefreshCw, Trash2, MessageCircle
+  Database, MoreHorizontal, RefreshCw, Trash2, MessageCircle, LogOut, User
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 import GlobalSearch from '@/components/GlobalSearch';
+import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 
 const bottomTabs = [
   { path: '/Dashboard',    label: 'Dashboard',  icon: LayoutDashboard },
@@ -114,9 +116,13 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { temAcesso } = usePermissoes();
+  const { user } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [moreOpen, setMoreOpen]   = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  const handleLogout = () => base44.auth.logout('/');
 
   const filtrarItens = (itens) => itens.filter(item => {
     const modulo = PATH_MODULO[item.path];
@@ -250,8 +256,33 @@ export default function Layout() {
           </div>
           <div className="flex items-center gap-3 flex-shrink-0">
             <NotificacoesPanel />
-            <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm"
-              style={{ background: '#C9A227', color: '#fff' }}>RS</div>
+            <div className="relative">
+              <button
+                onClick={() => setUserMenuOpen(v => !v)}
+                className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm hover:opacity-80 transition-opacity"
+                style={{ background: '#C9A227', color: '#fff' }}
+                title={user?.full_name || user?.email || 'Usuário'}
+              >
+                {user?.full_name ? user.full_name.slice(0, 2).toUpperCase() : <User size={16} />}
+              </button>
+              {userMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
+                  <div className="absolute right-0 top-11 z-50 bg-white border border-border rounded-2xl shadow-xl w-56 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-border bg-muted/30">
+                      <p className="text-sm font-semibold text-foreground truncate">{user?.full_name || 'Usuário'}</p>
+                      <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                    >
+                      <LogOut size={15} /> Sair
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </header>
 
@@ -364,6 +395,17 @@ export default function Layout() {
                   </Link>
                 );
               })}
+              <button
+                onClick={handleLogout}
+                className="flex flex-col items-center gap-2 p-3 rounded-xl transition-all min-h-[70px] justify-center"
+                style={{ color: 'rgba(255,100,100,0.8)' }}
+              >
+                <LogOut size={22} />
+                <span className="text-[11px] font-medium text-center leading-tight">Sair</span>
+              </button>
+            </div>
+            <div className="px-4 pb-3 border-t border-white/10 pt-2">
+              <p className="text-xs text-white/40 truncate">{user?.email}</p>
             </div>
           </div>
         </>
