@@ -157,20 +157,18 @@ export default function Layout() {
           return (
             <div className={cn("flex items-center gap-3 px-4 py-5", collapsed && "justify-center px-2")}
               style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-              {collapsed ? (
-                <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden"
-                  style={{ background: '#0D3B45' }}>
-                  {logoUrl
-                    ? <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
-                    : <img src="https://media.base44.com/images/public/69f5f8a58bf85ddb1c68a2d2/e634982e9_image.png" alt="Logo" className="w-full h-full object-contain" />
-                  }
+              <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg overflow-hidden"
+                style={{ background: '#C9A227' }}>
+                {logoUrl
+                  ? <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+                  : <span className="text-lg">☀️</span>
+                }
+              </div>
+              {!collapsed && (
+                <div>
+                  <p className="font-bold text-sm leading-tight" style={{ color: '#C9A227' }}>{titulo}</p>
+                  <p className="text-xs leading-tight" style={{ color: 'rgba(255,255,255,0.45)' }}>{subtitulo}</p>
                 </div>
-              ) : (
-                <img
-                  src={logoUrl || "https://media.base44.com/images/public/69f5f8a58bf85ddb1c68a2d2/e634982e9_image.png"}
-                  alt="Velas Raio do Sol"
-                  className="h-14 w-auto object-contain"
-                />
               )}
             </div>
           );
