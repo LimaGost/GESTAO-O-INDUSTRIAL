@@ -100,7 +100,9 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
   const porFamilia = useMemo(() => agruparPorCategoria(itensNormalizados, produtos), [itensNormalizados, produtos]);
 
   const totalItens = itensNormalizados.length;
-  const totalItensChecked = Object.values(checkItens).filter(Boolean).length;
+  // Itens com disponivel:true já contam como confirmados automaticamente
+  const itensDisponiveis = itensNormalizados.filter(i => i.disponivel === true).length;
+  const totalItensChecked = itensDisponiveis + itensNormalizados.filter(i => i.disponivel !== true).filter(i => !!checkItens[`${i.produto_id || i.produto_nome}`]).length;
   const itensOPCompleto = totalItens === 0 || totalItensChecked === totalItens;
 
   const etapaCompleto = itensEtapa.length === 0 || itensEtapa.every((_, i) => checkEtapa[i]);
@@ -271,12 +273,14 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
                   </div>
                   {itens.map((item, idx) => {
                     const itemKey = `${item.produto_id || item.produto_nome}`;
-                    const checked = !!checkItens[itemKey];
+                    // Itens marcados como disponivel:true já estão separados do estoque
+                    const jaDisponivel = item.disponivel === true;
+                    const checked = jaDisponivel || !!checkItens[itemKey];
                     return (
                       <button key={idx}
-                        onClick={onAvancar ? () => toggleItem(itemKey) : undefined}
-                        disabled={!onAvancar}
-                        className={`w-full flex items-center gap-3 px-4 py-2.5 border-b border-border/40 transition-colors text-left ${onAvancar ? 'hover:bg-muted/30' : 'cursor-default'} ${checked ? 'bg-green-50/50' : ''}`}>
+                        onClick={(!jaDisponivel && onAvancar) ? () => toggleItem(itemKey) : undefined}
+                        disabled={jaDisponivel || !onAvancar}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 border-b border-border/40 transition-colors text-left ${(!jaDisponivel && onAvancar) ? 'hover:bg-muted/30' : 'cursor-default'} ${checked ? 'bg-green-50/50' : ''}`}>
                         {checked
                           ? <CheckSquare size={14} className="text-green-500 flex-shrink-0" />
                           : <Square size={14} className="text-muted-foreground flex-shrink-0" />
@@ -284,7 +288,12 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
                         <span className={`text-sm flex-1 ${checked ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
                           {item.produto_nome}
                         </span>
-                        <span className="text-xs font-semibold text-muted-foreground">{item.quantidade} un</span>
+                        <div className="flex items-center gap-1.5">
+                          {jaDisponivel && (
+                            <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-semibold">em estoque</span>
+                          )}
+                          <span className="text-xs font-semibold text-muted-foreground">{item.quantidade} un</span>
+                        </div>
                       </button>
                     );
                   })}

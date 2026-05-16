@@ -63,6 +63,10 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
     ? ordem.itens.reduce((s, i) => s + (i.quantidade || 0), 0)
     : (ordem.quantidade || 0);
 
+  const itensDisponiveis = (ordem.itens || []).filter(i => i.disponivel === true).length;
+  const itensPendentes = (ordem.itens || []).filter(i => i.disponivel !== true).length;
+  const temMisto = itensDisponiveis > 0 && itensPendentes > 0;
+
   const accent = STATUS_ACCENT[ordem.status] || '#64748B';
   const leftBorderColor = urgente ? '#EF4444' : atencao ? '#F97316' : accent;
 
@@ -87,6 +91,14 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
           </div>
         </div>
 
+        {/* Badge de itens mistos (estoque + produção) */}
+        {temMisto && (
+          <div className="flex items-center gap-1 text-[10px] font-semibold mb-1.5 px-1.5 py-1 rounded-lg bg-blue-50 text-blue-700">
+            <Package size={10} />
+            {itensDisponiveis} em estoque · {itensPendentes} para produzir
+          </div>
+        )}
+
         {/* Urgência */}
         {(urgente || atencao) && (
           <div className={`flex items-center gap-1 text-[10px] font-semibold mb-2 px-1.5 py-1 rounded-lg ${urgente ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'}`}>
@@ -106,9 +118,12 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
         {ordem.itens?.length > 0 ? (
           <div className="space-y-0.5 mb-2">
             {ordem.itens.slice(0, 3).map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between text-xs">
-                <span className="text-foreground truncate flex-1">{item.produto_nome}</span>
-                <span className="font-semibold text-foreground ml-2 flex-shrink-0">{item.quantidade}</span>
+              <div key={idx} className={`flex items-center justify-between text-xs px-1.5 py-0.5 rounded ${item.disponivel ? 'bg-green-50' : ''}`}>
+                <span className={`truncate flex-1 ${item.disponivel ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{item.produto_nome}</span>
+                <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                  {item.disponivel && <span className="text-[9px] text-green-600 font-bold">✓</span>}
+                  <span className={`font-semibold ${item.disponivel ? 'text-green-600' : 'text-foreground'}`}>{item.quantidade}</span>
+                </div>
               </div>
             ))}
             {ordem.itens.length > 3 && <p className="text-[10px] text-muted-foreground">+{ordem.itens.length - 3} mais</p>}

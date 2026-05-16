@@ -90,54 +90,66 @@ export default function Pedidos() {
 
     const idsOrdens = [];
 
-    if (itensComEstoque.length > 0) {
-      const lote = gerarLote(pedido.id);
-      const op = await base44.entities.OrdemProducao.create({
-        numero: gerarNumero('OP'),
-        produto_nome: `Pedido ${numero}`,
-        quantidade: itensComEstoque.reduce((s, i) => s + i.quantidade, 0),
-        itens: itensComEstoque.map(i => ({ produto_id: i.produto_id, produto_nome: i.produto_nome, quantidade: i.quantidade })),
-        status: 'em_embalagem',
-        pedido_id: pedido.id,
-        pedido_numero: numero,
-        data_embalagem: new Date().toISOString(),
-        lote,
-      });
-      idsOrdens.push(op.id);
-      await registrarLog('OrdemProducao', op.id, 'CRIACAO_EMBALAGEM_DIRETA', `OP consolidada para embalagem — pedido ${numero} — ${itensComEstoque.length} produtos`);
-
-      for (const item of itensComEstoque) {
-        const novoEstoque = (item.produto.estoque_atual || 0) - item.quantidade;
-        await base44.entities.Produto.update(item.produto_id, { estoque_atual: novoEstoque });
-        await registrarLog('Produto', item.produto_id, 'BAIXA_ESTOQUE', `Baixa de ${item.quantidade} para pedido ${numero}`);
-        if (item.reposicao || novoEstoque <= (item.produto.estoque_minimo || 0)) {
-          const opRep = await base44.entities.OrdemProducao.create({
-            numero: gerarNumero('OP'),
-            produto_id: item.produto_id,
-            produto_nome: item.produto_nome,
-            quantidade: (item.produto.estoque_minimo || 10) * 2,
-            itens: [{ produto_id: item.produto_id, produto_nome: item.produto_nome, quantidade: (item.produto.estoque_minimo || 10) * 2 }],
-            status: 'a_produzir',
-            origem: 'estoque_minimo',
-          });
-          await registrarLog('OrdemProducao', opRep.id, 'ALERTA_ESTOQUE_MINIMO', `OP de reposição para ${item.produto_nome}`);
-        }
+    // ── Baixa imediata de estoque para itens disponíveis ──────────────────
+    for (const item of itensComEstoque) {
+      const novoEstoque = (item.produto.estoque_atual || 0) - item.quantidade;
+      await base44.entities.Produto.update(item.produto_id, { estoque_atual: novoEstoque });
+      await registrarLog('Produto', item.produto_id, 'BAIXA_ESTOQUE', `Baixa de ${item.quantidade} para pedido ${numero}`);
+      // OP de reposição se o estoque ficou abaixo do mínimo
+      if (novoEstoque <= (item.produto.estoque_minimo || 0)) {
+        const opRep = await base44.entities.OrdemProducao.create({
+          numero: gerarNumero('OP'),
+          produto_id: item.produto_id,
+          produto_nome: item.produto_nome,
+          quantidade: (item.produto.estoque_minimo || 10) * 2,
+          itens: [{ produto_id: item.produto_id, produto_nome: item.produto_nome, quantidade: (item.produto.estoque_minimo || 10) * 2 }],
+          status: 'a_produzir',
+          origem: 'estoque_minimo',
+        });
+        await registrarLog('OrdemProducao', opRep.id, 'ALERTA_ESTOQUE_MINIMO', `OP de reposição para ${item.produto_nome}`);
       }
     }
 
-    if (itensSemEstoque.length > 0) {
-      const ordem = await base44.entities.OrdemProducao.create({
-        numero: gerarNumero('OP'),
-        produto_nome: `Pedido ${numero}`,
-        quantidade: itensSemEstoque.reduce((s, i) => s + i.quantidadeFalta, 0),
-        itens: itensSemEstoque.map(i => ({ produto_id: i.produto_id, produto_nome: i.produto_nome, quantidade: i.quantidadeFalta })),
-        status: 'a_produzir',
-        pedido_id: pedido.id,
-        pedido_numero: numero,
-      });
-      idsOrdens.push(ordem.id);
-      await registrarLog('OrdemProducao', ordem.id, 'CRIACAO_AUTOMATICA', `OP consolidada para pedido ${numero} — ${itensSemEstoque.length} produtos`);
+    // ── Uma única OP consolidada para o pedido inteiro ────────────────────
+    // Itens com estoque ficam marcados como disponivel:true (já separados)
+    // Itens sem estoque seguem o fluxo normal do Kanban
+    const todosItensOP = [
+      ...itensComEstoque.map(i => ({
+        produto_id: i.produto_id,
+        produto_nome: i.produto_nome,
+        quantidade: i.quantidade,
+        disponivel: true, // estoque já baixado, item pronto para embalagem
+      })),
+      ...itensSemEstoque.map(i => ({
+        produto_id: i.produto_id,
+        produto_nome: i.produto_nome,
+        quantidade: i.quantidadeFalta,
+        disponivel: false,
+      })),
+    ];
+
+    const statusOP = precisaProducao ? 'a_produzir' : 'em_embalagem';
+    const opData = {
+      numero: gerarNumero('OP'),
+      produto_nome: `Pedido ${numero}`,
+      quantidade: todosItensOP.reduce((s, i) => s + i.quantidade, 0),
+      itens: todosItensOP,
+      status: statusOP,
+      pedido_id: pedido.id,
+      pedido_numero: numero,
+      origem: 'pedido',
+    };
+    if (!precisaProducao) {
+      opData.data_embalagem = new Date().toISOString();
+      opData.lote = gerarLote(pedido.id);
     }
+    const ordem = await base44.entities.OrdemProducao.create(opData);
+    idsOrdens.push(ordem.id);
+
+    const logMsg = precisaProducao
+      ? `OP única para pedido ${numero} — ${itensComEstoque.length} item(s) com estoque (separados) + ${itensSemEstoque.length} item(s) para produção`
+      : `OP única para pedido ${numero} — todos os ${itensComEstoque.length} item(s) disponíveis em estoque`;
+    await registrarLog('OrdemProducao', ordem.id, precisaProducao ? 'CRIACAO_AUTOMATICA' : 'CRIACAO_EMBALAGEM_DIRETA', logMsg);
 
     if (idsOrdens.length > 0) {
       await base44.entities.Pedido.update(pedido.id, { ordens_producao_ids: idsOrdens });
