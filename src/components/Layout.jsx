@@ -5,7 +5,7 @@ import {
   LayoutDashboard, ShoppingCart, Factory, Package,
   Truck, Settings, ChevronLeft, ChevronRight, ChevronUp,
   Bell, Tag, Users, Archive, SlidersHorizontal, BarChart2,
-  Database, MoreHorizontal, RefreshCw, Trash2, MessageCircle, LogOut, User
+  Database, MoreHorizontal, RefreshCw, Trash2, MessageCircle, LogOut, User, AlertTriangle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
@@ -43,8 +43,9 @@ const navGroups = [
   {
     label: 'ANÁLISE',
     items: [
-      { path: '/Relatorios', label: 'Relatórios', icon: BarChart2 },
-      { path: '/Perdas',     label: 'Perdas',     icon: Trash2 },
+      { path: '/Relatorios',  label: 'Relatórios',  icon: BarChart2 },
+      { path: '/Perdas',      label: 'Perdas',       icon: Trash2 },
+      { path: '/Reposicoes',  label: 'Reposições',   icon: AlertTriangle },
     ],
   },
   {
@@ -66,6 +67,7 @@ const allNavItems = [
   { path: '/Produtos',       label: 'Produtos',          icon: Settings },
   { path: '/Relatorios',     label: 'Relatórios',        icon: BarChart2 },
   { path: '/Perdas',         label: 'Perdas',            icon: Trash2 },
+  { path: '/Reposicoes',     label: 'Reposições',        icon: AlertTriangle },
   { path: '/Configuracoes',  label: 'Configurações',     icon: SlidersHorizontal },
 ];
 
@@ -82,6 +84,7 @@ const PATH_MODULO = {
   '/Produtos':     'Produtos',
   '/Relatorios':   'Relatorios',
   '/Perdas':       'Perdas',
+  '/Reposicoes':   'Estoque',
   '/Auditoria':    'Auditoria',
   '/Configuracoes': 'Configuracoes',
   '/SupabaseSchemas': null,

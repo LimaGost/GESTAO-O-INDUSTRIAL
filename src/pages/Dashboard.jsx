@@ -204,54 +204,18 @@ export default function Dashboard() {
           sub="Total histórico" path="/Kanban" />
       </div>
 
-      {!loading && (data?.alertasProdutos || []).length > 0 && (
-        <div className="rounded-2xl p-5" style={{ background: '#FFF8EE', border: '2px solid #F59E0B33' }}>
-          <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: '#FEF3C7' }}>
-                <AlertTriangle size={16} style={{ color: '#D97706' }} />
-              </div>
-              <div>
-                <h3 className="font-bold text-sm text-foreground">Reposição de Estoque</h3>
-                <p className="text-xs text-muted-foreground">{data.alertasProdutos.length} produto(s) abaixo do mínimo</p>
-              </div>
-            </div>
-            <Link to="/Kanban" className="text-xs font-semibold hover:underline text-primary">Ver Kanban →</Link>
+      {!loading && (data?.alertasBaixo || 0) > 0 && (
+        <Link to="/Reposicoes" className="flex items-center gap-3 rounded-2xl px-5 py-3.5 hover:opacity-90 transition-opacity"
+          style={{ background: '#FFF8EE', border: '1.5px solid #FDE68A' }}>
+          <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+            <AlertTriangle size={16} className="text-amber-600" />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {data.alertasProdutos.map(p => {
-              const pct = p.estoque_minimo > 0 ? Math.min(100, Math.round(((p.estoque_atual || 0) / p.estoque_minimo) * 100)) : 0;
-              const jaTemOP = (data.ordensAbertasLista || []).some(o => o.produto_id === p.id && o.origem === 'estoque_minimo');
-              const criando = criandoOP[p.id];
-              const qtd = Math.max((p.estoque_minimo || 10) * 2 - (p.estoque_atual || 0), p.estoque_minimo || 10);
-              return (
-                <div key={p.id} className="rounded-xl border p-3.5 flex flex-col gap-2 bg-card" style={{ borderColor: jaTemOP ? '#86EFAC' : '#FDE68A' }}>
-                  <p className="text-xs font-semibold leading-tight truncate text-foreground">{p.nome}</p>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Estoque:</span>
-                    <strong style={{ color: (p.estoque_atual || 0) === 0 ? '#DC2626' : '#D97706' }}>
-                      {p.estoque_atual || 0} / {p.estoque_minimo} un
-                    </strong>
-                  </div>
-                  <div className="h-1.5 rounded-full overflow-hidden bg-amber-100">
-                    <div className="h-full rounded-full" style={{ width: `${Math.max(pct, 3)}%`, background: pct === 0 ? '#DC2626' : '#F59E0B' }} />
-                  </div>
-                  {jaTemOP ? (
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-green-600">
-                      <CheckCircle size={12} /> OP já criada
-                    </div>
-                  ) : !readonly ? (
-                    <button onClick={() => criarOPReposicao(p)} disabled={criando}
-                      className="flex items-center justify-center gap-1.5 w-full py-1.5 rounded-lg text-xs font-bold bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50">
-                      {criando ? <RefreshCw size={12} className="animate-spin" /> : <Zap size={12} />}
-                      {criando ? 'Criando...' : `Criar OP (+${qtd} un)`}
-                    </button>
-                  ) : null}
-                </div>
-              );
-            })}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-foreground">Reposição de Estoque necessária</p>
+            <p className="text-xs text-muted-foreground">{data.alertasBaixo} produto(s) abaixo do mínimo · {data.alertasZero} zerado(s)</p>
           </div>
-        </div>
+          <span className="text-xs font-semibold text-primary flex-shrink-0">Ver detalhes →</span>
+        </Link>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
