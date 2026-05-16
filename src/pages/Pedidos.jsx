@@ -95,19 +95,7 @@ export default function Pedidos() {
       const novoEstoque = (item.produto.estoque_atual || 0) - item.quantidade;
       await base44.entities.Produto.update(item.produto_id, { estoque_atual: novoEstoque });
       await registrarLog('Produto', item.produto_id, 'BAIXA_ESTOQUE', `Baixa de ${item.quantidade} para pedido ${numero}`);
-      // OP de reposição se o estoque ficou abaixo do mínimo
-      if (novoEstoque <= (item.produto.estoque_minimo || 0)) {
-        const opRep = await base44.entities.OrdemProducao.create({
-          numero: gerarNumero('OP'),
-          produto_id: item.produto_id,
-          produto_nome: item.produto_nome,
-          quantidade: (item.produto.estoque_minimo || 10) * 2,
-          itens: [{ produto_id: item.produto_id, produto_nome: item.produto_nome, quantidade: (item.produto.estoque_minimo || 10) * 2 }],
-          status: 'a_produzir',
-          origem: 'estoque_minimo',
-        });
-        await registrarLog('OrdemProducao', opRep.id, 'ALERTA_ESTOQUE_MINIMO', `OP de reposição para ${item.produto_nome}`);
-      }
+      // Reposição automática desativada
     }
 
     // ── Uma única OP consolidada para o pedido inteiro ────────────────────

@@ -1,4 +1,4 @@
-import { ArrowRight, Clock, Package, AlertTriangle, CheckCircle, User, Calendar, ExternalLink, Printer } from 'lucide-react';
+import { ArrowRight, Clock, Package, AlertTriangle, CheckCircle, User, Calendar, ExternalLink, Printer, XCircle } from 'lucide-react';
 import { imprimirEtiquetaProduto } from '@/lib/imprimirEtiquetaProduto';
 import CardChecklist from './CardChecklist';
 
@@ -41,7 +41,7 @@ function tempoDecorrido(dataISO) {
   return { text: `${m}min`, hours };
 }
 
-export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, checklistOk, setChecklistOk, onAvancar, loading, onOpenModal, labelBotao, acaoAtual }) {
+export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, checklistOk, setChecklistOk, onAvancar, loading, onOpenModal, labelBotao, acaoAtual, onCancelar }) {
   const origem = ordem.origem || 'manual';
   const origemCfg = ORIGEM_CONFIG[origem] || ORIGEM_CONFIG.manual;
   const checkKey = `${ordem.id}_${ordem.status}`;
@@ -183,6 +183,15 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
             onClick={onOpenModal}
             className="w-full py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 border border-border text-muted-foreground hover:bg-muted hover:text-foreground">
             <ExternalLink size={11} /> Ver Detalhes
+          </button>
+        )}
+
+        {/* Cancelar — apenas a_produzir para admin/gerente */}
+        {onCancelar && (
+          <button
+            onClick={() => onCancelar(ordem)}
+            className="w-full py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 border border-red-200 text-red-500 hover:bg-red-50">
+            <XCircle size={11} /> Cancelar
           </button>
         )}
 

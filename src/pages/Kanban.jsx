@@ -82,7 +82,7 @@ function sortOrdens(ordens, sortKey) {
       }
       case 'urgencia':
       default:
-        return new Date(a.data_inicio || a.created_date) - new Date(b.data_inicio || b.created_date);
+        return new Date(b.created_date) - new Date(a.created_date);
     }
   });
 }
@@ -90,6 +90,9 @@ function sortOrdens(ordens, sortKey) {
 export default function Kanban() {
   const { somenteLeitura } = usePermissoes();
   const readonly = somenteLeitura('Kanban');
+  const [user, setUser] = useState(null);
+  useEffect(() => { base44.auth.me().then(setUser).catch(() => {}); }, []);
+  const podeGerenciarProducao = user?.role === 'admin' || user?.role === 'gerente_producao';
   const [kanbanColunas, setKanbanColunas] = useState(buildColunas);
   const PROXIMOS = buildProximos(kanbanColunas);
   const [ordens, setOrdens]               = useState([]);
@@ -350,6 +353,18 @@ export default function Kanban() {
     }
   };
 
+  const cancelarOP = async (ordem) => {
+    if (!podeGerenciarProducao) return;
+    if (!confirm(`Cancelar a ordem ${ordem.numero}?`)) return;
+    setOrdens(prev => prev.filter(o => o.id !== ordem.id));
+    await base44.entities.OrdemProducao.update(ordem.id, { status: 'cancelado' });
+    if (ordem.pedido_id) {
+      await base44.entities.Pedido.update(ordem.pedido_id, { status: 'cancelado' }).catch(() => {});
+    }
+    await registrarLog('OrdemProducao', ordem.id, 'CANCELAMENTO', `OP ${ordem.numero} cancelada por ${user?.email || 'usuário'}`);
+    load(true).catch(() => {});
+  };
+
   const criarOPManual = async () => {
     if (!novaOP.produto_id) return alert('Selecione um produto.');
     const temVariacoes = variacoesOP.length > 0;
@@ -594,6 +609,7 @@ export default function Kanban() {
                     onOpenModal={() => setOrdemSelecionada(ordem)}
                     labelBotao={PROXIMOS[key] ? `→ ${kanbanColunas.find(c => c.key === PROXIMOS[key])?.label || ''}` : null}
                     acaoAtual={kanbanColunas.find(c => c.key === key)?.acao || ''}
+                    onCancelar={(key === 'a_produzir' && podeGerenciarProducao && !readonly) ? cancelarOP : null}
                   />
                 ))}
               </div>
