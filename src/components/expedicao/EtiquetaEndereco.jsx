@@ -115,7 +115,7 @@ export default function EtiquetaEndereco({ expedicao, onClose }) {
     return `${day}/${m}/${y}`;
   })();
 
-  const qrCodeUrl = gerarQRCodeDataURL(`${expedicao.numero_nf}|${expedicao.cliente_nome}|${expedicao.pedido_numero || ''}`);
+  const qrCodeUrl = gerarQRCodeDataURL('https://velasraiodosol.com.br/');
 
   const [quantidade, setQuantidade] = useState(
     (expedicao.itens || []).reduce((s, i) => s + (i.quantidade || 0), 0) || 1
