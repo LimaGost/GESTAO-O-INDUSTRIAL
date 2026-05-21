@@ -5,6 +5,7 @@ function getDimensoes(config) {
     return { w: config.largura_custom || 100, h: config.altura_custom || 50 };
   }
   const TAMANHOS = {
+    '100x150': { w: 100, h: 150 },
     '100x50': { w: 100, h: 50 },
     '100x30': { w: 100, h: 30 },
     '80x40':  { w: 80,  h: 40 },
@@ -29,6 +30,21 @@ function gerarZPL({ produto_nome, quantidade, lote, data_producao, codigo_barras
 
 function gerarTSPL({ produto_nome, quantidade, lote, data_producao, codigo_barras, w, h, copias }) {
   const cod = codigo_barras || '0000000';
+  // Layout expandido para 100x150mm (L42 PRO)
+  if (h >= 150) {
+    return `SIZE ${w} mm, ${h} mm
+GAP 2 mm, 0 mm
+CLS
+TEXT 10,10,"4",0,1,1,"${produto_nome}"
+TEXT 10,60,"2",0,1,1,"Lote: ${lote || '—'}"
+TEXT 10,90,"2",0,1,1,"Quantidade: ${quantidade} un"
+TEXT 10,120,"2",0,1,1,"Fabricado: ${data_producao || '—'}"
+BAR 0,155,800,2
+BARCODE 10,165,"128",120,1,0,3,3,"${cod}"
+BAR 0,310,800,2
+TEXT 10,320,"1",0,1,1,"Raio do Sol — Gestao Industrial"
+PRINT ${copias || 1}`;
+  }
   return `SIZE ${w} mm, ${h} mm
 GAP 2 mm, 0 mm
 CLS

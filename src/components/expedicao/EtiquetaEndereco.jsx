@@ -1,4 +1,4 @@
-import { X, Printer, Plus, Minus } from 'lucide-react';
+import { X, Printer, Plus, Minus, Download } from 'lucide-react';
 import { useState } from 'react';
 
 function gerarQRCodeDataURL(texto) {
@@ -35,12 +35,12 @@ const CSS_ETIQUETA = `
   .bloco-produto .produto-nome { font-size: 11pt; font-weight: bold; color: #000; line-height: 1.2; }
   .bloco-produto .qrcode img { width: 20mm; height: 20mm; display: block; }
 
-  /* CLIENTE — destaque */
+  /* CLIENTE */
   .bloco-cliente { flex: 1.2; }
   .bloco-cliente .cliente-nome { font-size: 9pt; font-weight: bold; color: #000; line-height: 1.3; }
   .bloco-cliente .cliente-sub { font-size: 7pt; color: #222; margin-top: 0.5mm; font-weight: 600; }
 
-  /* NF — bem destacado */
+  /* NF */
   .bloco-nf { flex-direction: row; align-items: center; gap: 2mm; flex: 1; }
   .bloco-nf .nf-label { font-size: 12pt; font-weight: 900; color: #000; min-width: 18mm; }
   .bloco-nf .nf-valor { font-size: 20pt; font-weight: 900; color: #000; letter-spacing: 1px; }
@@ -49,7 +49,7 @@ const CSS_ETIQUETA = `
   .bloco-data { flex: 0.8; }
   .bloco-data .data-valor { font-size: 10pt; font-weight: bold; color: #000; letter-spacing: 0.5px; }
 
-  /* VOLUME — bem destacado */
+  /* VOLUME */
   .bloco-volume { flex-direction: row; align-items: center; gap: 2mm; flex: 1.2; }
   .bloco-volume .vol-label { font-size: 12pt; font-weight: 900; color: #000; min-width: 18mm; }
   .bloco-volume .vol-valor { font-size: 22pt; font-weight: 900; color: #000; letter-spacing: 1px; }
@@ -117,11 +117,49 @@ export default function EtiquetaEndereco({ expedicao, onClose }) {
 
   const qrCodeUrl = gerarQRCodeDataURL(`${expedicao.numero_nf}|${expedicao.cliente_nome}|${expedicao.pedido_numero || ''}`);
 
-  // Um único produto fixo: "Caixa de Velas" — quantidade ajustável
   const [quantidade, setQuantidade] = useState(
     (expedicao.itens || []).reduce((s, i) => s + (i.quantidade || 0), 0) || 1
   );
   const NOME_PRODUTO = 'Caixa de Velas';
+
+  const gerarTSPLExpedicao = (volAtual, volTotal) => {
+    const linhas = [
+      `SIZE 100 mm, 150 mm`,
+      `GAP 2 mm, 0 mm`,
+      `CLS`,
+      `TEXT 10,10,"4",0,1,1,"${nomeEmpresa}"`,
+      cnpjEmpresa ? `TEXT 10,55,"1",0,1,1,"CNPJ: ${cnpjEmpresa}"` : null,
+      `BAR 0,75,800,2`,
+      `TEXT 10,85,"2",0,1,1,"DESTINATARIO:"`,
+      `TEXT 10,115,"3",0,1,1,"${expedicao.cliente_nome || ''}"`,
+      expedicao.transportadora ? `TEXT 10,155,"1",0,1,1,"Transportadora: ${expedicao.transportadora}"` : null,
+      `BAR 0,175,800,2`,
+      `TEXT 10,185,"2",0,1,1,"NF/NP:"`,
+      `TEXT 120,185,"4",0,1,1,"${expedicao.numero_nf || ''}"`,
+      `TEXT 10,240,"2",0,1,1,"Data: ${dataFormatada}"`,
+      `TEXT 450,240,"2",0,1,1,"VOL: ${volAtual}/${volTotal}"`,
+      `BAR 0,270,800,2`,
+      `TEXT 10,280,"3",0,1,1,"${NOME_PRODUTO}"`,
+      `BAR 0,320,800,2`,
+      `TEXT 10,330,"1",0,1,1,"Raio do Sol - Sistema de Gestao Industrial"`,
+      `PRINT 1`,
+    ].filter(Boolean);
+    return linhas.join('\n');
+  };
+
+  const baixarTSPLExpedicao = () => {
+    const paginas = [];
+    for (let i = 1; i <= quantidade; i++) {
+      paginas.push(gerarTSPLExpedicao(i, quantidade));
+    }
+    const blob = new Blob([paginas.join('\n\n')], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `expedicao_${expedicao.numero_nf || 'etiqueta'}.prn`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const imprimirEtiqueta = () => {
     const paginas = [];
@@ -147,7 +185,6 @@ export default function EtiquetaEndereco({ expedicao, onClose }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
 
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div>
             <h3 className="font-bold text-foreground">Etiqueta de Expedição</h3>
@@ -159,14 +196,11 @@ export default function EtiquetaEndereco({ expedicao, onClose }) {
         </div>
 
         <div className="p-5 space-y-5">
-
-          {/* Produto fixo */}
           <div className="bg-muted/30 border border-border rounded-xl px-4 py-3">
             <p className="text-xs text-muted-foreground mb-0.5">Produto</p>
             <p className="text-base font-bold text-foreground">Caixa de Velas</p>
           </div>
 
-          {/* Quantidade / volumes */}
           <div>
             <label className="text-sm font-semibold text-foreground mb-2 block">Quantidade de volumes (etiquetas)</label>
             <div className="flex items-center gap-3">
@@ -189,12 +223,16 @@ export default function EtiquetaEndereco({ expedicao, onClose }) {
             </p>
           </div>
 
-          {/* Botões */}
           <div className="space-y-2 pt-1">
             <button onClick={imprimirEtiqueta}
               className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity">
               <Printer size={16} />
-              Imprimir {quantidade} etiqueta{quantidade !== 1 ? 's' : ''}
+              Imprimir {quantidade} etiqueta{quantidade !== 1 ? 's' : ''} (HTML)
+            </button>
+            <button onClick={baixarTSPLExpedicao}
+              className="w-full flex items-center justify-center gap-2 border border-primary/40 text-primary py-2.5 rounded-xl font-semibold text-sm hover:bg-primary/10 transition-colors">
+              <Download size={16} />
+              Baixar .prn — L42 PRO (TSPL)
             </button>
             <button onClick={onClose}
               className="w-full border border-border text-muted-foreground py-2 rounded-xl text-sm hover:bg-muted transition-colors">

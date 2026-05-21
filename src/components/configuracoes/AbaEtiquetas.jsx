@@ -20,7 +20,7 @@ const LINGUAGENS = [
     key: 'tspl',
     label: 'TSPL — TSC / Elgin',
     desc: 'Linguagem da TSC. Muito usada no Brasil. Gera arquivo .prn para envio direto.',
-    marcas: 'TSC TE200, TTP-244, Elgin L42DT, Tanca TLP-300+',
+    marcas: 'Elgin L42 PRO, Elgin L42DT, TSC TE200, TTP-244, Tanca TLP-300+',
     nivel: 'Médio',
   },
   {
@@ -33,6 +33,7 @@ const LINGUAGENS = [
 ];
 
 const TAMANHOS = [
+  { key: '100x150', label: '100 × 150 mm — L42 PRO', w: 100, h: 150 },
   { key: '100x50', label: '100 × 50 mm', w: 100, h: 50 },
   { key: '100x30', label: '100 × 30 mm', w: 100, h: 30 },
   { key: '80x40', label: '80 × 40 mm', w: 80, h: 40 },
