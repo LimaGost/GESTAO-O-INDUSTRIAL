@@ -5,7 +5,7 @@ import {
   LayoutDashboard, ShoppingCart, Factory, Package,
   Truck, Settings, ChevronLeft, ChevronRight, ChevronUp,
   Bell, Tag, Users, Archive, SlidersHorizontal, BarChart2,
-  Database, MoreHorizontal, RefreshCw, Trash2, MessageCircle, LogOut, User, AlertTriangle
+  Database, MoreHorizontal, RefreshCw, Trash2, MessageCircle, LogOut, User, AlertTriangle, HeadphonesIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
@@ -52,6 +52,7 @@ const navGroups = [
     label: 'SISTEMA',
     items: [
       { path: '/Configuracoes', label: 'Configurações', icon: SlidersHorizontal },
+      { path: '/Suporte',       label: 'Suporte',        icon: MessageCircle },
     ],
   },
 ];
@@ -69,6 +70,7 @@ const allNavItems = [
   { path: '/Perdas',         label: 'Perdas',            icon: Trash2 },
   { path: '/Reposicoes',     label: 'Reposições',        icon: AlertTriangle },
   { path: '/Configuracoes',  label: 'Configurações',     icon: SlidersHorizontal },
+  { path: '/Suporte',        label: 'Suporte',            icon: MessageCircle },
 ];
 
 const PATH_MODULO = {
@@ -87,6 +89,7 @@ const PATH_MODULO = {
   '/Reposicoes':   'Estoque',
   '/Auditoria':    'Auditoria',
   '/Configuracoes': 'Configuracoes',
+  '/Suporte':       null,
   '/SupabaseSchemas': null,
 };
 

@@ -23,6 +23,7 @@ import SupabaseSchemas from './pages/SupabaseSchemas';
 import ConfirmarRecebimento from './pages/ConfirmarRecebimento';
 import Perdas from './pages/Perdas';
 import Reposicoes from './pages/Reposicoes.jsx';
+import Suporte from './pages/Suporte.jsx';
 import CRM from './pages/CRM.jsx';
 import AguardandoAprovacao from './components/AguardandoAprovacao';
 import { PermissoesProvider, usePermissoes } from '@/lib/usePermissoes.jsx';
@@ -85,6 +86,7 @@ const AuthenticatedApp = () => {
           <Route path="/Reposicoes"     element={<RotaProtegida modulo="Estoque">     <Reposicoes />     </RotaProtegida>} />
           <Route path="/Auditoria"      element={<RotaProtegida modulo="Auditoria">      <Auditoria />      </RotaProtegida>} />
           <Route path="/CRM" element={<RotaProtegida modulo="Clientes"><CRM /></RotaProtegida>} />
+          <Route path="/Suporte" element={<Suporte />} />
           <Route path="/SupabaseSchemas" element={<SupabaseSchemas />} />
           <Route path="/Configuracoes"  element={<RotaProtegida modulo="Configuracoes">  <Configuracoes />  </RotaProtegida>} />
         </Route>
