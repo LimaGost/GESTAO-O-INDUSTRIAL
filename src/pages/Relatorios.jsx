@@ -194,7 +194,7 @@ export default function Relatorios() {
       ) : (
         <>
           {tab === 'visao_geral' && <TabVisaoGeral pedidos={filteredPedidos} ordens={filteredOrdens} produtos={produtos} clientes={clientes} ocultar={ocultarValores} />}
-          {tab === 'clientes' && <TabClientes pedidos={filteredPedidos} clientes={clientes} ocultar={ocultarValores} />}
+          {tab === 'clientes' && <TabClientes pedidos={filteredPedidos} clientes={clientes} produtos={produtos} ocultar={ocultarValores} />}
           {tab === 'produtos' && <TabProdutos pedidos={filteredPedidos} ordens={filteredOrdens} produtos={produtos} ocultar={ocultarValores} />}
           {tab === 'producao' && <TabProducao ordens={filteredOrdens} />}
           {tab === 'produtividade' && <TabProdutividade ordens={filteredOrdens} produtos={produtos} />}
@@ -334,8 +334,9 @@ function TabVisaoGeral({ pedidos, ordens, produtos, clientes, ocultar }) {
 }
 
 /* ── CLIENTES ─────────────────────────────────────────────────────────────── */
-function TabClientes({ pedidos, clientes, ocultar }) {
+function TabClientes({ pedidos, clientes, produtos, ocultar }) {
   const [ordenar, setOrdenar] = useState('faturamento');
+  const [clienteSelecionado, setClienteSelecionado] = useState('');
 
   const clienteMetricas = useMemo(() => {
     const map = {};
@@ -350,6 +351,38 @@ function TabClientes({ pedidos, clientes, ocultar }) {
     return Object.values(map).sort((a, b) => b[ordenar] - a[ordenar]);
   }, [pedidos, ordenar]);
 
+  const detalheCliente = useMemo(() => {
+    if (!clienteSelecionado) return null;
+    const produtoMap = {};
+    for (const prod of produtos) produtoMap[prod.id] = prod;
+    const pedidosCliente = pedidos.filter(p =>
+      p.status !== 'cancelado' && (p.cliente_id === clienteSelecionado || p.cliente_nome === clienteSelecionado)
+    );
+    const porCategoria = {};
+    let totalGeral = 0;
+    let totalUnidades = 0;
+    for (const ped of pedidosCliente) {
+      for (const item of ped.itens || []) {
+        const prod = produtoMap[item.produto_id];
+        const categoria = prod?.categoria || 'Sem categoria';
+        const nome = item.produto_nome || prod?.nome || 'Desconhecido';
+        const qtd = item.quantidade || 0;
+        const valor = item.total || qtd * (item.preco_unitario || prod?.preco_unitario || 0);
+        if (!porCategoria[categoria]) porCategoria[categoria] = { categoria, qtd: 0, valor: 0, produtos: {} };
+        porCategoria[categoria].qtd += qtd;
+        porCategoria[categoria].valor += valor;
+        if (!porCategoria[categoria].produtos[nome]) porCategoria[categoria].produtos[nome] = { nome, qtd: 0, valor: 0 };
+        porCategoria[categoria].produtos[nome].qtd += qtd;
+        porCategoria[categoria].produtos[nome].valor += valor;
+        totalGeral += valor;
+        totalUnidades += qtd;
+      }
+    }
+    const categorias = Object.values(porCategoria).sort((a, b) => b.qtd - a.qtd);
+    const clienteInfo = clienteMetricas.find(c => c.id === clienteSelecionado || c.nome === clienteSelecionado);
+    return { pedidosCliente, categorias, totalGeral, totalUnidades, clienteInfo };
+  }, [clienteSelecionado, pedidos, produtos, clienteMetricas]);
+
   const topClientes = clienteMetricas.slice(0, 10);
   const chartData = topClientes.map(c => ({ name: c.nome.split(' ')[0], faturamento: c.faturamento, pedidos: c.pedidos }));
 
@@ -359,83 +392,185 @@ function TabClientes({ pedidos, clientes, ocultar }) {
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard label="Clientes com Pedidos" value={clienteMetricas.length} sub="no período" icon={Users} color="bg-sky-500" />
-        <KpiCard label="Faturamento Total" value={ocultar ? VALOR_OCULTO : fmtRShort(totalFat)} sub="pedidos ativos" icon={DollarSign} color="bg-green-500" />
-        <KpiCard label="Ticket Médio/Cliente" value={ocultar ? VALOR_OCULTO : fmtRShort(clienteMetricas.length > 0 ? totalFat / clienteMetricas.length : 0)} icon={TrendingUp} color="bg-purple-500" />
-        <KpiCard label="Concentração Top 3" value={`${concentracao}%`} sub="do faturamento" icon={Award} color="bg-amber-500" />
+
+      {/* Seletor de cliente */}
+      <div className="bg-card border border-border rounded-2xl p-4">
+        <div className="flex items-center gap-3 flex-wrap">
+          <label className="text-sm font-semibold text-foreground whitespace-nowrap">Analisar cliente:</label>
+          <select value={clienteSelecionado} onChange={e => setClienteSelecionado(e.target.value)}
+            className="flex-1 min-w-[200px] border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
+            <option value="">— Ver ranking geral —</option>
+            {clienteMetricas.map(c => <option key={c.id || c.nome} value={c.id || c.nome}>{c.nome}</option>)}
+          </select>
+          {clienteSelecionado && (
+            <button onClick={() => setClienteSelecionado('')}
+              className="text-xs px-3 py-2 border border-border rounded-xl text-muted-foreground hover:bg-muted transition-colors">
+              Limpar
+            </button>
+          )}
+        </div>
       </div>
 
-      <ExportableChart title="Top 10 Clientes por Faturamento">
-        {ocultar ? (
-          <div className="flex flex-col items-center justify-center h-[260px] text-muted-foreground gap-2">
-            <EyeOff size={28} className="opacity-30" />
-            <p className="text-sm">Valores ocultos</p>
+      {/* DETALHE DO CLIENTE */}
+      {clienteSelecionado && detalheCliente && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <KpiCard label="Pedidos no Período" value={detalheCliente.pedidosCliente.length} icon={ShoppingCart} color="bg-sky-500" />
+            <KpiCard label="Faturamento Total" value={ocultar ? VALOR_OCULTO : fmtRShort(detalheCliente.totalGeral)} icon={DollarSign} color="bg-green-500" />
+            <KpiCard label="Unidades Compradas" value={fmt(detalheCliente.totalUnidades)} icon={Package} color="bg-purple-500" />
+            <KpiCard label="Ticket Médio" value={ocultar ? VALOR_OCULTO : fmtRShort(detalheCliente.pedidosCliente.length > 0 ? detalheCliente.totalGeral / detalheCliente.pedidosCliente.length : 0)} icon={TrendingUp} color="bg-amber-500" />
           </div>
-        ) : topClientes.length === 0 ? <EmptyState /> : (
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={chartData} layout="vertical" barSize={14}>
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0e8dc" />
-              <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={v => fmtRShort(v)} />
-              <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={90} />
-              <Tooltip formatter={v => fmtR(v)} />
-              <Bar dataKey="faturamento" name="Faturamento" radius={[0, 6, 6, 0]}>
-                {chartData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        )}
-      </ExportableChart>
 
-      <div className="bg-card border border-border rounded-2xl p-5">
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-          <SectionTitle>Ranking de Clientes</SectionTitle>
-          <div className="flex items-center gap-2">
-            <select value={ordenar} onChange={e => setOrdenar(e.target.value)}
-              className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground focus:outline-none">
-              <option value="faturamento">Por Faturamento</option>
-              <option value="pedidos">Por Qtd. Pedidos</option>
-              <option value="itens">Por Unidades</option>
-            </select>
-            <ExportButtons filename="ranking-clientes" title="Ranking de Clientes — Raio do Sol"
-              columns={[
-                { header: 'Pos.', key: 'pos', width: 15 },
-                { header: 'Cliente', key: 'nome', width: 60 },
-                { header: 'Pedidos', key: 'pedidos', width: 25 },
-                { header: 'Faturamento', key: 'fatFmt', width: 45 },
-                { header: 'Unidades', key: 'itens', width: 30 },
-              ]}
-              rows={clienteMetricas.map((c, i) => ({ pos: i+1, nome: c.nome, pedidos: c.pedidos, fatFmt: fmtR(c.faturamento), itens: c.itens }))}
-            />
-          </div>
-        </div>
-        <div className="space-y-2">
-          {clienteMetricas.slice(0, 15).map((c, i) => {
-            const pct = totalFat > 0 ? Math.round((c.faturamento / totalFat) * 100) : 0;
-            const medals = ['🥇', '🥈', '🥉'];
-            return (
-              <div key={c.id || c.nome} className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0">
-                <span className="w-8 text-center text-sm font-bold text-muted-foreground flex-shrink-0">
-                  {i < 3 ? medals[i] : `${i+1}º`}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-sm font-medium text-foreground truncate">{c.nome}</p>
-                    <p className="text-sm font-bold text-foreground ml-2 flex-shrink-0">{ocultar ? VALOR_OCULTO : fmtR(c.faturamento)}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
+          {detalheCliente.categorias.length > 0 && (
+            <ExportableChart title={`Categorias — ${detalheCliente.clienteInfo?.nome || ''}`}>
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={detalheCliente.categorias.map(c => ({ name: c.categoria, qtd: c.qtd, valor: c.valor }))} layout="vertical" barSize={16}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0e8dc" />
+                  <XAxis type="number" tick={{ fontSize: 10 }} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={120} />
+                  <Tooltip />
+                  <Bar dataKey="qtd" name="Unidades" radius={[0,6,6,0]}>
+                    {detalheCliente.categorias.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </ExportableChart>
+          )}
+
+          <div className="bg-card border border-border rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <SectionTitle>Breakdown por Categoria de Produto</SectionTitle>
+              <ExportButtons filename={`cliente-${detalheCliente.clienteInfo?.nome || 'detalhe'}`}
+                title={`Detalhe — ${detalheCliente.clienteInfo?.nome || ''}`}
+                columns={[
+                  { header: 'Categoria', key: 'categoria', width: 45 },
+                  { header: 'Produto', key: 'produto', width: 60 },
+                  { header: 'Unidades', key: 'qtd', width: 25 },
+                  { header: 'Valor', key: 'valorFmt', width: 40 },
+                ]}
+                rows={detalheCliente.categorias.flatMap(cat =>
+                  Object.values(cat.produtos).map(p => ({ categoria: cat.categoria, produto: p.nome, qtd: p.qtd, valorFmt: fmtR(p.valor) }))
+                )}
+              />
+            </div>
+            {detalheCliente.categorias.length === 0 ? <EmptyState msg="Nenhum item encontrado no período." /> : (
+              <div className="space-y-5">
+                {detalheCliente.categorias.map((cat, ci) => (
+                  <div key={cat.categoria}>
+                    <div className="flex items-center justify-between pb-2 mb-2 border-b border-border">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ background: COLORS[ci % COLORS.length] }} />
+                        <span className="font-bold text-foreground">{cat.categoria}</span>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm">
+                        <span className="text-muted-foreground">{fmt(cat.qtd)} un</span>
+                        <span className="font-bold text-foreground">{ocultar ? VALOR_OCULTO : fmtR(cat.valor)}</span>
+                      </div>
                     </div>
-                    <span className="text-xs text-muted-foreground flex-shrink-0">{c.pedidos} ped. · {pct}%</span>
+                    <div className="space-y-1 pl-5">
+                      {Object.values(cat.produtos).sort((a,b) => b.qtd - a.qtd).map(p => (
+                        <div key={p.nome} className="flex items-center justify-between text-sm py-1 border-b border-border/30 last:border-0">
+                          <span className="text-foreground">{p.nome}</span>
+                          <div className="flex items-center gap-4 text-xs">
+                            <span className="text-muted-foreground">{fmt(p.qtd)} un</span>
+                            <span className="font-semibold text-foreground w-28 text-right">{ocultar ? VALOR_OCULTO : fmtR(p.valor)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                ))}
               </div>
-            );
-          })}
-          {clienteMetricas.length === 0 && <EmptyState msg="Nenhum cliente com pedidos no período." />}
+            )}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* RANKING GERAL */}
+      {!clienteSelecionado && (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <KpiCard label="Clientes com Pedidos" value={clienteMetricas.length} sub="no período" icon={Users} color="bg-sky-500" />
+            <KpiCard label="Faturamento Total" value={ocultar ? VALOR_OCULTO : fmtRShort(totalFat)} sub="pedidos ativos" icon={DollarSign} color="bg-green-500" />
+            <KpiCard label="Ticket Médio/Cliente" value={ocultar ? VALOR_OCULTO : fmtRShort(clienteMetricas.length > 0 ? totalFat / clienteMetricas.length : 0)} icon={TrendingUp} color="bg-purple-500" />
+            <KpiCard label="Concentração Top 3" value={`${concentracao}%`} sub="do faturamento" icon={Award} color="bg-amber-500" />
+          </div>
+
+          <ExportableChart title="Top 10 Clientes por Faturamento">
+            {ocultar ? (
+              <div className="flex flex-col items-center justify-center h-[260px] text-muted-foreground gap-2">
+                <EyeOff size={28} className="opacity-30" />
+                <p className="text-sm">Valores ocultos</p>
+              </div>
+            ) : topClientes.length === 0 ? <EmptyState /> : (
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={chartData} layout="vertical" barSize={14}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0e8dc" />
+                  <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={v => fmtRShort(v)} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={90} />
+                  <Tooltip formatter={v => fmtR(v)} />
+                  <Bar dataKey="faturamento" name="Faturamento" radius={[0, 6, 6, 0]}>
+                    {chartData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </ExportableChart>
+
+          <div className="bg-card border border-border rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+              <SectionTitle>Ranking de Clientes</SectionTitle>
+              <div className="flex items-center gap-2">
+                <select value={ordenar} onChange={e => setOrdenar(e.target.value)}
+                  className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground focus:outline-none">
+                  <option value="faturamento">Por Faturamento</option>
+                  <option value="pedidos">Por Qtd. Pedidos</option>
+                  <option value="itens">Por Unidades</option>
+                </select>
+                <ExportButtons filename="ranking-clientes" title="Ranking de Clientes — Raio do Sol"
+                  columns={[
+                    { header: 'Pos.', key: 'pos', width: 15 },
+                    { header: 'Cliente', key: 'nome', width: 60 },
+                    { header: 'Pedidos', key: 'pedidos', width: 25 },
+                    { header: 'Faturamento', key: 'fatFmt', width: 45 },
+                    { header: 'Unidades', key: 'itens', width: 30 },
+                  ]}
+                  rows={clienteMetricas.map((c, i) => ({ pos: i+1, nome: c.nome, pedidos: c.pedidos, fatFmt: fmtR(c.faturamento), itens: c.itens }))}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              {clienteMetricas.slice(0, 15).map((c, i) => {
+                const pct = totalFat > 0 ? Math.round((c.faturamento / totalFat) * 100) : 0;
+                const medals = ['🥇', '🥈', '🥉'];
+                return (
+                  <div key={c.id || c.nome} className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0">
+                    <span className="w-8 text-center text-sm font-bold text-muted-foreground flex-shrink-0">
+                      {i < 3 ? medals[i] : `${i+1}º`}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <button onClick={() => setClienteSelecionado(c.id || c.nome)}
+                          className="text-sm font-medium text-foreground truncate hover:text-primary transition-colors text-left">
+                          {c.nome}
+                        </button>
+                        <p className="text-sm font-bold text-foreground ml-2 flex-shrink-0">{ocultar ? VALOR_OCULTO : fmtR(c.faturamento)}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-xs text-muted-foreground flex-shrink-0">{c.pedidos} ped. · {pct}%</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              {clienteMetricas.length === 0 && <EmptyState msg="Nenhum cliente com pedidos no período." />}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
