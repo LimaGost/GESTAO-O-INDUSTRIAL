@@ -1,0 +1,49 @@
+{
+  "name": "TicketSuporte",
+  "type": "object",
+  "properties": {
+    "tipo": {
+      "type": "string"
+    },
+    "titulo": {
+      "type": "string"
+    },
+    "descricao": {
+      "type": "string"
+    },
+    "prioridade": {
+      "type": "string",
+      "default": "media"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "aberto",
+        "em_atendimento",
+        "respondido",
+        "fechado"
+      ],
+      "default": "aberto"
+    },
+    "usuario_nome": {
+      "type": "string"
+    },
+    "usuario_email": {
+      "type": "string"
+    },
+    "resposta": {
+      "type": "string"
+    },
+    "respondido_por": {
+      "type": "string"
+    },
+    "data_resposta": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "titulo",
+    "descricao",
+    "tipo"
+  ]
+}

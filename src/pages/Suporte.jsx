@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { MessageCircle, Send, CheckCircle, AlertTriangle, Lightbulb, Bug, Star, HelpCircle } from 'lucide-react';
+import { MessageCircle, Send, CheckCircle, AlertTriangle, Lightbulb, Bug, Star, HelpCircle, Clock, RefreshCw } from 'lucide-react';
 
 const TIPOS = [
   { key: 'suporte',  label: 'Suporte',   icon: HelpCircle,  color: 'text-red-500',    bg: 'bg-red-50 border-red-200',    activeBg: 'bg-red-500 border-red-500 text-white' },
@@ -16,6 +16,14 @@ const PRIORIDADES = [
   { key: 'alta',   label: '🔴 Alta' },
 ];
 
+const STATUS_CONFIG = {
+  aberto:         { label: 'Aberto',         color: 'bg-red-100 text-red-700' },
+  em_atendimento: { label: 'Em Atendimento', color: 'bg-blue-100 text-blue-700' },
+  respondido:     { label: 'Respondido',     color: 'bg-green-100 text-green-700' },
+  fechado:        { label: 'Fechado',        color: 'bg-gray-100 text-gray-600' },
+};
+const TIPO_EMOJIS = { suporte: '🆘', melhoria: '💡', bug: '🐛', elogio: '⭐', outro: '📌' };
+
 export default function Suporte() {
   const [tipo, setTipo] = useState('suporte');
   const [titulo, setTitulo] = useState('');
@@ -24,6 +32,19 @@ export default function Suporte() {
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
   const [erro, setErro] = useState(null);
+  const [meusTickets, setMeusTickets] = useState([]);
+  const [ticketExpandido, setTicketExpandido] = useState(null);
+
+  useEffect(() => {
+    carregarTickets();
+  }, []);
+
+  const carregarTickets = async () => {
+    const user = await base44.auth.me().catch(() => null);
+    if (!user) return;
+    const todos = await base44.entities.TicketSuporte.list('-created_date');
+    setMeusTickets(todos.filter(t => t.usuario_email === user.email));
+  };
 
   const handleEnviar = async () => {
     if (!titulo.trim() || !descricao.trim()) {
@@ -41,6 +62,7 @@ export default function Suporte() {
       setTipo('suporte');
       setPrioridade('media');
       setTimeout(() => setEnviado(false), 5000);
+      carregarTickets();
     } else {
       setErro('Erro ao enviar. Tente novamente.');
     }
@@ -65,7 +87,7 @@ export default function Suporte() {
           <CheckCircle size={20} className="flex-shrink-0" />
           <div>
             <p className="font-semibold text-sm">Mensagem enviada com sucesso!</p>
-            <p className="text-xs text-green-600">Nossa equipe recebeu sua mensagem no Discord e irá responder em breve.</p>
+            <p className="text-xs text-green-600">Nossa equipe recebeu sua mensagem e irá responder em breve.</p>
           </div>
         </div>
       )}
@@ -144,11 +166,61 @@ export default function Suporte() {
         </button>
       </div>
 
+      {/* Meus tickets */}
+      {meusTickets.length > 0 && (
+        <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-foreground text-sm">Meus Tickets</h3>
+            <button onClick={carregarTickets} className="p-1.5 hover:bg-muted rounded-lg transition-colors">
+              <RefreshCw size={13} className="text-muted-foreground" />
+            </button>
+          </div>
+          <div className="space-y-2">
+            {meusTickets.map(t => {
+              const st = STATUS_CONFIG[t.status] || STATUS_CONFIG.aberto;
+              const aberto = ticketExpandido === t.id;
+              return (
+                <div key={t.id} className="border border-border rounded-xl overflow-hidden">
+                  <button
+                    onClick={() => setTicketExpandido(aberto ? null : t.id)}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors text-left">
+                    <span className="text-base">{TIPO_EMOJIS[t.tipo] || '📌'}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{t.titulo}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(t.created_date).toLocaleDateString('pt-BR')}</p>
+                    </div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold flex-shrink-0 ${st.color}`}>{st.label}</span>
+                  </button>
+                  {aberto && (
+                    <div className="px-4 pb-4 space-y-3 border-t border-border/50">
+                      <div className="bg-muted/40 rounded-lg p-3 mt-3">
+                        <p className="text-xs font-semibold text-muted-foreground mb-1">Sua mensagem</p>
+                        <p className="text-sm text-foreground whitespace-pre-wrap">{t.descricao}</p>
+                      </div>
+                      {t.resposta ? (
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                          <p className="text-xs font-semibold text-green-700 mb-1">Resposta — {t.respondido_por}</p>
+                          <p className="text-sm text-foreground whitespace-pre-wrap">{t.resposta}</p>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
+                          <Clock size={12} /> Aguardando resposta da equipe...
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Info */}
       <div className="bg-muted/40 border border-border rounded-2xl p-4 text-xs text-muted-foreground space-y-1">
         <p className="font-semibold text-foreground text-sm">ℹ️ Como funciona?</p>
-        <p>Sua mensagem é enviada diretamente para o canal do Discord da equipe de desenvolvimento/suporte.</p>
-        <p>O retorno será feito pelo canal de comunicação da empresa ou por contato direto.</p>
+        <p>Sua mensagem é enviada para a equipe e um ticket é gerado no sistema.</p>
+        <p>Acompanhe as respostas diretamente nesta página.</p>
       </div>
     </div>
   );

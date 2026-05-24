@@ -52,7 +52,8 @@ const navGroups = [
     label: 'SISTEMA',
     items: [
       { path: '/Configuracoes', label: 'Configurações', icon: SlidersHorizontal },
-      { path: '/Suporte',       label: 'Suporte',        icon: MessageCircle },
+      { path: '/Suporte',        label: 'Suporte',        icon: MessageCircle },
+      { path: '/TicketsSuporte',  label: 'Tickets',         icon: HeadphonesIcon },
     ],
   },
 ];
@@ -71,6 +72,7 @@ const allNavItems = [
   { path: '/Reposicoes',     label: 'Reposições',        icon: AlertTriangle },
   { path: '/Configuracoes',  label: 'Configurações',     icon: SlidersHorizontal },
   { path: '/Suporte',        label: 'Suporte',            icon: MessageCircle },
+  { path: '/TicketsSuporte', label: 'Tickets',             icon: HeadphonesIcon },
 ];
 
 const PATH_MODULO = {
@@ -89,8 +91,9 @@ const PATH_MODULO = {
   '/Reposicoes':   'Estoque',
   '/Auditoria':    'Auditoria',
   '/Configuracoes': 'Configuracoes',
-  '/Suporte':       null,
-  '/SupabaseSchemas': null,
+  '/Suporte':         null,
+  '/TicketsSuporte':   'Configuracoes',
+  '/SupabaseSchemas':  null,
 };
 
 function usePullToRefresh(onRefresh) {
