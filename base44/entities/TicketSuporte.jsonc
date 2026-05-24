@@ -39,6 +39,12 @@
     },
     "data_resposta": {
       "type": "string"
+    },
+    "discord_message_id": {
+      "type": "string"
+    },
+    "discord_thread_id": {
+      "type": "string"
     }
   },
   "required": [

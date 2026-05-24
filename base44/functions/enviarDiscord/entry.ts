@@ -66,11 +66,50 @@ Deno.serve(async (req) => {
         }]
       };
 
-      await fetch(webhookUrl, {
+      // Envia via webhook com ?wait=true para obter o ID da mensagem
+      const discordRes = await fetch(webhookUrl + '?wait=true', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+
+      if (discordRes.ok) {
+        const msg = await discordRes.json();
+        const updates = { discord_message_id: msg.id };
+
+        // Cria uma thread no canal para facilitar respostas da equipe
+        const botToken = Deno.env.get('DISCORD_BOT_TOKEN');
+        if (botToken && msg.channel_id) {
+          const threadRes = await fetch(`https://discord.com/api/v10/channels/${msg.channel_id}/messages/${msg.id}/threads`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bot ${botToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              name: `Ticket: ${titulo.slice(0, 90)}`,
+              auto_archive_duration: 1440,
+            }),
+          });
+          if (threadRes.ok) {
+            const thread = await threadRes.json();
+            updates.discord_thread_id = thread.id;
+            // Envia mensagem de boas-vindas na thread com o ID do ticket
+            await fetch(`https://discord.com/api/v10/channels/${thread.id}/messages`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bot ${botToken}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                content: `🎫 **Ticket ID:** \`${ticket.id}\`\n📧 **Usuário:** ${user.email}\n\nResponda nesta thread. A resposta será enviada automaticamente para o usuário no sistema.`,
+              }),
+            });
+          }
+        }
+
+        await base44.asServiceRole.entities.TicketSuporte.update(ticket.id, updates);
+      }
     }
 
     return Response.json({ ok: true, ticket_id: ticket.id });
