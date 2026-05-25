@@ -55,9 +55,36 @@ Deno.serve(async (req) => {
 
     // Busca detalhes completos do pedido via API Bling (o webhook envia payload resumido)
     let pedidoBling = dadosPedido;
-    const tokenRes = await base44.asServiceRole.functions.invoke('blingGetToken', {});
-    const accessToken = tokenRes?.access_token;
 
+    // Obtém token diretamente do BlingConfig (sem invocar outra função)
+    let accessToken = null;
+    const configs = await base44.asServiceRole.entities.BlingConfig.list();
+    const blingConfig = configs[0];
+    if (blingConfig) {
+      if (blingConfig.access_token && blingConfig.expires_at && Date.now() < blingConfig.expires_at - 300000) {
+        accessToken = blingConfig.access_token;
+      } else if (blingConfig.refresh_token) {
+        const clientId = Deno.env.get('BLING_CLIENT_ID');
+        const clientSecret = Deno.env.get('BLING_CLIENT_SECRET');
+        const tokenRes = await fetch('https://www.bling.com.br/Api/v3/oauth/token', {
+          method: 'POST',
+          headers: { 'Authorization': `Basic ${btoa(`${clientId}:${clientSecret}`)}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: blingConfig.refresh_token }),
+        });
+        if (tokenRes.ok) {
+          const tokenData = await tokenRes.json();
+          accessToken = tokenData.access_token;
+          await base44.asServiceRole.entities.BlingConfig.update(blingConfig.id, {
+            access_token: accessToken,
+            refresh_token: tokenData.refresh_token || blingConfig.refresh_token,
+            expires_at: Date.now() + (tokenData.expires_in || 21600) * 1000,
+            conectado: true,
+          });
+        }
+      }
+    }
+
+    // Busca detalhes completos via API Bling
     if (accessToken) {
       const res = await fetch(`https://www.bling.com.br/Api/v3/pedidos/vendas/${dadosPedido.id}`, {
         headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' },
@@ -67,7 +94,7 @@ Deno.serve(async (req) => {
         pedidoBling = json.data || pedidoBling;
         console.log('[blingWebhook] Detalhes completos obtidos para pedido:', numeroPedido);
       } else {
-        console.warn('[blingWebhook] Não foi possível buscar detalhes, usando payload do webhook');
+        console.warn('[blingWebhook] Falha ao buscar detalhes, usando payload do webhook');
       }
     }
 
