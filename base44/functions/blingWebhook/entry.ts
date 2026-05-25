@@ -22,16 +22,19 @@ Deno.serve(async (req) => {
     // Busca detalhes completos do pedido via API do Bling se tiver apenas o ID
     let pedidoBling = dadosPedido;
     if (dadosPedido.id && !dadosPedido.itens && !dadosPedido.items) {
-      const apiKey = Deno.env.get('BLING_API_KEY');
-      const res = await fetch(`https://www.bling.com.br/Api/v3/pedidos/vendas/${dadosPedido.id}`, {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Accept': 'application/json',
-        },
-      });
-      if (res.ok) {
-        const json = await res.json();
-        pedidoBling = json.data || pedidoBling;
+      const tokenRes = await base44.asServiceRole.functions.invoke('blingGetToken', {});
+      const accessToken = tokenRes?.access_token;
+      if (accessToken) {
+        const res = await fetch(`https://www.bling.com.br/Api/v3/pedidos/vendas/${dadosPedido.id}`, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Accept': 'application/json',
+          },
+        });
+        if (res.ok) {
+          const json = await res.json();
+          pedidoBling = json.data || pedidoBling;
+        }
       }
     }
 

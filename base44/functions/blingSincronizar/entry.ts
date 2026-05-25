@@ -11,8 +11,10 @@ Deno.serve(async (req) => {
 
     const { pagina = 1, limite = 50, dataInicio, dataFim } = await req.json().catch(() => ({}));
 
-    const apiKey = Deno.env.get('BLING_API_KEY');
-    if (!apiKey) return Response.json({ error: 'BLING_API_KEY não configurada' }, { status: 500 });
+    // Obtém token OAuth2 válido (renova automaticamente se necessário)
+    const tokenRes = await base44.asServiceRole.functions.invoke('blingGetToken', {});
+    const accessToken = tokenRes?.access_token;
+    if (!accessToken) return Response.json({ error: 'Bling não autorizado. Faça a autenticação OAuth2 nas Configurações.' }, { status: 401 });
 
     // Monta query params
     const params = new URLSearchParams({
@@ -25,7 +27,7 @@ Deno.serve(async (req) => {
     // Busca pedidos no Bling v3
     const res = await fetch(`https://www.bling.com.br/Api/v3/pedidos/vendas?${params}`, {
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'Authorization': `Bearer ${accessToken}`,
         'Accept': 'application/json',
       },
     });
@@ -55,7 +57,7 @@ Deno.serve(async (req) => {
         let detalhes = pedidoBling;
         if (pedidoBling.id) {
           const detRes = await fetch(`https://www.bling.com.br/Api/v3/pedidos/vendas/${pedidoBling.id}`, {
-            headers: { 'Authorization': `Bearer ${apiKey}`, 'Accept': 'application/json' },
+            headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' },
           });
           if (detRes.ok) {
             const detJson = await detRes.json();

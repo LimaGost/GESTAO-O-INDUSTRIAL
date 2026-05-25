@@ -1,0 +1,21 @@
+{
+  "name": "BlingConfig",
+  "type": "object",
+  "properties": {
+    "access_token": {
+      "type": "string"
+    },
+    "refresh_token": {
+      "type": "string"
+    },
+    "expires_at": {
+      "type": "number",
+      "description": "Timestamp em ms de quando o access_token expira"
+    },
+    "conectado": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": []
+}

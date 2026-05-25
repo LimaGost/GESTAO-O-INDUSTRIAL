@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import {
   Plus, Trash2, Save, CheckSquare, ChevronDown,
   Settings2, GripVertical, Shield, Search,
-  RefreshCw, User, LogOut, Tag, Activity, AlertTriangle, Users, Factory, Paintbrush, Printer, Database, Columns, MessageCircle, Truck
+  RefreshCw, User, LogOut, Tag, Activity, AlertTriangle, Users, Factory, Paintbrush, Printer, Database, Columns, MessageCircle, Truck, Link2
 } from 'lucide-react';
 import SupabaseSchemas from '@/pages/SupabaseSchemas';
 import AbaUsuarios from '@/components/configuracoes/AbaUsuarios';
@@ -12,6 +12,7 @@ import AbaEtiquetas from '@/components/configuracoes/AbaEtiquetas';
 import AbaKanban from '@/components/configuracoes/AbaKanban';
 import AbaWhatsapp from '@/components/configuracoes/AbaWhatsapp';
 import AbaExpedicao from '@/components/configuracoes/AbaExpedicao';
+import AbaBling from '@/components/configuracoes/AbaBling';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 
 const BADGE_CORES = [
@@ -670,6 +671,12 @@ const TAB_GROUPS = [
     ],
   },
   {
+    label: 'Integrações',
+    items: [
+      { key: 'bling', label: 'Bling', icon: Link2, desc: 'Importar pedidos do Bling', adminOnly: true },
+    ],
+  },
+  {
     label: 'Avançado',
     items: [
       { key: 'supabase', label: 'Supabase Schemas', icon: Database, desc: 'Estrutura do banco de dados', adminOnly: true },
@@ -764,6 +771,13 @@ export default function Configuracoes() {
           {aba === 'expedicao'      && <AbaExpedicao />}
           {aba === 'usuarios'       && <AbaUsuarios />}
           {aba === 'auditoria'      && <AbaAuditoria />}
+          {aba === 'bling'    && isAdmin && <AbaBling />}
+          {aba === 'bling'    && !isAdmin && (
+            <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+              <span className="text-4xl">🔒</span>
+              <p className="font-bold text-foreground">Acesso Restrito</p>
+            </div>
+          )}
           {aba === 'supabase' && isAdmin && <SupabaseSchemas />}
           {aba === 'supabase' && !isAdmin && (
             <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
