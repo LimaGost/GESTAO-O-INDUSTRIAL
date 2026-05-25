@@ -97,18 +97,17 @@ export default function AbaBling() {
         <div className="bg-card border border-border rounded-xl p-5 space-y-4">
           <p className="text-sm font-semibold text-foreground">Passo 1 — Autorizar no Bling</p>
 
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-xs text-yellow-800 space-y-1">
+                <p className="font-semibold">⚙️ Antes de continuar — Configure no Bling:</p>
+                <p>No painel do desenvolvedor Bling, adicione esta URL exata como <strong>redirect_uri</strong>:</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <code className="bg-yellow-100 px-2 py-1 rounded text-xs flex-1 break-all">{window.location.origin + '/BlingCallback'}</code>
+                  <button onClick={() => { navigator.clipboard.writeText(window.location.origin + '/BlingCallback'); }} className="p-1.5 border border-yellow-300 rounded hover:bg-yellow-100" title="Copiar"><Copy size={12} /></button>
+                </div>
+              </div>
+
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">URL de Autorização</label>
-            <div className="flex gap-2">
-              <input readOnly value={authUrl} className="flex-1 border border-border rounded-lg px-3 py-2 text-xs bg-muted text-muted-foreground" />
-              <button onClick={copiar} className="p-2 border border-border rounded-lg hover:bg-muted transition-colors" title="Copiar">
-                <Copy size={14} />
-              </button>
-              <a href={authUrl} target="_blank" rel="noreferrer" className="p-2 border border-border rounded-lg hover:bg-muted transition-colors" title="Abrir">
-                <ExternalLink size={14} />
-              </a>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Abra esta URL, autorize o app e copie o código da URL de retorno (parâmetro <code>code=...</code>).</p>
           </div>
 
           <div>
