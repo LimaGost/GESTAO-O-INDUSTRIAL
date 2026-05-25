@@ -21,6 +21,7 @@ import Relatorios from './pages/Relatorios.jsx';
 import Auditoria from './pages/Auditoria';
 import SupabaseSchemas from './pages/SupabaseSchemas';
 import ConfirmarRecebimento from './pages/ConfirmarRecebimento';
+import BlingCallback from './pages/BlingCallback';
 import Perdas from './pages/Perdas';
 import Reposicoes from './pages/Reposicoes.jsx';
 import Suporte from './pages/Suporte.jsx';
@@ -93,6 +94,7 @@ const AuthenticatedApp = () => {
           <Route path="/Configuracoes"  element={<RotaProtegida modulo="Configuracoes">  <Configuracoes />  </RotaProtegida>} />
         </Route>
         <Route path="/confirmar-recebimento" element={<ConfirmarRecebimento />} />
+        <Route path="/BlingCallback" element={<BlingCallback />} />
         <Route path="*" element={<PageNotFound />} />
       </AnimatedRoutes>
     </PermissoesProvider>

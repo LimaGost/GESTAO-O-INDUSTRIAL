@@ -24,7 +24,8 @@ export default function AbaBling() {
   };
 
   const gerarUrl = async () => {
-    const res = await base44.functions.invoke('blingGetAuthUrl', {});
+    const redirectUri = window.location.origin + '/BlingCallback';
+    const res = await base44.functions.invoke('blingGetAuthUrl', { redirectUri });
     if (res.data?.url) setAuthUrl(res.data.url);
   };
 
