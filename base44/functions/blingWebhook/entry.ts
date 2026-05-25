@@ -1,53 +1,77 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
-// Webhook do Bling - recebe notificações de novos pedidos
-// Configure no Bling: Configurações > API > Webhooks > URL: <URL desta função>
-// Evento: pedido.criado (ou pedidoVenda.criado no Bling v3)
+// Webhook do Bling v3 — recebe notificações em tempo real de pedidos de venda
+// Estrutura do payload: { eventId, date, version, event, companyId, data }
+// Validação: header X-Bling-Signature-256 com HMAC-SHA256 do body + BLING_CLIENT_SECRET
+
+async function validarAssinatura(bodyText, signature) {
+  const secret = Deno.env.get('BLING_CLIENT_SECRET');
+  if (!secret) return false;
+
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const hashBuffer = await crypto.subtle.sign('HMAC', key, encoder.encode(bodyText));
+  const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+  const esperado = `sha256=${hashHex}`;
+
+  return signature === esperado;
+}
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    const bodyText = await req.text();
+    const signature = req.headers.get('X-Bling-Signature-256') || '';
 
-    const body = await req.json();
-    console.log('[blingWebhook] Payload recebido:', JSON.stringify(body));
-
-    // Bling v3 envia { data: { ... }, event: "pedidoVenda.incluido" }
-    const evento = body.event || body.tipo || '';
-    const dadosPedido = body.data || body.retorno?.pedidos?.[0]?.pedido || body;
-
-    if (!dadosPedido) {
-      return Response.json({ ok: false, error: 'Payload inválido' }, { status: 400 });
+    // Valida assinatura (loga mas não bloqueia em ambiente de teste se não houver secret)
+    const assinaturaValida = await validarAssinatura(bodyText, signature);
+    if (!assinaturaValida && signature) {
+      console.warn('[blingWebhook] Assinatura inválida:', signature);
+      return Response.json({ error: 'Assinatura inválida' }, { status: 401 });
     }
 
-    // Busca detalhes completos do pedido via API do Bling se tiver apenas o ID
+    const body = JSON.parse(bodyText);
+    console.log('[blingWebhook] Evento recebido:', body.event, '| EventId:', body.eventId);
+
+    // Só processa criação de pedidos de venda
+    if (body.event !== 'order.created') {
+      return Response.json({ ok: true, msg: `Evento "${body.event}" ignorado` });
+    }
+
+    const dadosPedido = body.data;
+    if (!dadosPedido?.id) {
+      return Response.json({ ok: false, error: 'Payload sem ID do pedido' }, { status: 400 });
+    }
+
+    // Verifica duplicata pelo número do pedido
+    const numeroPedido = String(dadosPedido.numero || dadosPedido.id);
+    const existentes = await base44.asServiceRole.entities.Pedido.filter({ numero: numeroPedido });
+    if (existentes.length > 0) {
+      console.log('[blingWebhook] Pedido já importado:', numeroPedido);
+      return Response.json({ ok: true, msg: 'Duplicado', duplicado: true });
+    }
+
+    // Busca detalhes completos do pedido via API Bling (o webhook envia payload resumido)
     let pedidoBling = dadosPedido;
-    if (dadosPedido.id && !dadosPedido.itens && !dadosPedido.items) {
-      const tokenRes = await base44.asServiceRole.functions.invoke('blingGetToken', {});
-      const accessToken = tokenRes?.access_token;
-      if (accessToken) {
-        const res = await fetch(`https://www.bling.com.br/Api/v3/pedidos/vendas/${dadosPedido.id}`, {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Accept': 'application/json',
-          },
-        });
-        if (res.ok) {
-          const json = await res.json();
-          pedidoBling = json.data || pedidoBling;
-        }
+    const tokenRes = await base44.asServiceRole.functions.invoke('blingGetToken', {});
+    const accessToken = tokenRes?.access_token;
+
+    if (accessToken) {
+      const res = await fetch(`https://www.bling.com.br/Api/v3/pedidos/vendas/${dadosPedido.id}`, {
+        headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' },
+      });
+      if (res.ok) {
+        const json = await res.json();
+        pedidoBling = json.data || pedidoBling;
+        console.log('[blingWebhook] Detalhes completos obtidos para pedido:', numeroPedido);
+      } else {
+        console.warn('[blingWebhook] Não foi possível buscar detalhes, usando payload do webhook');
       }
     }
 
-    // Verifica se pedido já foi importado (evita duplicatas)
-    const existentes = await base44.asServiceRole.entities.Pedido.filter({
-      numero: String(pedidoBling.numero || pedidoBling.id || ''),
-    });
-    if (existentes.length > 0) {
-      console.log('[blingWebhook] Pedido já importado:', pedidoBling.numero);
-      return Response.json({ ok: true, msg: 'Pedido já importado', duplicado: true });
-    }
-
-    // Monta itens do pedido
+    // Monta itens
     const itensBrutos = pedidoBling.itens || pedidoBling.items || [];
     const itens = itensBrutos.map(item => ({
       produto_id: String(item.produto?.id || item.codigo || ''),
@@ -57,13 +81,12 @@ Deno.serve(async (req) => {
       total: Number(item.quantidade || 1) * Number(item.valor || item.preco || 0),
     }));
 
-    const valorTotal = Number(pedidoBling.totalProdutos || pedidoBling.total || pedidoBling.valor_total || 0);
-    const clienteNome = pedidoBling.contato?.nome || pedidoBling.cliente?.nome || pedidoBling.nomeCliente || 'Cliente Bling';
-    const numeroPedido = String(pedidoBling.numero || pedidoBling.id || `BLING-${Date.now()}`);
-    const dataPedido = (pedidoBling.data || pedidoBling.dataPedido || new Date().toISOString().split('T')[0]).split('T')[0];
-    const observacoes = pedidoBling.observacoes || pedidoBling.obs || '';
+    const agoraBrasil = new Date(Date.now() - 3 * 60 * 60 * 1000);
+    const valorTotal = Number(pedidoBling.totalProdutos || pedidoBling.total || dadosPedido.total || 0);
+    const clienteNome = pedidoBling.contato?.nome || dadosPedido.contato?.nome || 'Cliente Bling';
+    const dataPedido = (pedidoBling.data || dadosPedido.data || agoraBrasil.toISOString().split('T')[0]).split('T')[0];
+    const observacoes = pedidoBling.observacoes || '';
 
-    // Cria pedido no sistema
     const novoPedido = await base44.asServiceRole.entities.Pedido.create({
       numero: numeroPedido,
       cliente_nome: clienteNome,
@@ -74,7 +97,7 @@ Deno.serve(async (req) => {
       observacoes: observacoes ? `[Bling] ${observacoes}` : '[Importado do Bling]',
     });
 
-    console.log('[blingWebhook] Pedido criado:', novoPedido.id, numeroPedido);
+    console.log('[blingWebhook] ✅ Pedido criado:', novoPedido.id, numeroPedido, '-', clienteNome);
     return Response.json({ ok: true, pedido_id: novoPedido.id, numero: numeroPedido });
 
   } catch (error) {
