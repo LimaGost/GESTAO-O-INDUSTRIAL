@@ -39,7 +39,8 @@ export default function AbaBling() {
     if (!code.trim()) { setMsg({ tipo: 'erro', texto: 'Cole o código retornado pelo Bling.' }); return; }
     setProcessando(true);
     setMsg(null);
-    const res = await base44.functions.invoke('blingExchangeCode', { code: code.trim(), redirectUri: 'https://app.base44.app/callback' });
+    const redirectUri = window.location.origin + '/BlingCallback';
+    const res = await base44.functions.invoke('blingExchangeCode', { code: code.trim(), redirectUri });
     setProcessando(false);
     if (res.data?.ok) {
       setMsg({ tipo: 'ok', texto: 'Bling conectado com sucesso! 🎉' });
@@ -108,6 +109,16 @@ export default function AbaBling() {
 
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">URL de Autorização</label>
+            <div className="flex gap-2">
+              <input readOnly value={authUrl} className="flex-1 border border-border rounded-lg px-3 py-2 text-xs bg-muted text-muted-foreground" />
+              <button onClick={copiar} className="p-2 border border-border rounded-lg hover:bg-muted transition-colors" title="Copiar">
+                <Copy size={14} />
+              </button>
+              <button onClick={() => authUrl && window.open(authUrl, '_blank')} disabled={!authUrl} className="p-2 border border-border rounded-lg hover:bg-muted transition-colors disabled:opacity-40" title="Abrir">
+                <ExternalLink size={14} />
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Clique em Abrir, autorize o app no Bling — você será redirecionado automaticamente.</p>
           </div>
 
           <div>
