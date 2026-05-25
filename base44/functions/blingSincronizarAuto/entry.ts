@@ -55,7 +55,9 @@ Deno.serve(async (req) => {
     const local = new Date(agora.getTime() + (-3 * 60) * 60000);
     const hoje = local.toISOString().split('T')[0];
 
-    const params = new URLSearchParams({ pagina: '1', limite: '100', dataInicio: hoje, dataFim: hoje });
+    // Bling v3 usa formato DD/MM/YYYY
+    const hojeFormatado = hoje.split('-').reverse().join('/');
+    const params = new URLSearchParams({ pagina: '1', limite: '100', dataInicio: hojeFormatado, dataFim: hojeFormatado });
 
     const res = await fetch(`https://www.bling.com.br/Api/v3/pedidos/vendas?${params}`, {
       headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' },
