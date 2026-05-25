@@ -7,7 +7,7 @@ export default function AbaBling() {
   const [loading, setLoading] = useState(true);
   const [authUrl, setAuthUrl] = useState('');
   const [code, setCode] = useState('');
-  const [redirectUri, setRedirectUri] = useState('https://app.base44.app/callback');
+
   const [processando, setProcessando] = useState(false);
   const [msg, setMsg] = useState(null);
 
@@ -24,7 +24,7 @@ export default function AbaBling() {
   };
 
   const gerarUrl = async () => {
-    const res = await base44.functions.invoke('blingGetAuthUrl', { redirectUri });
+    const res = await base44.functions.invoke('blingGetAuthUrl', {});
     if (res.data?.url) setAuthUrl(res.data.url);
   };
 
@@ -38,7 +38,7 @@ export default function AbaBling() {
     if (!code.trim()) { setMsg({ tipo: 'erro', texto: 'Cole o código retornado pelo Bling.' }); return; }
     setProcessando(true);
     setMsg(null);
-    const res = await base44.functions.invoke('blingExchangeCode', { code: code.trim(), redirectUri });
+    const res = await base44.functions.invoke('blingExchangeCode', { code: code.trim(), redirectUri: 'https://app.base44.app/callback' });
     setProcessando(false);
     if (res.data?.ok) {
       setMsg({ tipo: 'ok', texto: 'Bling conectado com sucesso! 🎉' });
@@ -95,16 +95,6 @@ export default function AbaBling() {
       {!conectado && (
         <div className="bg-card border border-border rounded-xl p-5 space-y-4">
           <p className="text-sm font-semibold text-foreground">Passo 1 — Autorizar no Bling</p>
-
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">URL de Redirecionamento (configure no Bling)</label>
-            <input
-              value={redirectUri}
-              onChange={e => { setRedirectUri(e.target.value); }}
-              onBlur={gerarUrl}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background"
-            />
-          </div>
 
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">URL de Autorização</label>

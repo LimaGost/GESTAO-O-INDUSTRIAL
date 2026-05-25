@@ -14,13 +14,12 @@ Deno.serve(async (req) => {
     const clientId = Deno.env.get('BLING_CLIENT_ID');
     if (!clientId) return Response.json({ error: 'BLING_CLIENT_ID não configurado' }, { status: 500 });
 
-    const { redirectUri } = await req.json().catch(() => ({}));
-    const redirect = redirectUri || 'https://app.base44.app/callback';
+    const state = crypto.randomUUID().replace(/-/g, '');
 
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: clientId,
-      redirect_uri: redirect,
+      state,
     });
 
     const authUrl = `https://www.bling.com.br/Api/v3/oauth/authorize?${params}`;
