@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Plus, X, CheckCircle, AlertTriangle, Search, ShoppingCart, Clock, Package, Truck, Ban, FileText, Eye } from 'lucide-react';
+import { Plus, X, CheckCircle, AlertTriangle, Search, ShoppingCart, Clock, Package, Truck, Ban, FileText, Eye, Zap } from 'lucide-react';
+import ModalProcessarBling from '@/components/pedidos/ModalProcessarBling';
 import SeletorProdutos from '@/components/pedidos/SeletorProdutos';
 import { gerarNumero, gerarLote } from '@/lib/numeracao';
 import { registrarLog } from '@/lib/audit';
@@ -31,6 +32,8 @@ export default function Pedidos() {
   const [loading, setLoading] = useState(false);
   const [busca, setBusca] = useState('');
   const [pedidoConfirmado, setPedidoConfirmado] = useState(null);
+  const [pedidoBlingProcessar, setPedidoBlingProcessar] = useState(null);
+  const [processandoBling, setProcessandoBling] = useState(false);
 
   const load = async () => {
     const [p, c, pr, exp] = await Promise.all([
@@ -155,6 +158,93 @@ export default function Pedidos() {
       status,
       itens: itensAgrupados,
       valorTotal,
+      precisaProducao,
+      itensComEstoque: itensComEstoque.length,
+      itensSemEstoque: itensSemEstoque.length,
+    });
+  };
+
+  const processarPedidoBling = async (itensVinculados) => {
+    const pedido = pedidoBlingProcessar;
+    setProcessandoBling(true);
+
+    const mapaItens = {};
+    for (const item of itensVinculados) {
+      if (!item.produto_id || item.quantidade <= 0) continue;
+      if (mapaItens[item.produto_id]) {
+        mapaItens[item.produto_id].quantidade += item.quantidade;
+        mapaItens[item.produto_id].total = (mapaItens[item.produto_id].total || 0) + (item.total || 0);
+      } else {
+        mapaItens[item.produto_id] = { ...item };
+      }
+    }
+    const itensAgrupados = Object.values(mapaItens);
+
+    const itensComEstoque = [];
+    const itensSemEstoque = [];
+    for (const item of itensAgrupados) {
+      const p = produtos.find(pr => pr.id === item.produto_id);
+      if (!p) continue;
+      if ((p.estoque_atual || 0) >= item.quantidade) {
+        itensComEstoque.push({ ...item, produto: p });
+      } else {
+        itensSemEstoque.push({ ...item, produto: p, quantidadeFalta: item.quantidade - (p.estoque_atual || 0) });
+      }
+    }
+
+    const precisaProducao = itensSemEstoque.length > 0;
+    const status = precisaProducao ? 'aguardando_estoque' : 'separacao';
+    const numero = pedido.numero || gerarNumero('PED');
+
+    // Atualiza itens e status do pedido Bling
+    await base44.entities.Pedido.update(pedido.id, {
+      itens: itensVinculados,
+      status,
+      numero,
+    });
+
+    // Baixa estoque dos itens disponíveis
+    for (const item of itensComEstoque) {
+      const novoEstoque = (item.produto.estoque_atual || 0) - item.quantidade;
+      await base44.entities.Produto.update(item.produto_id, { estoque_atual: novoEstoque });
+      await registrarLog('Produto', item.produto_id, 'BAIXA_ESTOQUE', `Baixa de ${item.quantidade} para pedido Bling ${numero}`);
+    }
+
+    // Cria OP consolidada
+    const todosItensOP = [
+      ...itensComEstoque.map(i => ({ produto_id: i.produto_id, produto_nome: i.produto_nome, quantidade: i.quantidade, disponivel: true })),
+      ...itensSemEstoque.map(i => ({ produto_id: i.produto_id, produto_nome: i.produto_nome, quantidade: i.quantidadeFalta, disponivel: false })),
+    ];
+
+    const statusOP = precisaProducao ? 'a_produzir' : 'em_embalagem';
+    const opData = {
+      numero: gerarNumero('OP'),
+      produto_nome: `Pedido ${numero}`,
+      quantidade: todosItensOP.reduce((s, i) => s + i.quantidade, 0),
+      itens: todosItensOP,
+      status: statusOP,
+      pedido_id: pedido.id,
+      pedido_numero: numero,
+      origem: 'bling',
+    };
+    if (!precisaProducao) {
+      opData.data_embalagem = new Date().toISOString();
+      opData.lote = gerarLote(pedido.id);
+    }
+    const ordem = await base44.entities.OrdemProducao.create(opData);
+    await base44.entities.Pedido.update(pedido.id, { ordens_producao_ids: [ordem.id] });
+    await registrarLog('Pedido', pedido.id, 'PROCESSAMENTO_BLING', `Pedido Bling ${numero} processado. Status: ${status}`);
+
+    setProcessandoBling(false);
+    setPedidoBlingProcessar(null);
+    await load();
+
+    setPedidoConfirmado({
+      numero,
+      cliente: pedido.cliente_nome,
+      status,
+      itens: itensVinculados,
+      valorTotal: pedido.valor_total || 0,
       precisaProducao,
       itensComEstoque: itensComEstoque.length,
       itensSemEstoque: itensSemEstoque.length,
@@ -338,6 +428,11 @@ export default function Pedidos() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
+                    {!readonly && p.status === 'rascunho' && (p.observacoes || '').includes('Bling') && (
+                      <button onClick={() => setPedidoBlingProcessar(p)} className="text-xs bg-primary/10 text-primary border border-primary/30 px-3 py-1.5 rounded-lg font-semibold hover:bg-primary/20 transition-colors flex items-center gap-1">
+                        <Zap size={11} /> Processar
+                      </button>
+                    )}
                     {!readonly && p.status === 'separacao' && (
                       <button onClick={() => separarPedido(p)} className="text-xs bg-rainbow-green/15 text-rainbow-green border border-rainbow-green/30 px-3 py-1.5 rounded-lg font-semibold hover:bg-rainbow-green/25 transition-colors">
                         ✓ Separar
@@ -384,6 +479,17 @@ export default function Pedidos() {
           </div>
         )}
       </div>
+
+      {/* Modal processar Bling */}
+      {pedidoBlingProcessar && (
+        <ModalProcessarBling
+          pedido={pedidoBlingProcessar}
+          produtos={produtos}
+          loading={processandoBling}
+          onConfirmar={processarPedidoBling}
+          onClose={() => setPedidoBlingProcessar(null)}
+        />
+      )}
 
       {/* Modal de resumo */}
       {pedidoConfirmado && (
