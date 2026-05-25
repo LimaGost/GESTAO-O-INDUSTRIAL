@@ -1,0 +1,22 @@
+{
+  "name": "UltimaSincronizacao",
+  "type": "object",
+  "properties": {
+    "tipo": {
+      "type": "string",
+      "description": "Tipo de sincroniza\u00e7\u00e3o (ex: bling_pedidos)",
+      "default": "bling_pedidos"
+    },
+    "timestamp": {
+      "type": "number",
+      "description": "Timestamp em ms do \u00faltimo sincronismo bem-sucedido"
+    },
+    "data_ultima_sincronizacao": {
+      "type": "string",
+      "description": "Data/hora formatada do \u00faltimo sincronismo (ISO 8601)"
+    }
+  },
+  "required": [
+    "tipo"
+  ]
+}

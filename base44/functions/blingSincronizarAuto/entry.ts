@@ -50,13 +50,22 @@ Deno.serve(async (req) => {
       console.log('[blingSincronizarAuto] Token renovado');
     }
 
-    // Data de hoje no fuso de Brasília (UTC-3)
-    const agora = new Date();
-    const local = new Date(agora.getTime() + (-3 * 60) * 60000);
-    const hoje = local.toISOString().split('T')[0];
+    // Obtém timestamp do último sincronismo bem-sucedido
+    const ultimaSincs = await base44.asServiceRole.entities.UltimaSincronizacao.filter({ tipo: 'bling_pedidos' });
+    let dataInicio = hoje;
+    let dataFim = hoje;
 
-    // Bling v3 usa formato YYYY-MM-DD
-    const params = new URLSearchParams({ pagina: '1', limite: '100', dataInicio: hoje, dataFim: hoje });
+    if (ultimaSincs.length > 0) {
+      // Se existe último sync, usa como data de início (em UTC-0 para API Bling)
+      const ultimoTs = ultimaSincs[0].timestamp;
+      const ultimaData = new Date(ultimoTs);
+      dataInicio = ultimaData.toISOString().split('T')[0]; // apenas data YYYY-MM-DD
+      console.log(`[blingSincronizarAuto] Sincronizando desde ${ultimaData.toISOString()}`);
+    } else {
+      console.log('[blingSincronizarAuto] Primeira sincronização, puxando apenas de hoje');
+    }
+
+    const params = new URLSearchParams({ pagina: '1', limite: '100', dataInicio, dataFim });
 
     const res = await fetch(`https://www.bling.com.br/Api/v3/pedidos/vendas?${params}`, {
       headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' },
@@ -131,6 +140,23 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[blingSincronizarAuto] Resultado: ${importados} importados, ${duplicados} duplicados`);
+
+    // Atualiza timestamp do último sincronismo bem-sucedido
+    const agora = Date.now();
+    if (ultimaSincs.length > 0) {
+      await base44.asServiceRole.entities.UltimaSincronizacao.update(ultimaSincs[0].id, {
+        timestamp: agora,
+        data_ultima_sincronizacao: new Date(agora).toISOString(),
+      });
+    } else {
+      await base44.asServiceRole.entities.UltimaSincronizacao.create({
+        tipo: 'bling_pedidos',
+        timestamp: agora,
+        data_ultima_sincronizacao: new Date(agora).toISOString(),
+      });
+    }
+    console.log(`[blingSincronizarAuto] Timestamp atualizado para ${new Date(agora).toISOString()}`);
+
     return Response.json({ ok: true, data: hoje, total_bling: pedidosBling.length, importados, duplicados, erros });
 
   } catch (error) {
