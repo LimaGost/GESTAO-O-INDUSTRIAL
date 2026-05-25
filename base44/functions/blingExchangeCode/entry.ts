@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
 
     if (!tokenRes.ok || !tokenData.access_token) {
       console.error('[blingExchangeCode] Erro Bling:', JSON.stringify(tokenData));
-      return Response.json({ error: 'Falha ao obter token', detalhe: tokenData }, { status: 400 });
+      return Response.json({ ok: false, error: tokenData.error_description || tokenData.error || 'Falha ao obter token', detalhe: tokenData });
     }
 
     const expiresAt = Date.now() + (tokenData.expires_in || 21600) * 1000;
