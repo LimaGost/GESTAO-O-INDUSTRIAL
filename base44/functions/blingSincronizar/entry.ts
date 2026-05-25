@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
-// Sincroniza pedidos recentes do Bling manualmente
+// Sincroniza pedidos do Bling manualmente
 // Payload: { pagina: 1, limite: 50, dataInicio: "2024-01-01", dataFim: "2024-12-31" }
 
 Deno.serve(async (req) => {
@@ -11,10 +11,46 @@ Deno.serve(async (req) => {
 
     const { pagina = 1, limite = 50, dataInicio, dataFim } = await req.json().catch(() => ({}));
 
-    // Obtém token OAuth2 válido (renova automaticamente se necessário)
-    const tokenRes = await base44.asServiceRole.functions.invoke('blingGetToken', {});
-    const accessToken = tokenRes?.access_token;
-    if (!accessToken) return Response.json({ error: 'Bling não autorizado. Faça a autenticação OAuth2 nas Configurações.' }, { status: 401 });
+    // Obtém token OAuth2 válido diretamente (sem depender de outro function invoke)
+    const configs = await base44.asServiceRole.entities.BlingConfig.list();
+    const config = configs[0];
+    if (!config || !config.refresh_token) {
+      return Response.json({ error: 'Bling não autorizado. Faça a autenticação OAuth2 nas Configurações.' }, { status: 401 });
+    }
+
+    let accessToken = config.access_token;
+
+    // Renova se expirado (com margem de 5 min)
+    if (!accessToken || !config.expires_at || Date.now() >= config.expires_at - 300000) {
+      const clientId = Deno.env.get('BLING_CLIENT_ID');
+      const clientSecret = Deno.env.get('BLING_CLIENT_SECRET');
+      const credentials = btoa(`${clientId}:${clientSecret}`);
+
+      const tokenRes = await fetch('https://www.bling.com.br/Api/v3/oauth/token', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${credentials}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json',
+        },
+        body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: config.refresh_token }),
+      });
+
+      const tokenData = await tokenRes.json();
+      if (!tokenRes.ok || !tokenData.access_token) {
+        console.error('[blingSincronizar] Falha ao renovar token:', JSON.stringify(tokenData));
+        return Response.json({ error: 'Falha ao renovar token Bling. Reconecte nas Configurações.' }, { status: 401 });
+      }
+
+      accessToken = tokenData.access_token;
+      const expiresAt = Date.now() + (tokenData.expires_in || 21600) * 1000;
+      await base44.asServiceRole.entities.BlingConfig.update(config.id, {
+        access_token: accessToken,
+        refresh_token: tokenData.refresh_token || config.refresh_token,
+        expires_at: expiresAt,
+        conectado: true,
+      });
+    }
 
     // Monta query params
     const params = new URLSearchParams({
