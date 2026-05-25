@@ -52,16 +52,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Converte datas de YYYY-MM-DD para DD/MM/YYYY (formato Bling)
-    const formatarData = (d) => d ? d.split('-').reverse().join('/') : null;
-
-    // Monta query params
+    // Monta query params (Bling v3 usa YYYY-MM-DD)
     const params = new URLSearchParams({
       pagina: String(pagina),
       limite: String(Math.min(limite, 100)),
     });
-    if (dataInicio) params.set('dataInicio', formatarData(dataInicio));
-    if (dataFim) params.set('dataFim', formatarData(dataFim));
+    if (dataInicio) params.set('dataInicio', dataInicio);
+    if (dataFim) params.set('dataFim', dataFim);
 
     // Busca pedidos no Bling v3
     const res = await fetch(`https://www.bling.com.br/Api/v3/pedidos/vendas?${params}`, {
