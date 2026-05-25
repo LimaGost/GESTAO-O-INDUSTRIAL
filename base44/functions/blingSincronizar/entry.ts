@@ -112,7 +112,8 @@ Deno.serve(async (req) => {
 
         const valorTotal = Number(detalhes.totalProdutos || detalhes.total || 0);
         const clienteNome = detalhes.contato?.nome || detalhes.cliente?.nome || 'Cliente Bling';
-        const dataPedido = (detalhes.data || new Date().toISOString().split('T')[0]).split('T')[0];
+        const agoraBrasil = new Date(Date.now() - 3 * 60 * 60 * 1000);
+        const dataPedido = (detalhes.data || agoraBrasil.toISOString().split('T')[0]).split('T')[0];
         const observacoes = detalhes.observacoes || '';
 
         await base44.asServiceRole.entities.Pedido.create({
