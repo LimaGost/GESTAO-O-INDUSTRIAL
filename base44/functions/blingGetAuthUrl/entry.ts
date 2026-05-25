@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
       redirect_uri: redirect,
     });
 
-    const authUrl = `https://www.bling.com.br/OAuth2/Auth?${params}`;
+    const authUrl = `https://www.bling.com.br/Api/v3/oauth/authorize?${params}`;
     return Response.json({ url: authUrl });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
