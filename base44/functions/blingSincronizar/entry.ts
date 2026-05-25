@@ -77,6 +77,10 @@ Deno.serve(async (req) => {
     const json = await res.json();
     const pedidosBling = json.data || [];
 
+    // Busca todos os números de uma vez (evita rate limit no loop)
+    const pedidosExistentes = await base44.asServiceRole.entities.Pedido.list();
+    const numerosExistentes = new Set(pedidosExistentes.map(p => String(p.numero)));
+
     let importados = 0;
     let duplicados = 0;
     const erros = [];
@@ -85,9 +89,7 @@ Deno.serve(async (req) => {
       try {
         const numero = String(pedidoBling.numero || pedidoBling.id || '');
 
-        // Verifica duplicata
-        const existentes = await base44.asServiceRole.entities.Pedido.filter({ numero });
-        if (existentes.length > 0) { duplicados++; continue; }
+        if (numerosExistentes.has(numero)) { duplicados++; continue; }
 
         // Busca detalhes completos
         let detalhes = pedidoBling;

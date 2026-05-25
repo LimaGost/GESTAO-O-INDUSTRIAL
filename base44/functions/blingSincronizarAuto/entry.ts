@@ -72,6 +72,11 @@ Deno.serve(async (req) => {
     const pedidosBling = json.data || [];
     console.log(`[blingSincronizarAuto] ${pedidosBling.length} pedido(s) encontrado(s) para ${hoje}`);
 
+    // Busca todos os números já importados de uma vez (evita rate limit no loop)
+    const pedidosExistentes = await base44.asServiceRole.entities.Pedido.list();
+    const numerosExistentes = new Set(pedidosExistentes.map(p => String(p.numero)));
+    console.log(`[blingSincronizarAuto] ${numerosExistentes.size} pedidos já cadastrados no sistema`);
+
     let importados = 0;
     let duplicados = 0;
     const erros = [];
@@ -80,8 +85,7 @@ Deno.serve(async (req) => {
       try {
         const numero = String(pedidoBling.numero || pedidoBling.id || '');
 
-        const existentes = await base44.asServiceRole.entities.Pedido.filter({ numero });
-        if (existentes.length > 0) { duplicados++; continue; }
+        if (numerosExistentes.has(numero)) { duplicados++; continue; }
 
         let detalhes = pedidoBling;
         if (pedidoBling.id) {
