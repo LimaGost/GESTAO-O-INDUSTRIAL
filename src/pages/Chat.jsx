@@ -37,7 +37,7 @@ export default function Chat() {
       // Carrega conversas existentes para contar mensagens não lidas
       const todasConversas = await base44.entities.Conversa.list();
       
-      // Mapeia usuários com status de mensagens não lidas
+      // Mapeia TODOS os usuários (ativos e inativos) com status de mensagens não lidas
       const usuariosComStatus = outrosUsuarios.map(usuario => {
         const conversa = todasConversas.find(c => 
           c.participantes?.includes(usuario.id) && c.participantes?.includes(usuarioAtual.id)
