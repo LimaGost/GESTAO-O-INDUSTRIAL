@@ -208,8 +208,8 @@ export default function Chat() {
 
   return (
     <div className="flex h-[calc(100vh-80px)] bg-background">
-      {/* Mobile: Lista de Conversas - Padrão WhatsApp */}
-      <div className={`md:flex w-full ${usuarioSelecionado ? 'hidden' : 'flex'} flex-col bg-card`}>
+      {/* Lista de Conversas - Sidebar mais estreita no desktop */}
+      <div className={`md:flex w-full ${usuarioSelecionado ? 'hidden' : 'flex'} md:w-80 lg:w-96 flex-col bg-card border-r border-border`}>
         {/* Header */}
         <div className="px-4 py-3.5 border-b border-border bg-card flex items-center justify-between flex-shrink-0">
           <h2 className="font-bold text-foreground text-lg">Conversas</h2>
@@ -277,8 +277,8 @@ export default function Chat() {
         </div>
       </div>
 
-      {/* Mobile: Tela de Conversa (tela cheia) */}
-      <div className={`md:flex flex-1 ${usuarioSelecionado ? 'flex' : 'hidden'} md:w-auto md:flex md:flex-col bg-[#efe7dd]`}>
+      {/* Tela de Conversa - Área principal no desktop */}
+      <div className={`flex-1 ${usuarioSelecionado ? 'flex' : 'hidden'} md:flex flex-col bg-[#efe7dd]`}>
         {/* Área de Mensagens - estilo WhatsApp */}
         {usuarioSelecionado && conversaAtiva ? (
           <div className="flex-1 flex flex-col w-full h-full">
@@ -306,7 +306,7 @@ export default function Chat() {
             </div>
 
             {/* Mensagens com fundo estilo WhatsApp */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-2" style={{ backgroundImage: 'url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png")', backgroundRepeat: 'repeat', backgroundOpacity: 0.03 }}>
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 space-y-3" style={{ backgroundImage: 'url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png")', backgroundRepeat: 'repeat', backgroundOpacity: 0.03 }}>
               {mensagens.map((mensagem, idx) => {
                 const ehMeu = mensagem.remetente_id === usuarioAtual?.id;
                 return (
@@ -315,19 +315,19 @@ export default function Chat() {
                     className={`flex ${ehMeu ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[80%] md:max-w-[70%] rounded-lg px-3 py-2 shadow-sm ${
+                      className={`max-w-[85%] md:max-w-[60%] lg:max-w-[50%] rounded-2xl px-4 py-2.5 shadow-md ${
                         ehMeu
                           ? 'bg-[#d9fdd3] text-foreground'
                           : 'bg-white text-foreground'
                       }`}
                     >
                       {!ehMeu && (
-                        <p className="text-[10px] font-semibold mb-0.5 text-primary">
+                        <p className="text-xs font-semibold mb-1 text-primary">
                           {mensagem.remetente_nome || 'Usuário'}
                         </p>
                       )}
-                      <p className="text-sm break-words">{mensagem.conteudo}</p>
-                      <p className={`text-[10px] mt-1 text-right ${ehMeu ? 'text-green-700/70' : 'text-muted-foreground'}`}>
+                      <p className="text-base break-words leading-relaxed">{mensagem.conteudo}</p>
+                      <p className={`text-xs mt-1.5 text-right ${ehMeu ? 'text-green-700/70' : 'text-muted-foreground'}`}>
                         {mensagem.created_date 
                           ? new Date(mensagem.created_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
                           : ''
@@ -350,22 +350,22 @@ export default function Chat() {
             </div>
 
             {/* Input de Mensagem - estilo WhatsApp */}
-            <div className="px-4 py-3 bg-card border-t border-border flex items-center gap-3 flex-shrink-0">
+            <div className="px-4 md:px-6 py-4 bg-card border-t border-border flex items-center gap-3 flex-shrink-0">
               <input
                 type="text"
                 value={novaMensagem}
                 onChange={(e) => setNovaMensagem(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && enviarMensagem()}
                 placeholder="Digite uma mensagem"
-                className="flex-1 border border-border rounded-full px-4 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                className="flex-1 border border-border rounded-full px-5 py-3.5 text-base bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 disabled={loading}
               />
               <button
                 onClick={enviarMensagem}
                 disabled={loading || !novaMensagem.trim()}
-                className="w-11 h-11 rounded-full bg-primary text-white flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 shadow-md"
               >
-                <Send size={18} className="ml-0.5" />
+                <Send size={20} className="ml-0.5" />
               </button>
             </div>
           </div>
