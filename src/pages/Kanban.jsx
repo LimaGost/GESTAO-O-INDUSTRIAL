@@ -419,7 +419,7 @@ export default function Kanban() {
   const filtrosAtivos = busca || filtroOrigem !== 'todas' || filtroCategoria !== 'todas' || sortKey !== 'urgencia';
 
   return (
-    <div className="flex flex-col h-full space-y-4" style={{ overscrollBehavior: 'none' }}>
+    <div className="flex flex-col h-full space-y-4">
       {/* Header */}
       <div className="bg-card border border-border rounded-2xl px-4 md:px-5 py-4 flex-shrink-0">
         <div className="flex items-center justify-between flex-wrap gap-2 md:gap-3">
@@ -588,7 +588,7 @@ export default function Kanban() {
                   style={{ background: accent, opacity: total === 0 ? 0.4 : 1 }}>{total}</span>
               </div>
 
-              <div className="flex-1 p-2 md:p-3 overflow-y-auto space-y-1.5 md:space-y-2.5" style={{ overscrollBehavior: 'contain' }}>
+              <div className="flex-1 p-2 md:p-3 overflow-y-auto space-y-1.5 md:space-y-2.5">
                 {colOrdens.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-8 md:py-16 opacity-30">
                     <div className="w-8 md:w-10 h-8 md:h-10 rounded-full border-2 border-dashed flex items-center justify-center mb-2" style={{ borderColor: accent }}>

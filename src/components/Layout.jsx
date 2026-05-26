@@ -103,34 +103,25 @@ function usePullToRefresh(onRefresh) {
   const [refreshing, setRefreshing] = useState(false);
   const startY = useRef(null);
   const mainRef = useRef(null);
-  const pullDistance = useRef(0);
 
   const onTouchStart = useCallback((e) => {
     if (mainRef.current?.scrollTop === 0) {
       startY.current = e.touches[0].clientY;
-      pullDistance.current = 0;
     }
-  }, []);
-
-  const onTouchMove = useCallback((e) => {
-    if (startY.current === null || mainRef.current?.scrollTop !== 0) return;
-    const currentY = e.touches[0].clientY;
-    pullDistance.current = Math.max(0, currentY - startY.current);
   }, []);
 
   const onTouchEnd = useCallback(async (e) => {
     if (startY.current === null) return;
-    const delta = pullDistance.current;
+    const delta = e.changedTouches[0].clientY - startY.current;
     startY.current = null;
-    pullDistance.current = 0;
-    if (delta > 150) {
+    if (delta > 70) {
       setRefreshing(true);
       await onRefresh();
       setRefreshing(false);
     }
   }, [onRefresh]);
 
-  return { mainRef, refreshing, onTouchStart, onTouchMove, onTouchEnd };
+  return { mainRef, refreshing, onTouchStart, onTouchEnd };
 }
 
 export default function Layout() {
@@ -161,7 +152,7 @@ export default function Layout() {
   const moreItemsVisiveis = allNavItemsVisiveis.filter(n => !bottomTabsVisiveis.find(t => t.path === n.path));
   const isMoreActive = moreItemsVisiveis.some(n => n.path === location.pathname);
 
-  const { mainRef, refreshing, onTouchStart, onTouchMove, onTouchEnd } = usePullToRefresh(
+  const { mainRef, refreshing, onTouchStart, onTouchEnd } = usePullToRefresh(
     () => new Promise(res => { setRefreshKey(k => k + 1); setTimeout(res, 600); })
   );
 
@@ -331,8 +322,8 @@ export default function Layout() {
         </header>
 
         {refreshing && (
-          <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center py-2 text-xs gap-2 md:hidden"
-            style={{ background: 'rgba(245,158,11,0.95)', color: '#fff', backdropFilter: 'blur(4px)' }}>
+          <div className="md:hidden flex items-center justify-center py-2 text-xs gap-2"
+            style={{ background: 'rgba(245,158,11,0.1)', color: '#D97706' }}>
             <RefreshCw size={13} className="animate-spin" /> Atualizando...
           </div>
         )}
@@ -341,13 +332,9 @@ export default function Layout() {
           ref={mainRef}
           key={refreshKey}
           onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
           className="flex-1 overflow-auto p-4 md:p-6"
-          style={{ 
-            paddingBottom: 'calc(1rem + env(safe-area-inset-bottom) + 64px)',
-            overscrollBehavior: 'contain'
-          }}
+          style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom) + 64px)' }}
         >
           <Outlet />
         </main>

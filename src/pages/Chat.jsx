@@ -2,21 +2,6 @@ import { useEffect, useState, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Send, Plus, Users, MessageCircle, X, User } from 'lucide-react';
 
-// Componente de notificação flutuante para novas mensagens
-function NotificacaoChat({ total, onClick }) {
-  if (total === 0) return null;
-  
-  return (
-    <button
-      onClick={onClick}
-      className="fixed bottom-20 md:bottom-6 right-6 z-50 bg-red-500 text-white px-4 py-3 rounded-full shadow-lg hover:bg-red-600 transition-all animate-pulse flex items-center gap-2"
-    >
-      <MessageCircle size={18} />
-      <span className="text-sm font-bold">{total} nova{total !== 1 ? 's' : ''}</span>
-    </button>
-  );
-}
-
 export default function Chat() {
   const [conversas, setConversas] = useState([]);
   const [conversaSelecionada, setConversaSelecionada] = useState(null);
@@ -28,8 +13,6 @@ export default function Chat() {
   const [participantesNovaConversa, setParticipantesNovaConversa] = useState([]);
   const [todosUsuarios, setTodosUsuarios] = useState([]);
   const [usuarioAtual, setUsuarioAtual] = useState(null);
-  const [mensagensNaoLidas, setMensagensNaoLidas] = useState({});
-  const [totalNaoLidas, setTotalNaoLidas] = useState(0);
 
   const mensagensEndRef = useRef(null);
 
@@ -70,7 +53,6 @@ export default function Chat() {
     if (usuarioAtual) {
       loadConversas();
       loadUsuarios();
-      loadMensagensNaoLidas();
     }
   }, [usuarioAtual]);
 
@@ -84,42 +66,6 @@ export default function Chat() {
     }
   };
 
-  // Conta mensagens não lidas de todas as conversas
-  const loadMensagensNaoLidas = async () => {
-    try {
-      const todasMensagens = await base44.entities.Mensagem.list();
-      const naoLidasPorConversa = {};
-      let total = 0;
-      
-      todasMensagens.forEach(m => {
-        if (!m.lida && m.remetente_id !== usuarioAtual?.id) {
-          naoLidasPorConversa[m.conversa_id] = (naoLidasPorConversa[m.conversa_id] || 0) + 1;
-          total++;
-        }
-      });
-      
-      setMensagensNaoLidas(naoLidasPorConversa);
-      setTotalNaoLidas(total);
-    } catch (error) {
-      console.error('Erro ao carregar não lidas:', error);
-    }
-  };
-
-  // Marca mensagens como lidas ao abrir conversa
-  const marcarComoLidas = async (conversaId) => {
-    try {
-      const mensagens = await base44.entities.Mensagem.filter({ conversa_id: conversaId });
-      await Promise.all(
-        mensagens
-          .filter(m => !m.lida && m.remetente_id !== usuarioAtual?.id)
-          .map(m => base44.entities.Mensagem.update(m.id, { lida: true }))
-      );
-      loadMensagensNaoLidas();
-    } catch (error) {
-      console.error('Erro ao marcar como lidas:', error);
-    }
-  };
-
   // Subscribe em tempo real para novas mensagens
   useEffect(() => {
     if (!conversaSelecionada) return;
@@ -127,15 +73,11 @@ export default function Chat() {
     const unsubscribe = base44.entities.Mensagem.subscribe((event) => {
       if (event.type === 'create' && event.data?.conversa_id === conversaSelecionada.id) {
         setMensagens(prev => [...prev, event.data]);
-        // Se a mensagem não for minha, marca como lida automaticamente
-        if (event.data?.remetente_id !== usuarioAtual?.id) {
-          marcarComoLidas(conversaSelecionada.id);
-        }
       }
     });
 
     return () => unsubscribe();
-  }, [conversaSelecionada, usuarioAtual]);
+  }, [conversaSelecionada]);
 
   // Subscribe para atualizar lista de conversas
   useEffect(() => {
@@ -151,7 +93,6 @@ export default function Chat() {
   const selecionarConversa = (conversa) => {
     setConversaSelecionada(conversa);
     loadMensagens(conversa.id);
-    marcarComoLidas(conversa.id);
   };
 
   const enviarMensagem = async () => {
@@ -216,24 +157,17 @@ export default function Chat() {
   };
 
   return (
-    <>
-      <NotificacaoChat total={totalNaoLidas} onClick={() => {}} />
-      <div className="flex h-[calc(100vh-100px)] gap-4">
+    <div className="flex h-[calc(100vh-100px)] gap-4">
       {/* Lista de Conversas */}
       <div className="w-80 bg-card border border-border rounded-2xl overflow-hidden flex flex-col">
         <div className="p-4 border-b border-border flex items-center justify-between">
-          <div className="flex items-center gap-2 relative">
+          <div className="flex items-center gap-2">
             <MessageCircle size={18} className="text-primary" />
             <h2 className="font-bold text-foreground">Conversas</h2>
-            {totalNaoLidas > 0 && (
-              <span className="absolute -top-1 -right-3 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
-                {totalNaoLidas}
-              </span>
-            )}
           </div>
           <button 
             onClick={() => setShowNovaConversa(!showNovaConversa)}
-            className="p-2 hover:bg-muted rounded-lg transition-colors relative"
+            className="p-2 hover:bg-muted rounded-lg transition-colors"
           >
             <Plus size={18} className="text-primary" />
           </button>
@@ -291,41 +225,29 @@ export default function Chat() {
 
         {/* Lista */}
         <div className="flex-1 overflow-y-auto">
-          {conversas.map(conversa => {
-            const naoLidas = mensagensNaoLidas[conversa.id] || 0;
-            return (
-              <button
-                key={conversa.id}
-                onClick={() => selecionarConversa(conversa)}
-                className={`w-full p-4 border-b border-border/50 hover:bg-muted/50 transition-colors text-left relative ${
-                  conversaSelecionada?.id === conversa.id ? 'bg-muted/70' : ''
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className={`font-semibold text-sm truncate ${naoLidas > 0 ? 'text-primary' : 'text-foreground'}`}>
-                        {conversa.titulo}
-                      </p>
-                      {naoLidas > 0 && (
-                        <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
-                          {naoLidas}
-                        </span>
-                      )}
-                    </div>
-                    <p className={`text-xs truncate mt-0.5 ${naoLidas > 0 ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
-                      {conversa.ultima_mensagem || 'Sem mensagens'}
-                    </p>
-                  </div>
-                  {conversa.data_ultima_mensagem && (
-                    <span className={`text-[10px] flex-shrink-0 ${naoLidas > 0 ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
-                      {formatarData(conversa.data_ultima_mensagem)}
-                    </span>
-                  )}
+          {conversas.map(conversa => (
+            <button
+              key={conversa.id}
+              onClick={() => selecionarConversa(conversa)}
+              className={`w-full p-4 border-b border-border/50 hover:bg-muted/50 transition-colors text-left ${
+                conversaSelecionada?.id === conversa.id ? 'bg-muted/70' : ''
+              }`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-foreground text-sm truncate">{conversa.titulo}</p>
+                  <p className="text-xs text-muted-foreground truncate mt-0.5">
+                    {conversa.ultima_mensagem || 'Sem mensagens'}
+                  </p>
                 </div>
-              </button>
-            );
-          })}
+                {conversa.data_ultima_mensagem && (
+                  <span className="text-[10px] text-muted-foreground flex-shrink-0">
+                    {formatarData(conversa.data_ultima_mensagem)}
+                  </span>
+                )}
+              </div>
+            </button>
+          ))}
           {conversas.length === 0 && (
             <div className="p-8 text-center text-muted-foreground">
               <MessageCircle size={24} className="mx-auto mb-2 opacity-50" />
@@ -434,6 +356,5 @@ export default function Chat() {
         </div>
       )}
     </div>
-    </>
   );
 }
