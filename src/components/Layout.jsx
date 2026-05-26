@@ -52,7 +52,8 @@ const navGroups = [
     label: 'SISTEMA',
     items: [
       { path: '/Configuracoes', label: 'Configurações', icon: SlidersHorizontal },
-      { path: '/Suporte',        label: 'Suporte',        icon: MessageCircle },
+      { path: '/Chat',          label: 'Chat',           icon: MessageCircle },
+      { path: '/Suporte',        label: 'Suporte',        icon: HeadphonesIcon },
       { path: '/TicketsSuporte',  label: 'Tickets',         icon: HeadphonesIcon },
     ],
   },
@@ -71,7 +72,8 @@ const allNavItems = [
   { path: '/Perdas',         label: 'Perdas',            icon: Trash2 },
   { path: '/Reposicoes',     label: 'Reposições',        icon: AlertTriangle },
   { path: '/Configuracoes',  label: 'Configurações',     icon: SlidersHorizontal },
-  { path: '/Suporte',        label: 'Suporte',            icon: MessageCircle },
+  { path: '/Chat',           label: 'Chat',               icon: MessageCircle },
+  { path: '/Suporte',        label: 'Suporte',            icon: HeadphonesIcon },
   { path: '/TicketsSuporte', label: 'Tickets',             icon: HeadphonesIcon },
 ];
 
@@ -91,6 +93,7 @@ const PATH_MODULO = {
   '/Reposicoes':   'Estoque',
   '/Auditoria':    'Auditoria',
   '/Configuracoes': 'Configuracoes',
+  '/Chat':            null,
   '/Suporte':         null,
   '/TicketsSuporte':   'Configuracoes',
   '/SupabaseSchemas':  null,

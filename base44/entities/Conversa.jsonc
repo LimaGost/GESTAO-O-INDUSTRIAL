@@ -1,0 +1,37 @@
+{
+  "name": "Conversa",
+  "type": "object",
+  "properties": {
+    "titulo": {
+      "type": "string",
+      "description": "T\u00edtulo ou assunto da conversa"
+    },
+    "participantes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs dos usu\u00e1rios participantes"
+    },
+    "criado_por_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio que criou a conversa"
+    },
+    "criado_por_nome": {
+      "type": "string",
+      "description": "Nome do usu\u00e1rio que criou a conversa"
+    },
+    "ultima_mensagem": {
+      "type": "string",
+      "description": "Conte\u00fado da \u00faltima mensagem"
+    },
+    "data_ultima_mensagem": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "titulo",
+    "participantes"
+  ]
+}
