@@ -161,8 +161,9 @@ export default function Layout() {
   const moreItemsVisiveis = allNavItemsVisiveis.filter(n => !bottomTabsVisiveis.find(t => t.path === n.path));
   const isMoreActive = moreItemsVisiveis.some(n => n.path === location.pathname);
 
+  const isKanbanPage = location.pathname === '/Kanban';
   const { mainRef, refreshing, onTouchStart, onTouchMove, onTouchEnd } = usePullToRefresh(
-    () => new Promise(res => { setRefreshKey(k => k + 1); setTimeout(res, 600); })
+    isKanbanPage ? () => Promise.resolve() : () => new Promise(res => { setRefreshKey(k => k + 1); setTimeout(res, 600); })
   );
 
   useEffect(() => { setMoreOpen(false); }, [location.pathname]);
@@ -330,7 +331,7 @@ export default function Layout() {
           </button>
         </header>
 
-        {refreshing && (
+        {refreshing && !isKanbanPage && (
           <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center py-2 text-xs gap-2 md:hidden"
             style={{ background: 'rgba(245,158,11,0.95)', color: '#fff', backdropFilter: 'blur(4px)' }}>
             <RefreshCw size={13} className="animate-spin" /> Atualizando...
