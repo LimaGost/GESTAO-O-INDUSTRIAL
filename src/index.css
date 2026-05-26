@@ -97,13 +97,12 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    overscroll-behavior-y: none;
     -webkit-user-select: none;
     user-select: none;
   }
 
   main {
-    overscroll-behavior-y: none;
+    overscroll-behavior-y: auto;
   }
 
   button, [role="tab"], [role="navigation"], a[role="button"] {
