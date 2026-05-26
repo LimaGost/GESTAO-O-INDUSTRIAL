@@ -3,15 +3,12 @@ import { base44 } from '@/api/base44Client';
 import { Send, Plus, Users, MessageCircle, X, User, CheckCircle } from 'lucide-react';
 
 export default function Chat() {
-  const [conversas, setConversas] = useState([]);
-  const [conversaSelecionada, setConversaSelecionada] = useState(null);
+  const [usuariosDisponiveis, setUsuariosDisponiveis] = useState([]);
+  const [usuarioSelecionado, setUsuarioSelecionado] = useState(null);
+  const [conversaAtiva, setConversaAtiva] = useState(null);
   const [mensagens, setMensagens] = useState([]);
   const [novaMensagem, setNovaMensagem] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showNovaConversa, setShowNovaConversa] = useState(false);
-  const [tituloNovaConversa, setTituloNovaConversa] = useState('');
-  const [participantesNovaConversa, setParticipantesNovaConversa] = useState([]);
-  const [todosUsuarios, setTodosUsuarios] = useState([]);
   const [usuarioAtual, setUsuarioAtual] = useState(null);
   const [mensagensNaoLidas, setMensagensNaoLidas] = useState({});
   const [totalNaoLidas, setTotalNaoLidas] = useState(0);
@@ -31,21 +28,32 @@ export default function Chat() {
     base44.auth.me().then(setUsuarioAtual).catch(console.error);
   }, []);
 
-  // Carrega conversas
-  const loadConversas = async () => {
-    try {
-      const res = await base44.functions.invoke('chatListarConversas', {});
-      setConversas(res.data.conversas || []);
-    } catch (error) {
-      console.error('Erro ao carregar conversas:', error);
-    }
-  };
-
-  // Carrega usuários para selecionar participantes
+  // Carrega usuários disponíveis para chat
   const loadUsuarios = async () => {
     try {
       const usuarios = await base44.entities.User.list();
-      setTodosUsuarios(usuarios.filter(u => u.id !== usuarioAtual?.id));
+      const outrosUsuarios = usuarios.filter(u => u.id !== usuarioAtual?.id);
+      
+      // Carrega conversas existentes para contar mensagens não lidas
+      const todasConversas = await base44.entities.Conversa.list();
+      
+      // Mapeia usuários com status de mensagens não lidas
+      const usuariosComStatus = outrosUsuarios.map(usuario => {
+        const conversa = todasConversas.find(c => 
+          c.participantes?.includes(usuario.id) && c.participantes?.includes(usuarioAtual.id)
+        );
+        const naoLidas = mensagensNaoLidas[conversa?.id] || 0;
+        
+        return {
+          ...usuario,
+          ultimaMensagem: conversa?.ultima_mensagem || null,
+          dataUltimaMensagem: conversa?.data_ultima_mensagem || null,
+          conversaId: conversa?.id || null,
+          naoLidas,
+        };
+      });
+      
+      setUsuariosDisponiveis(usuariosComStatus);
     } catch (error) {
       console.error('Erro ao carregar usuários:', error);
     }
@@ -53,7 +61,6 @@ export default function Chat() {
 
   useEffect(() => {
     if (usuarioAtual) {
-      loadConversas();
       loadUsuarios();
       loadMensagensNaoLidas();
     }
@@ -107,48 +114,73 @@ export default function Chat() {
 
   // Subscribe em tempo real para novas mensagens
   useEffect(() => {
-    if (!conversaSelecionada) return;
+    if (!conversaAtiva) return;
 
     const unsubscribe = base44.entities.Mensagem.subscribe((event) => {
-      if (event.type === 'create' && event.data?.conversa_id === conversaSelecionada.id) {
+      if (event.type === 'create' && event.data?.conversa_id === conversaAtiva.id) {
         setMensagens(prev => [...prev, event.data]);
         // Se a mensagem não for minha, marca como lida automaticamente
         if (event.data?.remetente_id !== usuarioAtual?.id) {
-          marcarComoLidas(conversaSelecionada.id);
+          marcarComoLidas(conversaAtiva.id);
         }
+        loadUsuarios(); // Atualiza lista de usuários
       }
     });
 
     return () => unsubscribe();
-  }, [conversaSelecionada, usuarioAtual]);
+  }, [conversaAtiva, usuarioAtual]);
 
-  // Subscribe para atualizar lista de conversas
+  // Subscribe para atualizar lista de usuários
   useEffect(() => {
     const unsubscribe = base44.entities.Conversa.subscribe((event) => {
       if (event.type === 'create' || event.type === 'update') {
-        loadConversas();
+        loadUsuarios();
       }
     });
 
     return () => unsubscribe();
   }, []);
 
-  const selecionarConversa = (conversa) => {
-    setConversaSelecionada(conversa);
-    loadMensagens(conversa.id);
-    marcarComoLidas(conversa.id);
+  // Seleciona usuário e cria/abre conversa
+  const selecionarUsuario = async (usuario) => {
+    setUsuarioSelecionado(usuario);
+    
+    // Verifica se já existe conversa
+    if (usuario.conversaId) {
+      setConversaAtiva({ id: usuario.conversaId, titulo: usuario.full_name || usuario.email });
+      loadMensagens(usuario.conversaId);
+      marcarComoLidas(usuario.conversaId);
+    } else {
+      // Cria nova conversa automaticamente
+      try {
+        const novaConversa = await base44.functions.invoke('chatCriarConversa', {
+          titulo: `${usuarioAtual.full_name || usuarioAtual.email} ↔ ${usuario.full_name || usuario.email}`,
+          participantes: [usuario.id, usuarioAtual.id],
+        });
+        
+        const conversaCriada = {
+          id: novaConversa.data.id || novaConversa.data.conversa_id,
+          titulo: usuario.full_name || usuario.email,
+        };
+        setConversaAtiva(conversaCriada);
+        loadUsuarios(); // Recarrega para atualizar status
+      } catch (error) {
+        console.error('Erro ao criar conversa:', error);
+      }
+    }
   };
 
   const enviarMensagem = async () => {
-    if (!novaMensagem.trim() || !conversaSelecionada) return;
+    if (!novaMensagem.trim() || !conversaAtiva) return;
 
     setLoading(true);
     try {
       await base44.functions.invoke('chatEnviarMensagem', {
-        conversa_id: conversaSelecionada.id,
+        conversa_id: conversaAtiva.id,
         conteudo: novaMensagem,
       });
       setNovaMensagem('');
+      loadUsuarios(); // Atualiza última mensagem na lista
     } catch (error) {
       alert('Erro ao enviar mensagem: ' + error.message);
     } finally {
@@ -156,33 +188,7 @@ export default function Chat() {
     }
   };
 
-  const criarConversa = async () => {
-    if (!tituloNovaConversa.trim() || participantesNovaConversa.length === 0) {
-      alert('Preencha o título e selecione ao menos um participante');
-      return;
-    }
 
-    try {
-      await base44.functions.invoke('chatCriarConversa', {
-        titulo: tituloNovaConversa,
-        participantes: participantesNovaConversa,
-      });
-      setTituloNovaConversa('');
-      setParticipantesNovaConversa([]);
-      setShowNovaConversa(false);
-      loadConversas();
-    } catch (error) {
-      alert('Erro ao criar conversa: ' + error.message);
-    }
-  };
-
-  const toggleParticipante = (userId) => {
-    setParticipantesNovaConversa(prev => 
-      prev.includes(userId) 
-        ? prev.filter(id => id !== userId)
-        : [...prev, userId]
-    );
-  };
 
   const formatarData = (dataString) => {
     if (!dataString) return '';
@@ -202,157 +208,95 @@ export default function Chat() {
 
   return (
     <div className="flex h-[calc(100vh-80px)] bg-background">
-      {/* Lista de Conversas - estilo WhatsApp */}
+      {/* Lista de Usuários Disponíveis - estilo WhatsApp */}
       <div className="w-96 border-r border-border bg-card flex flex-col" style={{ maxWidth: '420px', minWidth: '320px' }}>
         {/* Header */}
-        <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between">
+        <div className="px-4 py-3 border-b border-border bg-muted/30">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-              <MessageCircle size={20} className="text-primary" />
+              <Users size={20} className="text-primary" />
             </div>
             <div>
-              <h2 className="font-bold text-foreground text-sm">Conversas</h2>
+              <h2 className="font-bold text-foreground text-sm">Usuários</h2>
               {totalNaoLidas > 0 && (
                 <p className="text-[10px] text-primary font-semibold">{totalNaoLidas} não lida{totalNaoLidas !== 1 ? 's' : ''}</p>
               )}
             </div>
           </div>
-          <button 
-            onClick={() => setShowNovaConversa(!showNovaConversa)}
-            className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center transition-colors"
-          >
-            <Plus size={20} className="text-primary" />
-          </button>
         </div>
 
-        {/* Nova Conversa - Modal estilo WhatsApp */}
-        {showNovaConversa && (
-          <div className="p-4 border-b border-border bg-muted/30 space-y-3 max-h-64 overflow-y-auto">
-            <input
-              type="text"
-              value={tituloNovaConversa}
-              onChange={(e) => setTituloNovaConversa(e.target.value)}
-              placeholder="Nome da conversa..."
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-            <div>
-              <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
-                <Users size={12} /> Selecione os participantes:
-              </p>
-              <div className="space-y-1">
-                {todosUsuarios.map(usuario => (
-                  <button
-                    key={usuario.id}
-                    onClick={() => toggleParticipante(usuario.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                      participantesNovaConversa.includes(usuario.id)
-                        ? 'bg-primary/10 text-primary'
-                        : 'hover:bg-muted'
-                    }`}
-                  >
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                      participantesNovaConversa.includes(usuario.id) ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                    }`}>
-                      {usuario.full_name?.charAt(0).toUpperCase() || 'U'}
-                    </div>
-                    <span className="flex-1 text-left truncate">{usuario.full_name || usuario.email}</span>
-                    {participantesNovaConversa.includes(usuario.id) && (
-                      <CheckCircle size={16} className="text-primary flex-shrink-0" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex gap-2 pt-2">
-              <button
-                onClick={criarConversa}
-                disabled={!tituloNovaConversa.trim() || participantesNovaConversa.length === 0}
-                className="flex-1 bg-primary text-primary-foreground py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
-              >
-                Criar conversa
-              </button>
-              <button
-                onClick={() => setShowNovaConversa(false)}
-                className="px-4 border border-border rounded-lg text-sm text-muted-foreground hover:bg-muted transition-colors"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Lista de Conversas */}
+        {/* Lista de Usuários */}
         <div className="flex-1 overflow-y-auto">
-          {conversas.map(conversa => {
-            const naoLidas = mensagensNaoLidas[conversa.id] || 0;
-            return (
-              <button
-                key={conversa.id}
-                onClick={() => selecionarConversa(conversa)}
-                className={`w-full px-4 py-3 border-b border-border/50 hover:bg-muted/50 transition-colors text-left flex items-center gap-3 ${
-                  conversaSelecionada?.id === conversa.id ? 'bg-muted/70' : ''
-                }`}
-              >
-                {/* Avatar */}
-                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                  <span className="text-sm font-bold text-primary">
-                    {conversa.titulo.charAt(0).toUpperCase()}
-                  </span>
+          {usuariosDisponiveis.map(usuario => (
+            <button
+              key={usuario.id}
+              onClick={() => selecionarUsuario(usuario)}
+              className={`w-full px-4 py-3 border-b border-border/50 hover:bg-muted/50 transition-colors text-left flex items-center gap-3 ${
+                usuarioSelecionado?.id === usuario.id ? 'bg-muted/70' : ''
+              }`}
+            >
+              {/* Avatar */}
+              <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 relative">
+                <span className="text-sm font-bold text-primary">
+                  {usuario.full_name?.charAt(0).toUpperCase() || 'U'}
+                </span>
+                {/* Indicador online */}
+                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+              </div>
+              {/* Conteúdo */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-semibold text-sm truncate text-foreground">
+                    {usuario.full_name || usuario.email}
+                  </p>
+                  {usuario.dataUltimaMensagem && (
+                    <span className={`text-[10px] flex-shrink-0 ${usuario.naoLidas > 0 ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
+                      {formatarData(usuario.dataUltimaMensagem)}
+                    </span>
+                  )}
                 </div>
-                {/* Conteúdo */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className={`font-semibold text-sm truncate ${naoLidas > 0 ? 'text-foreground' : 'text-foreground'}`}>
-                      {conversa.titulo}
-                    </p>
-                    {conversa.data_ultima_mensagem && (
-                      <span className={`text-[10px] flex-shrink-0 ${naoLidas > 0 ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
-                        {formatarData(conversa.data_ultima_mensagem)}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <p className={`text-xs truncate ${naoLidas > 0 ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
-                      {conversa.ultima_mensagem || 'Sem mensagens'}
-                    </p>
-                    {naoLidas > 0 && (
-                      <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center flex-shrink-0">
-                        {naoLidas}
-                      </span>
-                    )}
-                  </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <p className={`text-xs truncate ${usuario.naoLidas > 0 ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+                    {usuario.ultimaMensagem || 'Clique para iniciar conversa'}
+                  </p>
+                  {usuario.naoLidas > 0 && (
+                    <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center flex-shrink-0">
+                      {usuario.naoLidas}
+                    </span>
+                  )}
                 </div>
-              </button>
-            );
-          })}
-          {conversas.length === 0 && (
+              </div>
+            </button>
+          ))}
+          {usuariosDisponiveis.length === 0 && (
             <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
-              <MessageCircle size={40} className="mb-3 opacity-30" />
-              <p className="text-sm">Nenhuma conversa</p>
-              <p className="text-xs opacity-70 mt-1">Clique no + para começar</p>
+              <Users size={40} className="mb-3 opacity-30" />
+              <p className="text-sm">Nenhum usuário disponível</p>
             </div>
           )}
         </div>
       </div>
 
       {/* Área de Mensagens - estilo WhatsApp */}
-      {conversaSelecionada ? (
+      {usuarioSelecionado && conversaAtiva ? (
         <div className="flex-1 flex flex-col bg-[#efe7dd]">
           {/* Header */}
           <div className="px-4 py-2.5 border-b border-border bg-card flex items-center gap-3 flex-shrink-0">
-            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 relative">
               <span className="text-sm font-bold text-primary">
-                {conversaSelecionada.titulo.charAt(0).toUpperCase()}
+                {usuarioSelecionado.full_name?.charAt(0).toUpperCase() || 'U'}
               </span>
+              <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-foreground text-sm truncate">{conversaSelecionada.titulo}</p>
-              <p className="text-xs text-muted-foreground truncate">
-                {conversaSelecionada.participantes?.length || 0} participante{conversaSelecionada.participantes?.length !== 1 ? 's' : ''}
-              </p>
+              <p className="font-bold text-foreground text-sm truncate">{usuarioSelecionado.full_name || usuarioSelecionado.email}</p>
+              <p className="text-xs text-green-600 font-medium">Online</p>
             </div>
             <button
-              onClick={() => setConversaSelecionada(null)}
+              onClick={() => {
+                setUsuarioSelecionado(null);
+                setConversaAtiva(null);
+              }}
               className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center transition-colors"
             >
               <X size={18} className="text-muted-foreground" />
@@ -428,11 +372,11 @@ export default function Chat() {
         <div className="flex-1 flex flex-col items-center justify-center bg-[#efe7dd] border-b border-border">
           <div className="text-center max-w-md px-6">
             <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-              <MessageCircle size={48} className="text-primary opacity-50" />
+              <Users size={48} className="text-primary opacity-50" />
             </div>
-            <h3 className="text-lg font-bold text-foreground mb-2">WhatsApp Web do Chat</h3>
+            <h3 className="text-lg font-bold text-foreground mb-2">Selecione um usuário</h3>
             <p className="text-sm text-muted-foreground">
-              Selecione uma conversa para começar ou crie uma nova conversa clicando no ícone de +
+              Clique em um usuário da lista para começar a conversar
             </p>
           </div>
         </div>
