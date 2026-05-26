@@ -103,7 +103,7 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
   // Itens com disponivel:true já contam como confirmados automaticamente
   const itensDisponiveis = itensNormalizados.filter(i => i.disponivel === true).length;
   const totalItensChecked = itensDisponiveis + itensNormalizados.filter(i => i.disponivel !== true).filter(i => !!checkItens[`${i.produto_id || i.produto_nome}`]).length;
-  const itensOPCompleto = totalItens === 0 || totalItensChecked === totalItens;
+  const itensOPCompleto = isSeparacao || totalItens === 0 || totalItensChecked === totalItens;
 
   const etapaCompleto = itensEtapa.length === 0 || itensEtapa.every((_, i) => checkEtapa[i]);
 
