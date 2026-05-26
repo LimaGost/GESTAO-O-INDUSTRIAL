@@ -25,17 +25,34 @@ export default function Chat() {
 
   // Carrega usuário atual
   useEffect(() => {
-    base44.auth.me().then(setUsuarioAtual).catch(console.error);
+    base44.auth.me()
+      .then(user => {
+        console.log('[Chat] Usuário atual carregado:', user);
+        setUsuarioAtual(user);
+      })
+      .catch(err => console.error('[Chat] Erro ao carregar usuário atual:', err));
   }, []);
 
   // Carrega usuários disponíveis para chat
   const loadUsuarios = async () => {
     try {
+      console.log('[Chat] loadUsuarios - usuarioAtual:', usuarioAtual);
+      
+      if (!usuarioAtual?.id) {
+        console.log('[Chat] usuarioAtual não carregado ainda, pulando loadUsuarios');
+        return;
+      }
+      
       const usuarios = await base44.entities.User.list();
-      const outrosUsuarios = usuarios.filter(u => u.id !== usuarioAtual?.id);
+      console.log('[Chat] Total de usuários retornados:', usuarios.length);
+      console.log('[Chat] Usuários:', usuarios.map(u => ({ id: u.id, nome: u.full_name, email: u.email })));
+      
+      const outrosUsuarios = usuarios.filter(u => u.id !== usuarioAtual.id);
+      console.log('[Chat] Outros usuários (excluindo atual):', outrosUsuarios.length);
       
       // Carrega conversas existentes para contar mensagens não lidas
       const todasConversas = await base44.entities.Conversa.list();
+      console.log('[Chat] Total de conversas:', todasConversas.length);
       
       // Mapeia TODOS os usuários (ativos e inativos) com status de mensagens não lidas
       const usuariosComStatus = outrosUsuarios.map(usuario => {
@@ -53,9 +70,10 @@ export default function Chat() {
         };
       });
       
+      console.log('[Chat] Usuarios com status:', usuariosComStatus.map(u => ({ nome: u.full_name, temConversa: !!u.conversaId })));
       setUsuariosDisponiveis(usuariosComStatus);
     } catch (error) {
-      console.error('Erro ao carregar usuários:', error);
+      console.error('[Chat] Erro ao carregar usuários:', error);
     }
   };
 
