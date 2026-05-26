@@ -7,13 +7,6 @@ function fmtData(iso) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
 
-const PROXIMOS = {
-  a_produzir: 'em_producao', em_producao: 'produzido',
-  produzido: 'em_embalagem', em_embalagem: 'finalizado',
-};
-
-
-
 const ETAPAS = ['a_produzir', 'em_producao', 'produzido', 'em_embalagem', 'finalizado'];
 
 const ORIGEM_CONFIG = {
@@ -217,7 +210,7 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
           <div className="flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-green-600 bg-green-50 rounded-xl">
             <CheckCircle size={12} /> Concluído
           </div>
-        ) : onAvancar && PROXIMOS[ordem.status] ? (
+        ) : onAvancar && labelBotao ? (
           <button
             onClick={() => onAvancar(ordem)}
             disabled={loading || !checklistCompleto}
