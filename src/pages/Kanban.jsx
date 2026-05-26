@@ -230,9 +230,17 @@ export default function Kanban() {
       const dataProducao = hojeData();
       cacheInvalidate('Produto');
       const produtosFrescos = await cachedFetch('Produto', () => base44.entities.Produto.list(), 0);
-      const itensOP = ordem.itens && ordem.itens.length > 0 ?
-      ordem.itens :
-      ordem.produto_id ? [{ produto_id: ordem.produto_id, produto_nome: ordem.produto_nome, quantidade: ordem.quantidade }] : [];
+      
+      // Se a ordem veio com itens editados do modal, salva primeiro na OP
+      const itensParaProcessar = ordem.itens && ordem.itens.length > 0 ? ordem.itens :
+        ordem.produto_id ? [{ produto_id: ordem.produto_id, produto_nome: ordem.produto_nome, quantidade: ordem.quantidade }] : [];
+      
+      // Atualiza a OP com os itens editados antes de prosseguir
+      if (ordem.itens && ordem.itens.length > 0) {
+        await base44.entities.OrdemProducao.update(ordem.id, { itens: ordem.itens });
+      }
+      
+      const itensOP = itensParaProcessar;
       // Paralelo: atualiza estoque e cria etiquetas ao mesmo tempo
       await Promise.all(itensOP.map(async (item) => {
         const prod = produtosFrescos.find((p) => p.id === item.produto_id);
