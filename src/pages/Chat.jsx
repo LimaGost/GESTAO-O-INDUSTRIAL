@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Send, Plus, Users, MessageCircle, X, User, CheckCircle, ChevronLeft } from 'lucide-react';
+import { Send, Plus, Users, MessageCircle, X, User, CheckCircle, ChevronLeft, Search, Edit2 } from 'lucide-react';
 
 export default function Chat() {
   const [usuariosDisponiveis, setUsuariosDisponiveis] = useState([]);
@@ -208,68 +208,70 @@ export default function Chat() {
 
   return (
     <div className="flex h-[calc(100vh-80px)] bg-background">
-      {/* Mobile: Lista de Usuários */}
+      {/* Mobile: Lista de Conversas - Padrão WhatsApp */}
       <div className={`md:flex w-full ${usuarioSelecionado ? 'hidden' : 'flex'} flex-col bg-card`}>
         {/* Header */}
-        <div className="px-4 py-3 border-b border-border bg-muted/30">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-              <Users size={20} className="text-primary" />
-            </div>
-            <div>
-              <h2 className="font-bold text-foreground text-sm">Usuários</h2>
-              {totalNaoLidas > 0 && (
-                <p className="text-[10px] text-primary font-semibold">{totalNaoLidas} não lida{totalNaoLidas !== 1 ? 's' : ''}</p>
-              )}
-            </div>
+        <div className="px-4 py-3.5 border-b border-border bg-card flex items-center justify-between flex-shrink-0">
+          <h2 className="font-bold text-foreground text-lg">Conversas</h2>
+          <button className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center transition-colors">
+            <Edit2 size={18} className="text-primary" />
+          </button>
+        </div>
+
+        {/* Busca */}
+        <div className="px-3 py-2.5 bg-card sticky top-0 z-10 border-b border-border/50">
+          <div className="flex items-center gap-3 bg-muted/60 rounded-full px-3.5 py-2">
+            <Search size={16} className="text-muted-foreground flex-shrink-0" />
+            <input
+              type="text"
+              placeholder="Pesquisar"
+              className="bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none flex-1"
+            />
           </div>
         </div>
 
-        {/* Lista de Usuários */}
+        {/* Lista de Conversas */}
         <div className="flex-1 overflow-y-auto">
           {usuariosDisponiveis.map(usuario => (
             <button
               key={usuario.id}
               onClick={() => selecionarUsuario(usuario)}
-              className="w-full px-4 py-3 border-b border-border/50 hover:bg-muted/50 transition-colors text-left flex items-center gap-3"
+              className="w-full px-3 py-2.5 hover:bg-muted/40 transition-colors text-left flex items-center gap-3 border-b border-border/30"
             >
               {/* Avatar */}
-              <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 relative">
-                <span className="text-sm font-bold text-primary">
+              <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 relative overflow-hidden">
+                <span className="text-base font-bold text-primary">
                   {usuario.full_name?.charAt(0).toUpperCase() || 'U'}
                 </span>
-                {/* Indicador online */}
-                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
               </div>
+
               {/* Conteúdo */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="font-semibold text-sm truncate text-foreground">
+                <div className="flex items-baseline justify-between gap-2 mb-1">
+                  <p className="font-medium text-sm text-foreground truncate">
                     {usuario.full_name || usuario.email}
                   </p>
-                  {usuario.dataUltimaMensagem && (
-                    <span className={`text-[10px] flex-shrink-0 ${usuario.naoLidas > 0 ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
-                      {formatarData(usuario.dataUltimaMensagem)}
-                    </span>
-                  )}
+                  <span className={`text-[11px] flex-shrink-0 ${usuario.naoLidas > 0 ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
+                    {usuario.dataUltimaMensagem ? formatarData(usuario.dataUltimaMensagem) : ''}
+                  </span>
                 </div>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <p className={`text-xs truncate ${usuario.naoLidas > 0 ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
-                    {usuario.ultimaMensagem || 'Clique para iniciar conversa'}
-                  </p>
-                  {usuario.naoLidas > 0 && (
-                    <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center flex-shrink-0">
-                      {usuario.naoLidas}
-                    </span>
-                  )}
-                </div>
+                <p className={`text-[13px] truncate ${usuario.naoLidas > 0 ? 'text-foreground font-semibold' : 'text-muted-foreground'}`}>
+                  {usuario.ultimaMensagem || ''}
+                </p>
               </div>
+
+              {/* Badge de não lidas */}
+              {usuario.naoLidas > 0 && (
+                <span className="bg-primary text-primary-foreground text-[10px] font-bold px-2 py-1 rounded-full min-w-[20px] text-center flex-shrink-0 ml-2">
+                  {usuario.naoLidas}
+                </span>
+              )}
             </button>
           ))}
           {usuariosDisponiveis.length === 0 && (
             <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
-              <Users size={40} className="mb-3 opacity-30" />
-              <p className="text-sm">Nenhum usuário disponível</p>
+              <MessageCircle size={40} className="mb-3 opacity-20" />
+              <p className="text-sm">Nenhuma conversa</p>
             </div>
           )}
         </div>
