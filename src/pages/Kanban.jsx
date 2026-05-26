@@ -433,9 +433,9 @@ export default function Kanban() {
             </div>
           </div>
           <div className="flex items-center gap-1.5 md:gap-2 flex-wrap justify-end">
-            <button onClick={() => load(true)} className="p-2 md:p-2.5 border border-border rounded-lg md:rounded-xl hover:bg-muted transition-colors flex-shrink-0 hidden">
-              <RefreshCw size={15} className="text-muted-foreground hidden" />
-            </button>
+            
+
+            
             {!isMobile &&
             <>
                 <button onClick={() => setShowFilters((v) => !v)}
