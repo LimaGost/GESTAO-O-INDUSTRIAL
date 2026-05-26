@@ -208,8 +208,8 @@ export default function Chat() {
 
   return (
     <div className="flex h-[calc(100vh-80px)] bg-background">
-      {/* Mobile: Lista de Usuários */}
-      <div className={`md:flex w-full ${usuarioSelecionado ? 'hidden' : 'flex'} flex-col bg-card`}>
+      {/* Lista de Usuários - sempre visível */}
+      <div className="w-80 lg:w-96 border-r border-border bg-card flex flex-col flex-shrink-0">
         {/* Header */}
         <div className="px-4 py-3 border-b border-border bg-muted/30">
           <div className="flex items-center gap-3">
@@ -231,7 +231,9 @@ export default function Chat() {
             <button
               key={usuario.id}
               onClick={() => selecionarUsuario(usuario)}
-              className="w-full px-4 py-3 border-b border-border/50 hover:bg-muted/50 transition-colors text-left flex items-center gap-3"
+              className={`w-full px-4 py-3 border-b border-border/50 hover:bg-muted/50 transition-colors text-left flex items-center gap-3 ${
+                usuarioSelecionado?.id === usuario.id ? 'bg-muted/70' : ''
+              }`}
             >
               {/* Avatar */}
               <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 relative">
@@ -275,22 +277,13 @@ export default function Chat() {
         </div>
       </div>
 
-      {/* Mobile: Tela de Conversa (tela cheia) */}
-      <div className={`md:flex flex-1 ${usuarioSelecionado ? 'flex' : 'hidden'} md:w-auto md:flex md:flex-col bg-[#efe7dd]`}>
-        {/* Área de Mensagens - estilo WhatsApp */}
+      {/* Área de Conversa */}
+      <div className="flex-1 flex flex-col bg-[#efe7dd]">
         {usuarioSelecionado && conversaAtiva ? (
+          /* Conversa ativa */
           <div className="flex-1 flex flex-col w-full h-full">
             {/* Header */}
             <div className="px-4 py-2.5 border-b border-border bg-card flex items-center gap-3 flex-shrink-0">
-              <button
-                onClick={() => {
-                  setUsuarioSelecionado(null);
-                  setConversaAtiva(null);
-                }}
-                className="md:hidden w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center transition-colors"
-              >
-                <ChevronLeft size={20} className="text-muted-foreground" />
-              </button>
               <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 relative">
                 <span className="text-sm font-bold text-primary">
                   {usuarioSelecionado.full_name?.charAt(0).toUpperCase() || 'U'}
@@ -313,7 +306,7 @@ export default function Chat() {
                     className={`flex ${ehMeu ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[80%] md:max-w-[70%] rounded-lg px-3 py-2 shadow-sm ${
+                      className={`max-w-[70%] rounded-lg px-3 py-2 shadow-sm ${
                         ehMeu
                           ? 'bg-[#d9fdd3] text-foreground'
                           : 'bg-white text-foreground'
@@ -368,8 +361,8 @@ export default function Chat() {
             </div>
           </div>
         ) : (
-          /* Tela vazia - estilo WhatsApp Web */
-          <div className="hidden md:flex flex-1 flex-col items-center justify-center bg-[#efe7dd]">
+          /* Tela vazia quando nenhuma conversa selecionada */
+          <div className="flex-1 flex flex-col items-center justify-center bg-[#efe7dd]">
             <div className="text-center max-w-md px-6">
               <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                 <Users size={48} className="text-primary opacity-50" />
