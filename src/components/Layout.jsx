@@ -99,30 +99,7 @@ const PATH_MODULO = {
   '/SupabaseSchemas':  null,
 };
 
-function usePullToRefresh(onRefresh) {
-  const [refreshing, setRefreshing] = useState(false);
-  const startY = useRef(null);
-  const mainRef = useRef(null);
 
-  const onTouchStart = useCallback((e) => {
-    if (mainRef.current?.scrollTop === 0) {
-      startY.current = e.touches[0].clientY;
-    }
-  }, []);
-
-  const onTouchEnd = useCallback(async (e) => {
-    if (startY.current === null) return;
-    const delta = e.changedTouches[0].clientY - startY.current;
-    startY.current = null;
-    if (delta > 70) {
-      setRefreshing(true);
-      await onRefresh();
-      setRefreshing(false);
-    }
-  }, [onRefresh]);
-
-  return { mainRef, refreshing, onTouchStart, onTouchEnd };
-}
 
 export default function Layout() {
   const location = useLocation();
@@ -131,8 +108,11 @@ export default function Layout() {
   const { user } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [moreOpen, setMoreOpen]   = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  const handleRefresh = () => {
+    window.location.reload();
+  };
 
   const handleLogout = () => base44.auth.logout('/');
 
@@ -151,10 +131,6 @@ export default function Layout() {
   const allNavItemsVisiveis = filtrarItens(allNavItems);
   const moreItemsVisiveis = allNavItemsVisiveis.filter(n => !bottomTabsVisiveis.find(t => t.path === n.path));
   const isMoreActive = moreItemsVisiveis.some(n => n.path === location.pathname);
-
-  const { mainRef, refreshing, onTouchStart, onTouchEnd } = usePullToRefresh(
-    () => new Promise(res => { setRefreshKey(k => k + 1); setTimeout(res, 600); })
-  );
 
   useEffect(() => { setMoreOpen(false); }, [location.pathname]);
 
@@ -267,6 +243,13 @@ export default function Layout() {
             <GlobalSearch />
           </div>
           <div className="flex items-center gap-3 flex-shrink-0">
+            <button
+              onClick={handleRefresh}
+              className="p-2 hover:bg-muted rounded-lg transition-colors"
+              title="Atualizar página"
+            >
+              <RefreshCw size={18} className="text-muted-foreground" />
+            </button>
             <NotificacoesPanel />
             <div className="relative">
               <button
@@ -321,18 +304,7 @@ export default function Layout() {
           </button>
         </header>
 
-        {refreshing && (
-          <div className="md:hidden flex items-center justify-center py-2 text-xs gap-2"
-            style={{ background: 'rgba(245,158,11,0.1)', color: '#D97706' }}>
-            <RefreshCw size={13} className="animate-spin" /> Atualizando...
-          </div>
-        )}
-
         <main
-          ref={mainRef}
-          key={refreshKey}
-          onTouchStart={onTouchStart}
-          onTouchEnd={onTouchEnd}
           className="flex-1 overflow-auto p-4 md:p-6"
           style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom) + 64px)' }}
         >
