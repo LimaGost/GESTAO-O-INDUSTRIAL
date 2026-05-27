@@ -45,6 +45,29 @@
     },
     "discord_thread_id": {
       "type": "string"
+    },
+    "historico_respostas": {
+      "type": "array",
+      "description": "Hist\u00f3rico de todas as respostas trocadas",
+      "items": {
+        "type": "object",
+        "properties": {
+          "mensagem": {
+            "type": "string"
+          },
+          "respondido_por": {
+            "type": "string"
+          },
+          "data": {
+            "type": "string"
+          },
+          "origem": {
+            "type": "string",
+            "description": "sistema ou discord"
+          }
+        }
+      },
+      "default": []
     }
   },
   "required": [

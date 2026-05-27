@@ -19,13 +19,21 @@ Deno.serve(async (req) => {
     const tickets = await base44.asServiceRole.entities.TicketSuporte.list();
     const ticket = tickets.find(t => t.id === ticket_id);
 
-    // Atualiza o ticket no sistema
-    await base44.asServiceRole.entities.TicketSuporte.update(ticket_id, {
-      resposta,
+    // Acumula no histórico sem sobrescrever resposta anterior
+    const historicoAtual = ticket?.historico_respostas || [];
+    const novaEntrada = { mensagem: resposta, respondido_por: respondidoPor, data: agora, origem: 'sistema' };
+
+    const atualizacao = {
+      historico_respostas: [...historicoAtual, novaEntrada],
       status: 'respondido',
       respondido_por: respondidoPor,
       data_resposta: agora,
-    });
+    };
+    if (!ticket?.resposta) {
+      atualizacao.resposta = resposta;
+    }
+
+    await base44.asServiceRole.entities.TicketSuporte.update(ticket_id, atualizacao);
 
     // Cria notificacao para o usuario que abriu o ticket
     if (ticket?.created_by_id) {

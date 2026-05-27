@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { MessageSquare, CheckCircle, Send, X, RefreshCw, Clock, User, Circle } from 'lucide-react';
+import { MessageSquare, CheckCircle, Send, X, RefreshCw, Clock, User, Circle, MessageCircle } from 'lucide-react';
 
 const STATUS_CONFIG = {
   aberto:         { label: 'Aberto',          color: 'bg-red-100 text-red-700',    dot: 'bg-red-500' },
@@ -64,8 +64,10 @@ export default function TicketsSuporte() {
       `Seu ticket foi respondido: ${ticketAberto.titulo}`,
       resposta.slice(0, 120)
     );
-    await load();
-    setTicketAberto(null);
+    const updated = await base44.entities.TicketSuporte.list('-created_date');
+    setTickets(updated);
+    const atualizado = updated.find(t => t.id === ticketAberto.id);
+    if (atualizado) setTicketAberto(atualizado);
     setResposta('');
     setSalvando(false);
   };
@@ -227,7 +229,7 @@ export default function TicketsSuporte() {
                       </p>
                     </div>
                   </div>
-                  {/* Resposta */}
+                  {/* Primeira resposta */}
                   {ticketAberto.resposta && (
                     <div className="flex items-start gap-3 px-4 py-3 bg-green-50/50">
                       <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -244,6 +246,28 @@ export default function TicketsSuporte() {
                       </div>
                     </div>
                   )}
+                  {/* Respostas adicionais do histórico (exceto a primeira já exibida acima) */}
+                  {(ticketAberto.historico_respostas || []).filter(h => h.mensagem !== ticketAberto.resposta).map((h, idx) => (
+                    <div key={idx} className={`flex items-start gap-3 px-4 py-3 ${h.origem === 'discord' ? 'bg-indigo-50/50' : 'bg-green-50/50'}`}>
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${h.origem === 'discord' ? 'bg-indigo-100' : 'bg-green-100'}`}>
+                        {h.origem === 'discord'
+                          ? <MessageCircle size={12} className="text-indigo-600" />
+                          : <CheckCircle size={12} className="text-green-600" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs font-semibold text-foreground">{h.respondido_por}</p>
+                          {h.origem === 'discord' && <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full font-semibold">Discord</span>}
+                        </div>
+                        {h.data && (
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            {new Date(h.data).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        )}
+                        <p className="text-xs text-foreground mt-2 bg-white border border-border rounded-lg px-3 py-2 whitespace-pre-wrap">{h.mensagem}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
