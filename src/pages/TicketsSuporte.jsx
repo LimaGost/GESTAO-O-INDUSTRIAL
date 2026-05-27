@@ -247,7 +247,12 @@ export default function TicketsSuporte() {
                     </div>
                   )}
                   {/* Respostas adicionais do histórico (exceto a primeira já exibida acima) */}
-                  {(ticketAberto.historico_respostas || []).filter(h => h.mensagem !== ticketAberto.resposta).map((h, idx) => (
+                  {(ticketAberto.historico_respostas || [])
+                    .filter((h, idx, arr) =>
+                      h.mensagem?.trim() !== ticketAberto.resposta?.trim() &&
+                      arr.findIndex(x => x.mensagem?.trim() === h.mensagem?.trim()) === idx
+                    )
+                    .map((h, idx) => (
                     <div key={idx} className={`flex items-start gap-3 px-4 py-3 ${h.origem === 'discord' ? 'bg-indigo-50/50' : 'bg-green-50/50'}`}>
                       <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${h.origem === 'discord' ? 'bg-indigo-100' : 'bg-green-100'}`}>
                         {h.origem === 'discord'
