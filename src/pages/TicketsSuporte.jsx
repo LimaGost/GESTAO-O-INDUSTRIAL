@@ -41,12 +41,9 @@ export default function TicketsSuporte() {
   const enviarResposta = async () => {
     if (!resposta.trim()) return;
     setSalvando(true);
-    const agora = new Date().toISOString();
-    await base44.entities.TicketSuporte.update(ticketAberto.id, {
+    await base44.functions.invoke('responderTicketDiscord', {
+      ticket_id: ticketAberto.id,
       resposta,
-      status: 'respondido',
-      respondido_por: user?.full_name || user?.email || 'Admin',
-      data_resposta: agora,
     });
     await load();
     setTicketAberto(null);
