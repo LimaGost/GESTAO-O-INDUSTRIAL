@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { Bell, X, CheckCheck, Package, ShoppingCart, Factory, Users } from 'lucide-react';
+import { Bell, X, CheckCheck, Package, ShoppingCart, Factory, Users, MessageSquare } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useNavigate } from 'react-router-dom';
 
 const TIPO_CONFIG = {
-  pedido:   { icon: ShoppingCart, color: 'text-blue-500',   bg: 'bg-blue-50',   label: 'Pedido' },
-  estoque:  { icon: Package,      color: 'text-amber-500',  bg: 'bg-amber-50',  label: 'Estoque' },
-  producao: { icon: Factory,      color: 'text-purple-500', bg: 'bg-purple-50', label: 'Produção' },
-  cliente:  { icon: Users,        color: 'text-green-500',  bg: 'bg-green-50',  label: 'Cliente' },
+  pedido:   { icon: ShoppingCart,  color: 'text-blue-500',   bg: 'bg-blue-50',   label: 'Pedido' },
+  estoque:  { icon: Package,       color: 'text-amber-500',  bg: 'bg-amber-50',  label: 'Estoque' },
+  producao: { icon: Factory,       color: 'text-purple-500', bg: 'bg-purple-50', label: 'Produção' },
+  cliente:  { icon: Users,         color: 'text-green-500',  bg: 'bg-green-50',  label: 'Cliente' },
+  suporte:  { icon: MessageSquare, color: 'text-primary',    bg: 'bg-primary/10', label: 'Suporte' },
 };
 
 function timeAgo(dateStr) {
@@ -23,23 +24,29 @@ function timeAgo(dateStr) {
 export default function NotificacoesPanel() {
   const [open, setOpen] = useState(false);
   const [notificacoes, setNotificacoes] = useState([]);
+  const [userId, setUserId] = useState(null);
   const panelRef = useRef(null);
   const navigate = useNavigate();
 
   const naoLidas = notificacoes.filter(n => !n.lida).length;
 
-  const load = async () => {
+  const load = async (uid) => {
     try {
-      const data = await base44.entities.Notificacao.list('-created_date', 30);
-      setNotificacoes(data);
+      const data = await base44.entities.Notificacao.list('-created_date', 60);
+      const currentId = uid || userId;
+      const filtradas = data.filter(n => !n.usuario_id || n.usuario_id === currentId);
+      setNotificacoes(filtradas.slice(0, 30));
     } catch {
       // ignora erros silenciosamente
     }
   };
 
   useEffect(() => {
-    load();
-    const interval = setInterval(load, 30000);
+    base44.auth.me().then(u => {
+      setUserId(u?.id);
+      load(u?.id);
+    }).catch(() => load());
+    const interval = setInterval(() => load(), 30000);
     return () => clearInterval(interval);
   }, []);
 

@@ -39,6 +39,19 @@ export default function TicketsSuporte() {
     setResposta(ticket.resposta || '');
   };
 
+  const criarNotificacaoTicket = async (ticket, titulo, descricao) => {
+    const destinatario = ticket.created_by_id;
+    if (!destinatario) return;
+    await base44.entities.Notificacao.create({
+      titulo,
+      descricao,
+      tipo: 'suporte',
+      lida: false,
+      link: '/Suporte',
+      usuario_id: destinatario,
+    });
+  };
+
   const enviarResposta = async () => {
     if (!resposta.trim()) return;
     setSalvando(true);
@@ -46,6 +59,11 @@ export default function TicketsSuporte() {
       ticket_id: ticketAberto.id,
       resposta,
     });
+    await criarNotificacaoTicket(
+      ticketAberto,
+      `Seu ticket foi respondido: ${ticketAberto.titulo}`,
+      resposta.slice(0, 120)
+    );
     await load();
     setTicketAberto(null);
     setResposta('');
@@ -70,6 +88,21 @@ export default function TicketsSuporte() {
     await base44.entities.TicketSuporte.update(id, { status: novoStatus });
     setTickets(prev => prev.map(t => t.id === id ? { ...t, status: novoStatus } : t));
     if (ticketAberto?.id === id) setTicketAberto(prev => ({ ...prev, status: novoStatus }));
+    const STATUS_MSG = {
+      em_atendimento: 'Seu ticket está sendo atendido',
+      respondido: 'Seu ticket foi respondido',
+      fechado: 'Seu ticket foi encerrado',
+    };
+    if (STATUS_MSG[novoStatus] && ticketAberto?.created_by_id) {
+      await base44.entities.Notificacao.create({
+        titulo: `${STATUS_MSG[novoStatus]}: ${ticketAberto.titulo}`,
+        descricao: ticketAberto.resposta ? ticketAberto.resposta.slice(0, 120) : `Status atualizado para: ${STATUS_CONFIG[novoStatus]?.label}`,
+        tipo: 'suporte',
+        lida: false,
+        link: '/Suporte',
+        usuario_id: ticketAberto.created_by_id,
+      });
+    }
   };
 
   const ticketsFiltrados = filtroStatus === 'todos'

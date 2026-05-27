@@ -15,6 +15,10 @@ Deno.serve(async (req) => {
     const respondidoPor = user.full_name || user.email || 'Admin';
     const agora = new Date().toISOString();
 
+    // Busca o ticket para obter thread e created_by_id
+    const tickets = await base44.asServiceRole.entities.TicketSuporte.list();
+    const ticket = tickets.find(t => t.id === ticket_id);
+
     // Atualiza o ticket no sistema
     await base44.asServiceRole.entities.TicketSuporte.update(ticket_id, {
       resposta,
@@ -23,19 +27,27 @@ Deno.serve(async (req) => {
       data_resposta: agora,
     });
 
+    // Cria notificacao para o usuario que abriu o ticket
+    if (ticket?.created_by_id) {
+      await base44.asServiceRole.entities.Notificacao.create({
+        titulo: `Seu ticket foi respondido: ${ticket.titulo || 'Suporte'}`,
+        descricao: resposta.slice(0, 120),
+        tipo: 'suporte',
+        lida: false,
+        link: '/Suporte',
+        usuario_id: ticket.created_by_id,
+      });
+    }
+
     // Envia a resposta na thread do Discord
-    if (botToken) {
-      const tickets = await base44.asServiceRole.entities.TicketSuporte.list();
-      const ticket = tickets.find(t => t.id === ticket_id);
-      if (ticket?.discord_thread_id) {
-        await fetch(`https://discord.com/api/v10/channels/${ticket.discord_thread_id}/messages`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bot ${botToken}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            content: `✅ **Resposta enviada ao usuário por ${respondidoPor}:**\n\n${resposta}`,
-          }),
-        });
-      }
+    if (botToken && ticket?.discord_thread_id) {
+      await fetch(`https://discord.com/api/v10/channels/${ticket.discord_thread_id}/messages`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bot ${botToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: `✅ **Resposta enviada ao usuário por ${respondidoPor}:**\n\n${resposta}`,
+        }),
+      });
     }
 
     return Response.json({ success: true, respondido_por: respondidoPor });

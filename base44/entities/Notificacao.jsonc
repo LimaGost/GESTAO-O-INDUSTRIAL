@@ -14,7 +14,8 @@
         "pedido",
         "estoque",
         "producao",
-        "cliente"
+        "cliente",
+        "suporte"
       ],
       "default": "pedido"
     },
@@ -24,6 +25,10 @@
     },
     "link": {
       "type": "string"
+    },
+    "usuario_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio destinat\u00e1rio da notifica\u00e7\u00e3o"
     }
   },
   "required": [
