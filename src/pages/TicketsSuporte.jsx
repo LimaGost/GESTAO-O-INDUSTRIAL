@@ -20,6 +20,7 @@ export default function TicketsSuporte() {
   const [salvando, setSalvando] = useState(false);
   const [filtroStatus, setFiltroStatus] = useState('todos');
   const [user, setUser] = useState(null);
+  const [buscandoDiscord, setBuscandoDiscord] = useState(false);
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
@@ -49,6 +50,20 @@ export default function TicketsSuporte() {
     setTicketAberto(null);
     setResposta('');
     setSalvando(false);
+  };
+
+  const buscarDoDiscord = async () => {
+    if (!ticketAberto?.discord_thread_id) return;
+    setBuscandoDiscord(true);
+    await base44.functions.invoke('verificarRespostasDiscord', {});
+    const data = await base44.entities.TicketSuporte.list('-created_date');
+    setTickets(data);
+    const atualizado = data.find(t => t.id === ticketAberto.id);
+    if (atualizado) {
+      setTicketAberto(atualizado);
+      setResposta(atualizado.resposta || '');
+    }
+    setBuscandoDiscord(false);
   };
 
   const mudarStatus = async (id, novoStatus) => {
@@ -156,8 +171,15 @@ export default function TicketsSuporte() {
 
               {/* Histórico de ações */}
               <div className="border border-border rounded-xl overflow-hidden">
-                <div className="px-4 py-2.5 bg-muted/30 border-b border-border">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Histórico</p>
+                <div className="px-4 py-2.5 bg-muted/30 border-b border-border flex items-center justify-between">
+                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Histórico</p>
+                 {ticketAberto.discord_thread_id && (
+                   <button onClick={buscarDoDiscord} disabled={buscandoDiscord}
+                     className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:bg-primary/10 px-2 py-1 rounded-lg transition-colors disabled:opacity-50">
+                     <RefreshCw size={11} className={buscandoDiscord ? 'animate-spin' : ''} />
+                     {buscandoDiscord ? 'Buscando...' : 'Buscar do Discord'}
+                   </button>
+                 )}
                 </div>
                 <div className="divide-y divide-border/40">
                   {/* Criação */}
