@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { X, Printer } from 'lucide-react';
+import { X, Printer, Package } from 'lucide-react';
 import { imprimirEtiquetaProduto } from '@/lib/imprimirEtiquetaProduto';
 
 export default function ModalImpressao({ grupos, onClose, onMarkPrinted }) {
-  const [qtds, setQtds] = useState(() => {
+  const [volumes, setVolumes] = useState(() => {
     const m = {};
-    grupos.forEach(g => { m[g.key] = g.totalCopias; });
+    grupos.forEach(g => { m[g.key] = 1; });
     return m;
   });
+
   const [selecionados, setSelecionados] = useState(() => {
     const m = {};
     grupos.forEach(g => { m[g.key] = !g.etiquetas.every(e => e.impresso); });
@@ -23,12 +24,14 @@ export default function ModalImpressao({ grupos, onClose, onMarkPrinted }) {
     if (alvos.length === 0) return alert('Selecione ao menos um produto para imprimir.');
 
     alvos.forEach(g => {
+      const num_volumes = volumes[g.key] || 1;
       imprimirEtiquetaProduto({
         produto_nome: g.produto_nome,
-        quantidade: qtds[g.key] || g.totalCopias,
+        quantidade: g.totalCopias,
         lote: g.lote,
         data_producao: g.data_producao,
         codigo_barras: g.codigo_barras,
+        num_volumes,
       });
     });
 
@@ -36,9 +39,9 @@ export default function ModalImpressao({ grupos, onClose, onMarkPrinted }) {
     onClose();
   };
 
-  const totalSelecionado = grupos
+  const totalVolumes = grupos
     .filter(g => selecionados[g.key])
-    .reduce((s, g) => s + (qtds[g.key] || g.totalCopias), 0);
+    .reduce((s, g) => s + (volumes[g.key] || 1), 0);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose}>
@@ -55,9 +58,10 @@ export default function ModalImpressao({ grupos, onClose, onMarkPrinted }) {
         </div>
 
         {/* Lista */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2">
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
           {grupos.map(g => {
             const impresso = g.etiquetas.every(e => e.impresso);
+            const numVol = volumes[g.key] || 1;
             return (
               <div
                 key={g.key}
@@ -79,33 +83,49 @@ export default function ModalImpressao({ grupos, onClose, onMarkPrinted }) {
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-foreground truncate">{g.produto_nome}</p>
-                    <p className="text-xs text-muted-foreground">Lote: {g.lote} · {g.data_producao}</p>
-                  </div>
-
-                  {/* Quantidade */}
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <button
-                      onClick={() => setQtds(prev => ({ ...prev, [g.key]: Math.max(1, (prev[g.key] || 1) - 1) }))}
-                      className="w-7 h-7 rounded-lg bg-muted hover:bg-muted/70 flex items-center justify-center text-foreground font-bold transition-colors"
-                    >
-                      −
-                    </button>
-                    <input
-                      type="number"
-                      min="1"
-                      value={qtds[g.key] || 1}
-                      onChange={e => setQtds(prev => ({ ...prev, [g.key]: Math.max(1, parseInt(e.target.value) || 1) }))}
-                      className="w-12 text-center border border-border rounded-lg py-1 text-sm font-bold bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    />
-                    <button
-                      onClick={() => setQtds(prev => ({ ...prev, [g.key]: (prev[g.key] || 1) + 1 }))}
-                      className="w-7 h-7 rounded-lg bg-muted hover:bg-muted/70 flex items-center justify-center text-foreground font-bold transition-colors"
-                    >
-                      +
-                    </button>
-                    <span className="text-xs text-muted-foreground ml-0.5">un</span>
+                    <p className="text-xs text-muted-foreground">Lote: {g.lote} · {g.data_producao} · {g.totalCopias} un</p>
                   </div>
                 </div>
+
+                {/* Volumes por produto */}
+                {!impresso && (
+                  <div className="mt-3 flex items-center gap-3 pl-8">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Package size={12} />
+                      <span className="font-medium">Volumes/Caixas:</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => setVolumes(prev => ({ ...prev, [g.key]: Math.max(1, (prev[g.key] || 1) - 1) }))}
+                        className="w-7 h-7 rounded-lg bg-muted hover:bg-muted/70 flex items-center justify-center text-foreground font-bold transition-colors"
+                      >
+                        −
+                      </button>
+                      <input
+                        type="number"
+                        min="1"
+                        value={numVol}
+                        onChange={e => setVolumes(prev => ({ ...prev, [g.key]: Math.max(1, parseInt(e.target.value) || 1) }))}
+                        className="w-14 text-center border border-border rounded-lg py-1 text-sm font-bold bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      />
+                      <button
+                        onClick={() => setVolumes(prev => ({ ...prev, [g.key]: (prev[g.key] || 1) + 1 }))}
+                        className="w-7 h-7 rounded-lg bg-muted hover:bg-muted/70 flex items-center justify-center text-foreground font-bold transition-colors"
+                      >
+                        +
+                      </button>
+                    </div>
+                    {numVol > 1 && (
+                      <div className="flex gap-1 flex-wrap ml-1">
+                        {Array.from({ length: numVol }).map((_, i) => (
+                          <span key={i} className="text-[10px] bg-primary/10 text-primary font-bold px-1.5 py-0.5 rounded">
+                            {i + 1}/{numVol}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -115,7 +135,7 @@ export default function ModalImpressao({ grupos, onClose, onMarkPrinted }) {
         <div className="px-5 py-4 border-t border-border flex-shrink-0 space-y-3">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>{grupos.filter(g => selecionados[g.key]).length} produto(s) selecionado(s)</span>
-            <span className="font-semibold text-foreground">{totalSelecionado} etiqueta(s) no total</span>
+            <span className="font-semibold text-foreground">{totalVolumes} etiqueta(s) no total</span>
           </div>
           <div className="flex gap-2">
             <button
