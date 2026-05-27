@@ -39,12 +39,17 @@ Deno.serve(async (req) => {
           ? new Date(ticket.data_resposta)
           : new Date(ticket.created_date || 0);
 
-        // Filtra mensagens humanas que não sejam a resposta já salva no ticket
+        // Filtra mensagens humanas que ainda não estão no histórico
+        const historicoMensagens = new Set(
+          (ticket.historico_respostas || []).map(h => h.mensagem?.trim())
+        );
+        if (ticket.resposta) historicoMensagens.add(ticket.resposta.trim());
+
         const respostasHumanas = mensagens.filter(m => {
           if (m.author?.bot) return false;
           if (!m.content?.trim()) return false;
-          // Ignora se o conteúdo já é idêntico à resposta salva
-          if (ticket.resposta && m.content.trim() === ticket.resposta.trim()) return false;
+          // Ignora se já está registrada no histórico ou como resposta principal
+          if (historicoMensagens.has(m.content.trim())) return false;
           return true;
         });
 
