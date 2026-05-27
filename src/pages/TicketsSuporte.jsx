@@ -204,8 +204,15 @@ export default function TicketsSuporte() {
 
               {/* Histórico de ações */}
               <div className="border border-border rounded-xl overflow-hidden">
-                <div className="px-4 py-2.5 bg-muted/30 border-b border-border">
+                <div className="px-4 py-2.5 bg-muted/30 border-b border-border flex items-center justify-between">
                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Histórico</p>
+                 {ticketAberto.discord_thread_id && (
+                   <button onClick={buscarDoDiscord} disabled={buscandoDiscord}
+                     className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:bg-primary/10 px-2 py-1 rounded-lg transition-colors disabled:opacity-50">
+                     <RefreshCw size={11} className={buscandoDiscord ? 'animate-spin' : ''} />
+                     {buscandoDiscord ? 'Buscando...' : 'Buscar do Discord'}
+                   </button>
+                 )}
                 </div>
                 <div className="divide-y divide-border/40">
                   {/* Criação */}
