@@ -9,10 +9,10 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'DISCORD_BOT_TOKEN não configurado' }, { status: 500 });
     }
 
-    // Busca tickets abertos ou em atendimento que têm thread no Discord
+    // Busca todos os tickets com thread Discord que não estão fechados
     const tickets = await base44.asServiceRole.entities.TicketSuporte.list();
     const ticketsPendentes = tickets.filter(t =>
-      ['aberto', 'em_atendimento'].includes(t.status) && t.discord_thread_id
+      t.status !== 'fechado' && t.discord_thread_id
     );
 
     if (ticketsPendentes.length === 0) {
@@ -39,10 +39,13 @@ Deno.serve(async (req) => {
           ? new Date(ticket.data_resposta)
           : new Date(ticket.created_date || 0);
 
+        // Filtra mensagens humanas que não sejam a resposta já salva no ticket
         const respostasHumanas = mensagens.filter(m => {
-          if (m.author?.bot) return false; // Ignora mensagens de bots
-          const dataMensagem = new Date(m.timestamp);
-          return dataMensagem > dataReferencia;
+          if (m.author?.bot) return false;
+          if (!m.content?.trim()) return false;
+          // Ignora se o conteúdo já é idêntico à resposta salva
+          if (ticket.resposta && m.content.trim() === ticket.resposta.trim()) return false;
+          return true;
         });
 
         if (respostasHumanas.length === 0) continue;
