@@ -361,6 +361,32 @@ export default function Kanban() {
     }
   };
 
+  const salvarItensOP = async (ordem, itens) => {
+    let usuarioAtual = 'sistema';
+    try { const me = await base44.auth.me(); usuarioAtual = me?.email || me?.full_name || 'sistema'; } catch {}
+    // Salva itens na OP
+    await base44.entities.OrdemProducao.update(ordem.id, { itens });
+    // Atualiza cache
+    setOrdens(prev => prev.map(o => o.id === ordem.id ? { ...o, itens } : o));
+    // Atualiza pedido vinculado se existir
+    if (ordem.pedido_id) {
+      const todosPedidos = await base44.entities.Pedido.list();
+      const ped = todosPedidos.find(p => p.id === ordem.pedido_id);
+      if (ped) {
+        const novosItens = itens.map(i => {
+          const existente = (ped.itens || []).find(pi => pi.produto_id === i.produto_id);
+          const preco = existente?.preco_unitario || existente?.valor_unitario || 0;
+          return { ...existente, produto_id: i.produto_id, produto_nome: i.produto_nome, quantidade: i.quantidade, preco_unitario: preco, valor_total: preco * i.quantidade };
+        });
+        const novoTotal = novosItens.reduce((s, i) => s + (i.valor_total || 0), 0);
+        await base44.entities.Pedido.update(ped.id, { itens: novosItens, valor_total: novoTotal || ped.valor_total });
+      }
+    }
+    registrarLog('OrdemProducao', ordem.id, 'ITENS_SEPARACAO_SALVOS',
+      `Itens da separação salvos por ${usuarioAtual}: ${itens.map(i => `${i.produto_nome} x${i.quantidade}`).join(', ')}`,
+      usuarioAtual).catch(() => {});
+  };
+
   const cancelarOP = async (ordem) => {
     if (!podeGerenciarProducao) return;
     if (!confirm(`Cancelar a ordem ${ordem.numero}?`)) return;
@@ -704,6 +730,7 @@ export default function Kanban() {
         kanbanColunas={kanbanColunas}
         clienteNome={ordemSelecionada.pedido_id ? pedidoMap[ordemSelecionada.pedido_id]?.nome : null}
         onAvancar={readonly ? null : async (ordem, descarte) => {await avancarStatus(ordem, descarte);setOrdemSelecionada(null);}}
+        onSalvarItens={readonly ? null : salvarItensOP}
         loading={loadingId === ordemSelecionada.id}
         onClose={() => setOrdemSelecionada(null)} />
 

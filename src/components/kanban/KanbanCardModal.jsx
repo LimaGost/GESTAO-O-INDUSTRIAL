@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { X, ArrowRight, CheckCircle, CheckSquare, Square, Trash2, Printer, User, AlertTriangle, Plus, Minus, PackagePlus } from 'lucide-react';
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { X, ArrowRight, CheckCircle, CheckSquare, Square, Trash2, Printer, User, AlertTriangle, Plus, Minus, PackagePlus, Search, Save } from 'lucide-react';
 import ModalDescarte from './ModalDescarte';
 import { imprimirEtiquetaProduto } from '@/lib/imprimirEtiquetaProduto';
 
@@ -28,7 +28,6 @@ function getStorageKey(ordemId, status) { return `checklist_modal_${ordemId}_${s
 function loadStorage(key) { try { return JSON.parse(localStorage.getItem(key)) || {}; } catch { return {}; } }
 function saveStorage(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 
-// Agrupa itens por categoria do produto (via lista de produtos)
 function agruparPorCategoria(itens, produtos) {
   const map = {};
   for (const item of itens) {
@@ -40,26 +39,24 @@ function agruparPorCategoria(itens, produtos) {
   return map;
 }
 
-export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos = [], kanbanColunas: kanbanColunasProps, clienteNome, onAvancar, loading, onClose }) {
+export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos = [], kanbanColunas: kanbanColunasProps, clienteNome, onAvancar, onSalvarItens, loading, onClose }) {
   const kanbanColunas = kanbanColunasProps || loadKanbanColunas();
   const PROXIMOS = buildProximos(kanbanColunas);
   const checkKey = `${ordem.id}_${ordem.status}`;
 
-  // Edição de itens na etapa "em_separacao"
   const isSeparacao = ordem.status === 'em_separacao';
-  const [itensEditados, setItensEditados] = useState(null); // null = não editado ainda
-  const [novoItem, setNovoItem] = useState({ produto_id: '', produto_nome: '', quantidade: 1 });
+  const [itensEditados, setItensEditados] = useState(null);
+  const [novoItem, setNovoItem] = useState({ produto_id: '', produto_nome: '', quantidade: 1, estoque: 0 });
   const [showAdicionarItem, setShowAdicionarItem] = useState(false);
+  const [buscaProduto, setBuscaProduto] = useState('');
+  const [salvandoItens, setSalvandoItens] = useState(false);
+  const searchRef = useRef(null);
 
-  // Checklist da etapa com persistência
   const itensEtapa = checklistConfigs[ordem.status]?.itens || [];
   const [checkEtapa, setCheckEtapa] = useState(() => loadStorage(getStorageKey(checkKey, 'etapa')));
-
-  // Checkboxes de itens da OP (confirmação de produção)
   const [checkItens, setCheckItens] = useState(() => loadStorage(getStorageKey(checkKey, 'prod')));
 
-  // Descarte — obrigatório em TODAS as etapas que têm "próximo"
-  const [descartarAtivo, setDescartarAtivo] = useState(null); // null = não respondido, false = sem descarte, true = com descarte
+  const [descartarAtivo, setDescartarAtivo] = useState(null);
   const [descarteRegistrado, setDescarteRegistrado] = useState(null);
   const [showDescarte, setShowDescarte] = useState(false);
 
@@ -70,8 +67,29 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
     return [];
   }, [ordem, itensEditados]);
 
+  useEffect(() => {
+    if (showAdicionarItem && searchRef.current) {
+      setTimeout(() => searchRef.current?.focus(), 50);
+    }
+  }, [showAdicionarItem]);
+
+  const produtosFiltrados = useMemo(() => {
+    if (!buscaProduto.trim()) return produtos;
+    const q = buscaProduto.toLowerCase();
+    return produtos.filter(p =>
+      (p.nome || '').toLowerCase().includes(q) ||
+      (p.codigo || '').toLowerCase().includes(q)
+    );
+  }, [produtos, buscaProduto]);
+
   const adicionarItem = () => {
     if (!novoItem.produto_id) return;
+    const prod = produtos.find(p => p.id === novoItem.produto_id);
+    const estoqueDisp = prod?.estoque_atual || 0;
+    if (estoqueDisp < novoItem.quantidade) {
+      alert(`⚠️ Estoque insuficiente! Disponível: ${estoqueDisp} un de "${novoItem.produto_nome}"`);
+      return;
+    }
     const base = itensEditados !== null ? itensEditados : (ordem.itens?.length > 0 ? ordem.itens : [{ produto_id: ordem.produto_id, produto_nome: ordem.produto_nome, quantidade: ordem.quantidade || 0 }]);
     const existente = base.findIndex(i => i.produto_id === novoItem.produto_id);
     let novos;
@@ -81,7 +99,8 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
       novos = [...base, { produto_id: novoItem.produto_id, produto_nome: novoItem.produto_nome, quantidade: novoItem.quantidade }];
     }
     setItensEditados(novos);
-    setNovoItem({ produto_id: '', produto_nome: '', quantidade: 1 });
+    setNovoItem({ produto_id: '', produto_nome: '', quantidade: 1, estoque: 0 });
+    setBuscaProduto('');
     setShowAdicionarItem(false);
   };
 
@@ -100,14 +119,12 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
   const porFamilia = useMemo(() => agruparPorCategoria(itensNormalizados, produtos), [itensNormalizados, produtos]);
 
   const totalItens = itensNormalizados.length;
-  // Itens com disponivel:true já contam como confirmados automaticamente
   const itensDisponiveis = itensNormalizados.filter(i => i.disponivel === true).length;
   const totalItensChecked = itensDisponiveis + itensNormalizados.filter(i => i.disponivel !== true).filter(i => !!checkItens[`${i.produto_id || i.produto_nome}`]).length;
   const itensOPCompleto = isSeparacao || totalItens === 0 || totalItensChecked === totalItens;
 
   const etapaCompleto = itensEtapa.length === 0 || itensEtapa.every((_, i) => checkEtapa[i]);
 
-  // Descarte é obrigatório em qualquer etapa com "próximo"
   const temProximo = !!PROXIMOS[ordem.status];
   const descarteRespondido = !temProximo || descartarAtivo !== null;
   const descartePreenchido = descartarAtivo !== true || descarteRegistrado !== null;
@@ -136,12 +153,10 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
     if (isSeparacao && !itensComQuantidadeValida) { alert('⚠️ Todos os itens precisam ter quantidade maior que zero.'); return; }
     if (!descarteRespondido) { alert('⚠️ Informe se houve descarte nesta etapa antes de avançar.'); return; }
     if (descartarAtivo === true && !descarteRegistrado) { alert('Preencha o formulário de descarte antes de continuar.'); return; }
-    // Passa itens editados para o onAvancar (o Kanban.jsx usa para saida_estoque)
     const ordemFinal = itensEditados !== null ? { ...ordem, itens: itensEditados } : ordem;
     onAvancar(ordemFinal, descarteRegistrado?.length > 0 ? descarteRegistrado : null);
   };
 
-  // Indicador de progresso do checklist
   const checklistPct = itensEtapa.length > 0
     ? Math.round((itensEtapa.filter((_, i) => checkEtapa[i]).length / itensEtapa.length) * 100)
     : 100;
@@ -218,32 +233,89 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
               {/* Adicionar novo item */}
               {showAdicionarItem && (
                 <div className="px-4 py-3 bg-muted/20 border-t border-border space-y-2">
-                  <select value={novoItem.produto_id}
-                    onChange={e => {
-                      const p = produtos.find(pr => pr.id === e.target.value);
-                      setNovoItem(n => ({ ...n, produto_id: e.target.value, produto_nome: p?.nome || '' }));
-                    }}
-                    className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
-                    <option value="">Selecione um produto...</option>
-                    {produtos.map(p => <option key={p.id} value={p.id}>{p.nome} (est: {p.estoque_atual || 0})</option>)}
-                  </select>
-                  <div className="flex gap-2">
-                    <div className="flex items-center gap-1.5 border border-border rounded-xl px-2 py-1.5 bg-background">
-                      <button onClick={() => setNovoItem(n => ({ ...n, quantidade: Math.max(1, n.quantidade - 1) }))}
-                        className="w-6 h-6 rounded flex items-center justify-center hover:bg-muted"><Minus size={11} /></button>
-                      <span className="text-sm font-bold w-6 text-center">{novoItem.quantidade}</span>
-                      <button onClick={() => setNovoItem(n => ({ ...n, quantidade: n.quantidade + 1 }))}
-                        className="w-6 h-6 rounded flex items-center justify-center hover:bg-muted"><Plus size={11} /></button>
-                    </div>
-                    <button onClick={adicionarItem} disabled={!novoItem.produto_id}
-                      className="flex-1 bg-primary text-primary-foreground rounded-xl text-xs font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity">
-                      Confirmar
-                    </button>
-                    <button onClick={() => setShowAdicionarItem(false)}
-                      className="px-3 border border-border rounded-xl text-xs text-muted-foreground hover:bg-muted">
-                      Cancelar
-                    </button>
+                  {/* Campo de busca */}
+                  <div className="flex items-center gap-2 border border-border rounded-xl px-3 py-2 bg-background">
+                    <Search size={13} className="text-muted-foreground flex-shrink-0" />
+                    <input
+                      ref={searchRef}
+                      type="text"
+                      value={buscaProduto}
+                      onChange={e => setBuscaProduto(e.target.value)}
+                      placeholder="Buscar por nome ou SKU..."
+                      className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                    />
+                    {buscaProduto && (
+                      <button onClick={() => setBuscaProduto('')} className="text-muted-foreground hover:text-foreground">
+                        <X size={12} />
+                      </button>
+                    )}
                   </div>
+
+                  {/* Lista filtrada de produtos */}
+                  {!novoItem.produto_id && (
+                    <div className="max-h-48 overflow-y-auto border border-border rounded-xl bg-background divide-y divide-border/40">
+                      {produtosFiltrados.length === 0 ? (
+                        <p className="text-xs text-muted-foreground text-center py-4">Nenhum produto encontrado</p>
+                      ) : produtosFiltrados.map(p => {
+                        const semEstoque = (p.estoque_atual || 0) <= 0;
+                        return (
+                          <button key={p.id}
+                            onClick={() => setNovoItem(n => ({ ...n, produto_id: p.id, produto_nome: p.nome, estoque: p.estoque_atual || 0 }))}
+                            className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-muted/50 ${semEstoque ? 'opacity-60' : ''}`}>
+                            {p.foto_url
+                              ? <img src={p.foto_url} alt={p.nome} className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
+                              : <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-primary">{p.nome?.charAt(0)}</div>
+                            }
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold text-foreground truncate">{p.nome}</p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {p.codigo ? `SKU: ${p.codigo} · ` : ''}Est: {p.estoque_atual || 0} un{semEstoque ? ' · ⚠️ Sem estoque' : ''}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Produto selecionado + quantidade */}
+                  {novoItem.produto_id && (
+                    <div className="border border-primary/30 rounded-xl p-3 bg-primary/5 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {(() => {
+                            const p = produtos.find(x => x.id === novoItem.produto_id);
+                            return p?.foto_url ? <img src={p.foto_url} alt={p.nome} className="w-7 h-7 rounded object-cover" /> : null;
+                          })()}
+                          <div>
+                            <p className="text-xs font-semibold text-foreground">{novoItem.produto_nome}</p>
+                            <p className="text-[10px] text-muted-foreground">Estoque: {novoItem.estoque} un</p>
+                          </div>
+                        </div>
+                        <button onClick={() => setNovoItem({ produto_id: '', produto_nome: '', quantidade: 1, estoque: 0 })}
+                          className="text-muted-foreground hover:text-foreground">
+                          <X size={12} />
+                        </button>
+                      </div>
+                      <div className="flex gap-2">
+                        <div className="flex items-center gap-1.5 border border-border rounded-xl px-2 py-1.5 bg-background">
+                          <button onClick={() => setNovoItem(n => ({ ...n, quantidade: Math.max(1, n.quantidade - 1) }))}
+                            className="w-6 h-6 rounded flex items-center justify-center hover:bg-muted"><Minus size={11} /></button>
+                          <span className="text-sm font-bold w-6 text-center">{novoItem.quantidade}</span>
+                          <button onClick={() => setNovoItem(n => ({ ...n, quantidade: n.quantidade + 1 }))}
+                            className="w-6 h-6 rounded flex items-center justify-center hover:bg-muted"><Plus size={11} /></button>
+                        </div>
+                        <button onClick={adicionarItem}
+                          className="flex-1 bg-primary text-primary-foreground rounded-xl text-xs font-semibold hover:opacity-90 transition-opacity">
+                          Confirmar
+                        </button>
+                        <button onClick={() => { setShowAdicionarItem(false); setBuscaProduto(''); }}
+                          className="px-3 border border-border rounded-xl text-xs text-muted-foreground hover:bg-muted">
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -266,14 +338,12 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
               </div>
               {Object.entries(porFamilia).map(([familia, itens]) => (
                 <div key={familia}>
-                  {/* Cabeçalho de família */}
                   <div className="flex items-center justify-between px-4 py-2 bg-muted/20 border-b border-border/50">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{familia}</p>
                     <p className="text-[10px] text-muted-foreground">{itens.reduce((s, i) => s + (i.quantidade || 0), 0)} un</p>
                   </div>
                   {itens.map((item, idx) => {
                     const itemKey = `${item.produto_id || item.produto_nome}`;
-                    // Itens marcados como disponivel:true já estão separados do estoque
                     const jaDisponivel = item.disponivel === true;
                     const checked = jaDisponivel || !!checkItens[itemKey];
                     return (
@@ -307,15 +377,13 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
             </div>
           )}
 
-          {/* Itens para confirmar (separação usa a seção editável acima) */}
-
-          {/* Checklist da Etapa com persistência */}
+          {/* Checklist da Etapa */}
           {itensEtapa.length > 0 && (
             <div className="border border-border rounded-xl overflow-hidden">
               <div className="flex items-center justify-between px-4 py-2.5 border-b border-border"
                 style={{ background: etapaCompleto ? '#F0FDF4' : '#FFFBEB' }}>
                 <p className="text-xs font-semibold text-foreground">
-                 Checklist — {kanbanColunas.find(c => c.key === ordem.status)?.label || ordem.status}
+                  Checklist — {kanbanColunas.find(c => c.key === ordem.status)?.label || ordem.status}
                 </p>
                 <div className="flex items-center gap-2">
                   <div className="w-24 h-1.5 rounded-full bg-border overflow-hidden">
@@ -398,7 +466,6 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
           {/* Botões de ação */}
           <div className="space-y-2 pt-1">
             {!onAvancar ? (
-              /* Modo somente leitura */
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold bg-muted text-muted-foreground border border-border">
                   🔒 Somente visualização — sem permissão para avançar
@@ -409,7 +476,21 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
               </div>
             ) : (
               <>
-                {/* Imprimir Etiquetas (qualquer etapa) */}
+                {/* Salvar Alterações (apenas em_separacao com itens editados) */}
+                {isSeparacao && itensEditados !== null && onSalvarItens && (
+                  <button
+                    onClick={async () => {
+                      setSalvandoItens(true);
+                      await onSalvarItens(ordem, itensEditados);
+                      setSalvandoItens(false);
+                    }}
+                    disabled={salvandoItens || !itensComQuantidadeValida}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-green-600 text-white hover:opacity-90 disabled:opacity-40 transition-opacity">
+                    <Save size={14} /> {salvandoItens ? 'Salvando...' : 'Salvar Alterações'}
+                  </button>
+                )}
+
+                {/* Imprimir Etiquetas */}
                 <button onClick={() => {
                   itensNormalizados.forEach(item => {
                     imprimirEtiquetaProduto({
