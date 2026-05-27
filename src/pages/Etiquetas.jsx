@@ -24,7 +24,9 @@ export default function Etiquetas() {
       if (!etiqueta.codigo_barras && etiqueta.produto_id) {
         const prod = produtos.find(p => p.id === etiqueta.produto_id);
         if (prod?.codigo) {
-          await base44.entities.Etiqueta.update(etiqueta.id, { codigo_barras: String(prod.codigo) });
+          try {
+            await base44.entities.Etiqueta.update(etiqueta.id, { codigo_barras: String(prod.codigo) });
+          } catch { /* etiqueta pode ter sido deletada, ignora */ }
         }
       }
     }
