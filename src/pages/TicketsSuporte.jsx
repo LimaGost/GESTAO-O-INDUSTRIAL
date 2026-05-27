@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Ticket, MessageSquare, CheckCircle, Clock, AlertTriangle, Send, X, RefreshCw } from 'lucide-react';
+import { MessageSquare, CheckCircle, Send, X, RefreshCw, Clock, User, Circle } from 'lucide-react';
 
 const STATUS_CONFIG = {
   aberto:         { label: 'Aberto',          color: 'bg-red-100 text-red-700',    dot: 'bg-red-500' },
@@ -154,13 +154,43 @@ export default function TicketsSuporte() {
                 <p className="text-sm text-foreground whitespace-pre-wrap">{ticketAberto.descricao}</p>
               </div>
 
-              {/* Resposta existente */}
-              {ticketAberto.resposta && (
-                <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-                  <p className="text-xs font-semibold text-green-700 mb-2 uppercase tracking-wide">Resposta — {ticketAberto.respondido_por}</p>
-                  <p className="text-sm text-foreground whitespace-pre-wrap">{ticketAberto.resposta}</p>
+              {/* Histórico de ações */}
+              <div className="border border-border rounded-xl overflow-hidden">
+                <div className="px-4 py-2.5 bg-muted/30 border-b border-border">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Histórico</p>
                 </div>
-              )}
+                <div className="divide-y divide-border/40">
+                  {/* Criação */}
+                  <div className="flex items-start gap-3 px-4 py-3">
+                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Circle size={8} className="text-blue-500 fill-blue-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-foreground">Ticket aberto por {ticketAberto.usuario_nome || ticketAberto.usuario_email}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        {new Date(ticketAberto.created_date).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
+                  {/* Resposta */}
+                  {ticketAberto.resposta && (
+                    <div className="flex items-start gap-3 px-4 py-3 bg-green-50/50">
+                      <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <CheckCircle size={12} className="text-green-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-foreground">Respondido por <span className="text-green-700">{ticketAberto.respondido_por}</span></p>
+                        {ticketAberto.data_resposta && (
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            {new Date(ticketAberto.data_resposta).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        )}
+                        <p className="text-xs text-foreground mt-2 bg-white border border-green-200 rounded-lg px-3 py-2 whitespace-pre-wrap">{ticketAberto.resposta}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
 
               {/* Campo de resposta */}
               {ticketAberto.status !== 'fechado' && (
