@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Plus, X, CheckCircle, AlertTriangle, Search, ShoppingCart, Clock, Package, Truck, Ban, FileText, Eye, Zap } from 'lucide-react';
+import { Plus, X, CheckCircle, AlertTriangle, Search, ShoppingCart, Clock, Package, Truck, Ban, FileText, Eye, Zap, Pencil, Save } from 'lucide-react';
 import ModalProcessarBling from '@/components/pedidos/ModalProcessarBling';
 import SeletorProdutos from '@/components/pedidos/SeletorProdutos';
 import { gerarNumero, gerarLote } from '@/lib/numeracao';
@@ -34,6 +34,9 @@ export default function Pedidos() {
   const [pedidoConfirmado, setPedidoConfirmado] = useState(null);
   const [pedidoBlingProcessar, setPedidoBlingProcessar] = useState(null);
   const [processandoBling, setProcessandoBling] = useState(false);
+  const [user, setUser] = useState(null);
+  const [precosEditados, setPrecosEditados] = useState({});
+  const [salvandoPrecos, setSalvandoPrecos] = useState(false);
 
   const load = async () => {
     const [p, c, pr, exp] = await Promise.all([
@@ -48,7 +51,38 @@ export default function Pedidos() {
     setExpedicoes(exp);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    base44.auth.me().then(setUser).catch(() => {});
+  }, []);
+
+  const podeEditarPrecos = user?.role === 'vendedor' || user?.role === 'admin';
+
+  const getPrecoOriginal = (item) =>
+    item.preco_unitario || item.valor_unitario ||
+    (item.total && item.quantidade ? item.total / item.quantidade : 0);
+
+  const salvarPrecos = async () => {
+    if (!pedidoConfirmado?.pedido_id || Object.keys(precosEditados).length === 0) return;
+    setSalvandoPrecos(true);
+    const itensAtualizados = pedidoConfirmado.itens.map((item, i) => {
+      const novoPreco = precosEditados[i];
+      if (novoPreco === undefined) return item;
+      return { ...item, preco_unitario: novoPreco, valor_unitario: novoPreco, total: novoPreco * item.quantidade };
+    });
+    const novoTotal = itensAtualizados.reduce((s, i) => s + (i.total || 0), 0);
+    await base44.entities.Pedido.update(pedidoConfirmado.pedido_id, { itens: itensAtualizados, valor_total: novoTotal });
+    for (const [idx, novoPreco] of Object.entries(precosEditados)) {
+      const item = pedidoConfirmado.itens[Number(idx)];
+      const precoAnterior = getPrecoOriginal(item);
+      await registrarLog('Pedido', pedidoConfirmado.pedido_id, 'EDICAO_PRECO',
+        `Preco de "${item.produto_nome}" alterado de R$${precoAnterior.toFixed(2)} para R$${Number(novoPreco).toFixed(2)} por ${user?.full_name || user?.email || 'vendedor'}`);
+    }
+    setPedidos(prev => prev.map(p => p.id === pedidoConfirmado.pedido_id ? { ...p, itens: itensAtualizados, valor_total: novoTotal } : p));
+    setPedidoConfirmado(prev => ({ ...prev, itens: itensAtualizados, valorTotal: novoTotal }));
+    setPrecosEditados({});
+    setSalvandoPrecos(false);
+  };
 
   const confirmarPedido = async () => {
     if (!form.cliente_nome || form.itens.length === 0) return alert('Preencha cliente e ao menos um item.');
@@ -153,6 +187,7 @@ export default function Pedidos() {
     setLoading(false);
 
     setPedidoConfirmado({
+      pedido_id: pedido.id,
       numero,
       cliente: form.cliente_nome,
       status,
@@ -162,6 +197,7 @@ export default function Pedidos() {
       itensComEstoque: itensComEstoque.length,
       itensSemEstoque: itensSemEstoque.length,
     });
+    setPrecosEditados({});
   };
 
   const processarPedidoBling = async (itensVinculados) => {
@@ -240,6 +276,7 @@ export default function Pedidos() {
     await load();
 
     setPedidoConfirmado({
+      pedido_id: pedido.id,
       numero,
       cliente: pedido.cliente_nome,
       status,
@@ -249,6 +286,7 @@ export default function Pedidos() {
       itensComEstoque: itensComEstoque.length,
       itensSemEstoque: itensSemEstoque.length,
     });
+    setPrecosEditados({});
   };
 
   const cancelarPedido = async (id, numero) => {
@@ -418,7 +456,7 @@ export default function Pedidos() {
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <button
-                      onClick={() => setPedidoConfirmado({ numero: p.numero, cliente: p.cliente_nome, status: p.status, itens: p.itens || [], valorTotal: p.valor_total || 0, fromList: true })}
+                      onClick={() => { setPedidoConfirmado({ pedido_id: p.id, numero: p.numero, cliente: p.cliente_nome, status: p.status, itens: p.itens || [], valorTotal: p.valor_total || 0, fromList: true }); setPrecosEditados({}); }}
                       className="font-bold text-foreground hover:text-primary transition-colors text-base"
                     >
                       {p.numero || 'Rascunho'}
@@ -512,7 +550,19 @@ export default function Pedidos() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total</span>
-                  <span className="font-bold text-foreground">{ocultarValores ? VALOR_OCULTO : `R$ ${(pedidoConfirmado.valorTotal || 0).toFixed(2)}`}</span>
+                  {(() => {
+                    const totalLive = pedidoConfirmado.itens.reduce((s, item, i) => {
+                      const p = precosEditados[i] !== undefined ? Number(precosEditados[i]) : getPrecoOriginal(item);
+                      return s + p * (item.quantidade || 0);
+                    }, 0);
+                    const foiEditado = Object.keys(precosEditados).length > 0;
+                    return (
+                      <span className={`font-bold ${foiEditado ? 'text-amber-600' : 'text-foreground'}`}>
+                        {ocultarValores ? VALOR_OCULTO : `R$ ${totalLive.toFixed(2)}`}
+                        {foiEditado && <span className="ml-1 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">editado</span>}
+                      </span>
+                    );
+                  })()}
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Status</span>
@@ -527,15 +577,57 @@ export default function Pedidos() {
                   <p className="text-xs text-rainbow-orange">⚠️ {pedidoConfirmado.itensSemEstoque} produto(s) aguardando produção</p>
                 )}
               </div>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {pedidoConfirmado.itens.map((item, i) => (
-                  <div key={i} className="flex justify-between items-center text-sm bg-muted/50 rounded-lg px-3 py-2">
-                    <span className="text-foreground">{item.produto_nome}</span>
-                    <span className="font-medium text-foreground">{item.quantidade} un</span>
-                  </div>
-                ))}
+              {podeEditarPrecos && pedidoConfirmado.pedido_id && !['cancelado','entregue'].includes(pedidoConfirmado.status) && (
+                <div className="flex items-center gap-1.5 text-xs text-primary bg-primary/5 border border-primary/20 rounded-lg px-3 py-2">
+                  <Pencil size={11} /> Você pode editar os preços diretamente abaixo
+                </div>
+              )}
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {pedidoConfirmado.itens.map((item, i) => {
+                  const precoBase = getPrecoOriginal(item);
+                  const precoAtual = precosEditados[i] !== undefined ? precosEditados[i] : precoBase;
+                  const foiAlterado = precosEditados[i] !== undefined && Number(precosEditados[i]) !== precoBase;
+                  const canEdit = podeEditarPrecos && pedidoConfirmado.pedido_id && !['cancelado','entregue'].includes(pedidoConfirmado.status);
+                  return (
+                    <div key={i} className={`text-sm rounded-lg px-3 py-2 ${foiAlterado ? 'bg-amber-50 border border-amber-200' : 'bg-muted/50'}`}>
+                      <div className="flex justify-between items-center gap-2">
+                        <span className="text-foreground flex-1 truncate">{item.produto_nome}</span>
+                        <span className="text-xs text-muted-foreground flex-shrink-0">{item.quantidade} un</span>
+                      </div>
+                      <div className="flex items-center justify-between mt-1.5 gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-muted-foreground">Preço unit.:</span>
+                          {canEdit ? (
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={precoAtual}
+                              onChange={e => setPrecosEditados(prev => ({ ...prev, [i]: parseFloat(e.target.value) || 0 }))}
+                              className="w-24 border border-border rounded-lg px-2 py-0.5 text-xs font-semibold bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
+                            />
+                          ) : (
+                            <span className="text-xs font-semibold text-foreground">{ocultarValores ? VALOR_OCULTO : `R$ ${precoBase.toFixed(2)}`}</span>
+                          )}
+                          {foiAlterado && (
+                            <span className="text-[10px] bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded-full font-bold">editado</span>
+                          )}
+                        </div>
+                        <span className="text-xs font-bold text-foreground flex-shrink-0">
+                          {ocultarValores ? VALOR_OCULTO : `R$ ${(Number(precoAtual) * item.quantidade).toFixed(2)}`}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              <button onClick={() => setPedidoConfirmado(null)}
+              {Object.keys(precosEditados).length > 0 && (
+                <button onClick={salvarPrecos} disabled={salvandoPrecos}
+                  className="w-full flex items-center justify-center gap-2 bg-amber-500 text-white py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity">
+                  <Save size={14} /> {salvandoPrecos ? 'Salvando...' : 'Salvar Preços Alterados'}
+                </button>
+              )}
+              <button onClick={() => { setPedidoConfirmado(null); setPrecosEditados({}); }}
                 className="w-full bg-primary text-primary-foreground py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity">
                 Fechar
               </button>
