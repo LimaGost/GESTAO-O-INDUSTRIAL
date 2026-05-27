@@ -19,21 +19,12 @@ Deno.serve(async (req) => {
     const tickets = await base44.asServiceRole.entities.TicketSuporte.list();
     const ticket = tickets.find(t => t.id === ticket_id);
 
-    // Atualiza o ticket com histórico
-    const novoItem = {
-      tipo: 'sistema',
-      autor: respondidoPor,
-      conteudo: resposta,
-      data: agora,
-    };
-    const historico = [...(ticket?.historico || []), novoItem];
-
+    // Atualiza o ticket no sistema
     await base44.asServiceRole.entities.TicketSuporte.update(ticket_id, {
       resposta,
       status: 'respondido',
       respondido_por: respondidoPor,
       data_resposta: agora,
-      historico,
     });
 
     // Cria notificacao para o usuario que abriu o ticket
