@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { MessageSquare, CheckCircle, Send, X, RefreshCw, Clock, User, Circle } from 'lucide-react';
+import { MessageSquare, CheckCircle, Send, X, RefreshCw, Clock, User, Circle, MessageCircle } from 'lucide-react';
 
 const STATUS_CONFIG = {
   aberto:         { label: 'Aberto',          color: 'bg-red-100 text-red-700',    dot: 'bg-red-500' },
@@ -227,23 +227,34 @@ export default function TicketsSuporte() {
                       </p>
                     </div>
                   </div>
-                  {/* Resposta */}
-                  {ticketAberto.resposta && (
-                    <div className="flex items-start gap-3 px-4 py-3 bg-green-50/50">
-                      <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <CheckCircle size={12} className="text-green-600" />
+                  {/* Histórico de interações */}
+                  {(ticketAberto.historico?.length > 0 ? ticketAberto.historico : ticketAberto.resposta ? [{ tipo: 'sistema', autor: ticketAberto.respondido_por, conteudo: ticketAberto.resposta, data: ticketAberto.data_resposta }] : []).map((item, idx) => {
+                    const isDiscord = item.tipo === 'discord';
+                    return (
+                      <div key={idx} className={`flex items-start gap-3 px-4 py-3 ${isDiscord ? 'bg-indigo-50/50' : 'bg-green-50/50'}`}>
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${isDiscord ? 'bg-indigo-100' : 'bg-green-100'}`}>
+                          {isDiscord
+                            ? <MessageCircle size={12} className="text-indigo-600" />
+                            : <CheckCircle size={12} className="text-green-600" />
+                          }
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs font-semibold text-foreground">
+                              {isDiscord ? '🎮 Discord — ' : '💬 Sistema — '}
+                              <span className={isDiscord ? 'text-indigo-700' : 'text-green-700'}>{item.autor}</span>
+                            </p>
+                          </div>
+                          {item.data && (
+                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                              {new Date(item.data).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          )}
+                          <p className={`text-xs text-foreground mt-2 bg-white border rounded-lg px-3 py-2 whitespace-pre-wrap ${isDiscord ? 'border-indigo-200' : 'border-green-200'}`}>{item.conteudo}</p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-foreground">Respondido por <span className="text-green-700">{ticketAberto.respondido_por}</span></p>
-                        {ticketAberto.data_resposta && (
-                          <p className="text-[11px] text-muted-foreground mt-0.5">
-                            {new Date(ticketAberto.data_resposta).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                        )}
-                        <p className="text-xs text-foreground mt-2 bg-white border border-green-200 rounded-lg px-3 py-2 whitespace-pre-wrap">{ticketAberto.resposta}</p>
-                      </div>
-                    </div>
-                  )}
+                    );
+                  })}
                 </div>
               </div>
 

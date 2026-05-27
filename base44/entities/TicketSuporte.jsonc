@@ -45,6 +45,28 @@
     },
     "discord_thread_id": {
       "type": "string"
+    },
+    "historico": {
+      "type": "array",
+      "description": "Registro de todas as intera\u00e7\u00f5es do ticket",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string"
+          },
+          "autor": {
+            "type": "string"
+          },
+          "conteudo": {
+            "type": "string"
+          },
+          "data": {
+            "type": "string"
+          }
+        }
+      },
+      "default": []
     }
   },
   "required": [

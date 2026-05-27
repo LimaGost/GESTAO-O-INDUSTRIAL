@@ -60,12 +60,21 @@ Deno.serve(async (req) => {
 
         if (!mensagemResposta?.trim()) continue;
 
-        // Atualiza o ticket no sistema
+        // Atualiza o ticket no sistema com histórico
+        const novoItem = {
+          tipo: 'discord',
+          autor: respondidoPor,
+          conteudo: mensagemResposta,
+          data: new Date(ultimaResposta.timestamp).toISOString(),
+        };
+        const historico = [...(ticket.historico || []), novoItem];
+
         await base44.asServiceRole.entities.TicketSuporte.update(ticket.id, {
           resposta: mensagemResposta,
           respondido_por: respondidoPor,
           data_resposta: new Date(ultimaResposta.timestamp).toISOString(),
           status: 'respondido',
+          historico,
         });
 
         // Confirma na thread que a resposta foi enviada ao usuário
