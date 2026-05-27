@@ -212,7 +212,7 @@ export default function TicketsSuporte() {
                    <button onClick={buscarDoDiscord} disabled={buscandoDiscord}
                      className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:bg-primary/10 px-2 py-1 rounded-lg transition-colors disabled:opacity-50">
                      <RefreshCw size={11} className={buscandoDiscord ? 'animate-spin' : ''} />
-                     {buscandoDiscord ? 'Buscando...' : 'Buscar do Discord'}
+                     {buscandoDiscord ? 'Buscando...' : 'Buscar Atualização'}
                    </button>
                  )}
                 </div>
