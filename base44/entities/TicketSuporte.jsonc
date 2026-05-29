@@ -21,7 +21,8 @@
         "aberto",
         "em_atendimento",
         "respondido",
-        "fechado"
+        "fechado",
+        "cancelado"
       ],
       "default": "aberto"
     },

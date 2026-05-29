@@ -7,6 +7,7 @@ const STATUS_CONFIG = {
   em_atendimento: { label: 'Em Atendimento',  color: 'bg-blue-100 text-blue-700',  dot: 'bg-blue-500' },
   respondido:     { label: 'Respondido',      color: 'bg-green-100 text-green-700', dot: 'bg-green-500' },
   fechado:        { label: 'Fechado',         color: 'bg-gray-100 text-gray-600',  dot: 'bg-gray-400' },
+  cancelado:      { label: 'Cancelado',       color: 'bg-orange-100 text-orange-700', dot: 'bg-orange-500' },
 };
 
 const TIPO_EMOJIS = { suporte: '🆘', melhoria: '💡', bug: '🐛', elogio: '⭐', outro: '📌' };
@@ -21,6 +22,7 @@ export default function TicketsSuporte() {
   const [filtroStatus, setFiltroStatus] = useState('todos');
   const [user, setUser] = useState(null);
   const [buscandoDiscord, setBuscandoDiscord] = useState(false);
+  const [cancelando, setCancelando] = useState(false);
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
@@ -107,6 +109,17 @@ export default function TicketsSuporte() {
     }
   };
 
+  const cancelarTicket = async () => {
+    if (!window.confirm('Tem certeza que deseja cancelar este ticket? Isso também notificará o Discord.')) return;
+    setCancelando(true);
+    await base44.functions.invoke('cancelarTicketDiscord', { ticket_id: ticketAberto.id });
+    const updated = await base44.entities.TicketSuporte.list('-created_date');
+    setTickets(updated);
+    const atualizado = updated.find(t => t.id === ticketAberto.id);
+    if (atualizado) setTicketAberto(atualizado);
+    setCancelando(false);
+  };
+
   const ticketsFiltrados = filtroStatus === 'todos'
     ? tickets
     : tickets.filter(t => t.status === filtroStatus);
@@ -132,7 +145,7 @@ export default function TicketsSuporte() {
 
       {/* Filtros */}
       <div className="flex gap-2 flex-wrap">
-        {[{ k: 'todos', l: 'Todos' }, { k: 'aberto', l: 'Abertos' }, { k: 'em_atendimento', l: 'Em Atendimento' }, { k: 'respondido', l: 'Respondidos' }, { k: 'fechado', l: 'Fechados' }].map(f => (
+        {[{ k: 'todos', l: 'Todos' }, { k: 'aberto', l: 'Abertos' }, { k: 'em_atendimento', l: 'Em Atendimento' }, { k: 'respondido', l: 'Respondidos' }, { k: 'fechado', l: 'Fechados' }, { k: 'cancelado', l: 'Cancelados' }].map(f => (
           <button key={f.k} onClick={() => setFiltroStatus(f.k)}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${filtroStatus === f.k ? 'bg-primary text-primary-foreground' : 'bg-card border border-border text-muted-foreground hover:bg-muted'}`}>
             {f.l} {f.k !== 'todos' && <span className="ml-1 opacity-70">{tickets.filter(t => t.status === f.k).length}</span>}
@@ -306,11 +319,15 @@ export default function TicketsSuporte() {
               </div>
             </div>
 
-            {ticketAberto.status !== 'fechado' && (
+            {ticketAberto.status !== 'fechado' && ticketAberto.status !== 'cancelado' && (
               <div className="px-5 py-4 border-t border-border flex gap-3 flex-shrink-0">
                 <button onClick={enviarResposta} disabled={salvando || !resposta.trim()}
                   className="flex-1 flex items-center justify-center gap-2 bg-primary text-primary-foreground py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity">
                   <Send size={14} /> {salvando ? 'Salvando...' : 'Salvar Resposta'}
+                </button>
+                <button onClick={cancelarTicket} disabled={cancelando}
+                  className="flex items-center gap-1.5 px-4 border border-red-300 text-red-600 rounded-xl text-sm font-semibold hover:bg-red-50 disabled:opacity-50 transition-colors">
+                  <X size={14} /> {cancelando ? 'Cancelando...' : 'Cancelar'}
                 </button>
                 <button onClick={() => setTicketAberto(null)}
                   className="px-4 border border-border rounded-xl text-sm text-muted-foreground hover:bg-muted transition-colors">
