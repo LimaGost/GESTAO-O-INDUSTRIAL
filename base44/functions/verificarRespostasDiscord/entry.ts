@@ -45,6 +45,45 @@ Deno.serve(async (req) => {
         );
         if (ticket.resposta) historicoMensagens.add(ticket.resposta.trim());
 
+        // Verifica se alguma mensagem contém o comando de fechar ticket
+        const mensagemFechamento = mensagens.find(m =>
+          !m.author?.bot && m.content?.toLowerCase().includes('ticket fechado')
+        );
+
+        if (mensagemFechamento) {
+          const fechadoPor = mensagemFechamento.author?.username || 'Equipe';
+          const agora = new Date().toISOString();
+          const historicoAtual = ticket.historico_respostas || [];
+          await base44.asServiceRole.entities.TicketSuporte.update(ticket.id, {
+            status: 'fechado',
+            historico_respostas: [...historicoAtual, {
+              mensagem: 'Ticket fechado via Discord',
+              respondido_por: fechadoPor,
+              data: agora,
+              origem: 'discord',
+            }],
+          });
+          // Notifica o usuário
+          if (ticket.created_by_id) {
+            await base44.asServiceRole.entities.Notificacao.create({
+              titulo: `Seu ticket foi fechado: ${ticket.titulo}`,
+              descricao: `Encerrado por ${fechadoPor} via Discord`,
+              tipo: 'suporte',
+              lida: false,
+              link: '/Suporte',
+              usuario_id: ticket.created_by_id,
+            });
+          }
+          // Confirma no Discord
+          await fetch(`https://discord.com/api/v10/channels/${ticket.discord_thread_id}/messages`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bot ${botToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: `✅ **Ticket fechado com sucesso por ${fechadoPor}. Esta thread foi encerrada.**` }),
+          });
+          atualizados++;
+          continue;
+        }
+
         const respostasHumanas = mensagens.filter(m => {
           if (m.author?.bot) return false;
           if (!m.content?.trim()) return false;
