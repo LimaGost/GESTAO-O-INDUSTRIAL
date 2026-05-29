@@ -59,9 +59,9 @@ Deno.serve(async (req) => {
             ? (mensagemFechamento.author?.username || 'Equipe')
             : (fechamentoNoHistorico.respondido_por || 'Equipe');
           const fechadoPor = quemFechou;
+          const historicoAtual = ticket.historico_respostas || [];
           const jaTemEntradaFechamento = historicoAtual.some(h => h.mensagem === 'Ticket fechado via Discord');
           const agora = new Date().toISOString();
-          const historicoAtual = ticket.historico_respostas || [];
           const novoHistorico = jaTemEntradaFechamento
             ? historicoAtual
             : [...historicoAtual, { mensagem: 'Ticket fechado via Discord', respondido_por: fechadoPor, data: agora, origem: 'discord' }];
