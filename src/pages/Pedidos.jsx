@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Plus, X, CheckCircle, AlertTriangle, Search, ShoppingCart, Clock, Package, Truck, Ban, FileText, Eye, Zap, Pencil, Save } from 'lucide-react';
+import { Plus, X, CheckCircle, AlertTriangle, Search, ShoppingCart, Clock, Package, Truck, Ban, FileText, Eye, Zap, Pencil, Save, Link2 } from 'lucide-react';
+import ModalGrupamento from '@/components/pedidos/ModalGrupamento';
 import ModalProcessarBling from '@/components/pedidos/ModalProcessarBling';
 import SeletorProdutos from '@/components/pedidos/SeletorProdutos';
 import { gerarNumero, gerarLote } from '@/lib/numeracao';
@@ -37,18 +38,22 @@ export default function Pedidos() {
   const [user, setUser] = useState(null);
   const [precosEditados, setPrecosEditados] = useState({});
   const [salvandoPrecos, setSalvandoPrecos] = useState(false);
+  const [grupos, setGrupos] = useState([]);
+  const [showGrupamento, setShowGrupamento] = useState(false);
 
   const load = async () => {
-    const [p, c, pr, exp] = await Promise.all([
+    const [p, c, pr, exp, gps] = await Promise.all([
       base44.entities.Pedido.list('-created_date'),
       base44.entities.Cliente.list(),
       base44.entities.Produto.list(),
       base44.entities.Expedicao.list(),
+      base44.entities.GrupoPedidos.list(),
     ]);
     setPedidos(p);
     setClientes(c);
     setProdutos(pr);
     setExpedicoes(exp);
+    setGrupos(gps.filter(g => g.status !== 'desfeito'));
   };
 
   useEffect(() => {
@@ -371,16 +376,22 @@ export default function Pedidos() {
             <p className="text-xs text-muted-foreground">{pedidos.filter(p => !['expedido','cancelado'].includes(p.status)).length} pedido(s) ativo(s)</p>
           </div>
         </div>
-        {!readonly ? (
-          <button onClick={() => setShowForm(!showForm)}
-            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm">
-            <Plus size={16} /> Novo Pedido
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowGrupamento(true)}
+            className="flex items-center gap-2 border border-violet-300 text-violet-700 bg-violet-50 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-violet-100 transition-colors">
+            <Link2 size={15} /> Grupos {grupos.length > 0 && <span className="text-xs bg-violet-200 text-violet-800 px-1.5 py-0.5 rounded-full font-bold">{grupos.length}</span>}
           </button>
-        ) : (
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted px-3 py-2 rounded-xl">
-            <Eye size={13} /> Somente visualização
-          </span>
-        )}
+          {!readonly ? (
+            <button onClick={() => setShowForm(!showForm)}
+              className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm">
+              <Plus size={16} /> Novo Pedido
+            </button>
+          ) : (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted px-3 py-2 rounded-xl">
+              <Eye size={13} /> Somente visualização
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Busca */}
@@ -464,6 +475,11 @@ export default function Pedidos() {
                     <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-semibold ${st.color}`}>
                       <StIcon size={10} /> {st.label}
                     </span>
+                    {grupos.find(g => (g.pedidos_ids || []).includes(p.id)) && (
+                      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-semibold">
+                        <Link2 size={9} /> Grupo
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {!readonly && p.status === 'rascunho' && (p.observacoes || '').includes('Bling') && (
@@ -518,6 +534,43 @@ export default function Pedidos() {
         )}
       </div>
 
+      {/* Grupos Ativos */}
+      {grupos.length > 0 && (
+        <div className="mt-2 space-y-3">
+          <div className="flex items-center gap-2 py-2 border-t border-border mt-4">
+            <Link2 size={14} className="text-violet-600" />
+            <h3 className="text-sm font-bold text-foreground">Grupos Ativos</h3>
+            <span className="text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full font-semibold">{grupos.length}</span>
+          </div>
+          {grupos.map(g => {
+            const pedidosGrupo = pedidos.filter(p => (g.pedidos_ids || []).includes(p.id));
+            const totalConsolidado = pedidosGrupo.reduce((s, p) => s + (p.valor_total || 0), 0);
+            return (
+              <div key={g.id} className="bg-violet-50 border border-violet-200 rounded-2xl p-4">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0">
+                      <Link2 size={13} className="text-violet-700" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{g.cliente_nome}</p>
+                      <p className="text-xs text-muted-foreground">{(g.pedidos_numeros || []).map(n => `#${n}`).join(' · ')}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-violet-800">R$ {totalConsolidado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    <p className="text-xs text-muted-foreground">total consolidado</p>
+                  </div>
+                </div>
+                {g.observacoes && (
+                  <p className="text-xs text-muted-foreground mt-2 bg-white border border-violet-100 rounded-lg px-2.5 py-1.5">{g.observacoes}</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Modal processar Bling */}
       {pedidoBlingProcessar && (
         <ModalProcessarBling
@@ -526,6 +579,15 @@ export default function Pedidos() {
           loading={processandoBling}
           onConfirmar={processarPedidoBling}
           onClose={() => setPedidoBlingProcessar(null)}
+        />
+      )}
+
+      {showGrupamento && (
+        <ModalGrupamento
+          pedidos={pedidos}
+          grupos={grupos}
+          onClose={() => setShowGrupamento(false)}
+          onRefresh={load}
         />
       )}
 

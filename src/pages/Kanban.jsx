@@ -98,6 +98,7 @@ export default function Kanban() {
   const [ordens, setOrdens] = useState([]);
   const [produtos, setProdutos] = useState([]);
   const [pedidoMap, setPedidoMap] = useState({});
+  const [grupoMap, setGrupoMap] = useState({});
   const [checklistConfigs, setChecklistConfigs] = useState({});
   const [checklistOk, setChecklistOk] = useState({});
   const [loadingId, setLoadingId] = useState(null);
@@ -163,17 +164,23 @@ export default function Kanban() {
 
   const load = async (invalidate = false) => {
     if (invalidate) {cacheInvalidate('OrdemProducao');cacheInvalidate('Produto');cacheInvalidate('Pedido');}
-    const [ords, prods, checklists, peds] = await Promise.all([
+    const [ords, prods, checklists, peds, gps] = await Promise.all([
     cachedFetch('OrdemProducao', () => base44.entities.OrdemProducao.list('-created_date'), 30_000),
     cachedFetch('Produto', () => base44.entities.Produto.list(), 120_000),
     cachedFetch('ChecklistConfig', () => base44.entities.ChecklistConfig.list(), 300_000),
-    cachedFetch('Pedido', () => base44.entities.Pedido.list(), 60_000)]
+    cachedFetch('Pedido', () => base44.entities.Pedido.list(), 60_000),
+    base44.entities.GrupoPedidos.list().catch(() => [])]
     );
     setOrdens(ords);
     setProdutos(prods);
     const pm = {};
     for (const p of peds) pm[p.id] = { nome: p.cliente_nome, cliente_id: p.cliente_id };
     setPedidoMap(pm);
+    const gm = {};
+    for (const g of gps.filter(g => g.status !== 'desfeito')) {
+      for (const pid of (g.pedidos_ids || [])) gm[pid] = g;
+    }
+    setGrupoMap(gm);
     const map = {};
     for (const c of checklists) map[c.etapa] = c;
     setChecklistConfigs(map);
@@ -630,22 +637,32 @@ export default function Kanban() {
                     </div>
                     <p className="text-xs text-muted-foreground">Sem ordens</p>
                   </div> :
-                colOrdens.map((ordem) =>
-                <KanbanCard
-                  key={ordem.id}
-                  ordem={ordem}
-                  clienteNome={ordem.pedido_id ? pedidoMap[ordem.pedido_id]?.nome : null}
-                  checklistConfigs={checklistConfigs}
-                  checklistOk={checklistOk}
-                  setChecklistOk={setChecklistOk}
-                  onAvancar={readonly ? null : avancarStatus}
-                  loading={loadingId === ordem.id}
-                  onOpenModal={() => setOrdemSelecionada(ordem)}
-                  labelBotao={PROXIMOS[key] ? `→ ${kanbanColunas.find((c) => c.key === PROXIMOS[key])?.label || ''}` : null}
-                  acaoAtual={kanbanColunas.find((c) => c.key === key)?.acao || ''}
-                  onCancelar={key === 'a_produzir' && podeGerenciarProducao && !readonly ? cancelarOP : null} />
-
-                )}
+                colOrdens.map((ordem) => {
+                  const grupoOrdem = ordem.pedido_id ? grupoMap[ordem.pedido_id] : null;
+                  return (
+                    <div key={ordem.id} className="relative">
+                      {grupoOrdem && (
+                        <div className="absolute top-2 right-2 z-10 flex items-center gap-1 bg-violet-100 text-violet-700 text-[10px] px-2 py-0.5 rounded-full font-semibold pointer-events-none">
+                          🔗 Grupo
+                        </div>
+                      )}
+                      <KanbanCard
+                        ordem={ordem}
+                        clienteNome={ordem.pedido_id ? pedidoMap[ordem.pedido_id]?.nome : null}
+                        checklistConfigs={checklistConfigs}
+                        checklistOk={checklistOk}
+                        setChecklistOk={setChecklistOk}
+                        onAvancar={readonly ? null : avancarStatus}
+                        loading={loadingId === ordem.id}
+                        onOpenModal={() => setOrdemSelecionada(ordem)}
+                        labelBotao={PROXIMOS[key] ? `→ ${kanbanColunas.find((c) => c.key === PROXIMOS[key])?.label || ''}` : null}
+                        acaoAtual={kanbanColunas.find((c) => c.key === key)?.acao || ''}
+                        onCancelar={key === 'a_produzir' && podeGerenciarProducao && !readonly ? cancelarOP : null}
+                      />
+                    </div>
+                  );
+                })
+                }
               </div>
             </div>);
 

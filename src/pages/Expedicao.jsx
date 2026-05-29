@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { gerarDANFEHTML } from '@/lib/danfeGenerator';
-import { Truck, FileText, CheckCircle, Plus, Search, X, Send, Printer, ExternalLink, RefreshCw, Package, ArrowRight } from 'lucide-react';
+import { Truck, FileText, CheckCircle, Plus, Search, X, Send, Printer, ExternalLink, RefreshCw, Package, ArrowRight, Link2 } from 'lucide-react';
 import { gerarNumero } from '@/lib/numeracao';
 import { registrarLog } from '@/lib/audit';
 import ModalConfirmacaoRecebimento from '@/components/expedicao/ModalConfirmacaoRecebimento';
@@ -194,12 +194,14 @@ export default function Expedicao() {
   const [advancingId, setAdvancingId] = useState(null);
   const [emitindoOpId, setEmitindoOpId] = useState(null);
   const [etiquetaExpedicao, setEtiquetaExpedicao] = useState(null);
+  const [grupoMap, setGrupoMap] = useState({});
 
   const load = async () => {
-    const [exps, ordens, pedidos] = await Promise.all([
+    const [exps, ordens, pedidos, gps] = await Promise.all([
       base44.entities.Expedicao.list('-created_date'),
       base44.entities.OrdemProducao.list('-created_date'),
       base44.entities.Pedido.list(),
+      base44.entities.GrupoPedidos.list().catch(() => []),
     ]);
 
     setExpedicoes(exps);
@@ -210,9 +212,7 @@ export default function Expedicao() {
 
     const finalizadas = ordens.filter(o => {
       if (o.status !== 'finalizado') return false;
-      // Apenas OPs vinculadas a um pedido
       if (!o.pedido_id) return false;
-      // Só mostra se o pedido ainda não tem expedição
       return !expPedidoIds.has(o.pedido_id);
     });
 
@@ -221,6 +221,12 @@ export default function Expedicao() {
     const pm = {};
     for (const p of pedidos) pm[p.id] = { nome: p.cliente_nome, cliente_id: p.cliente_id, itens: p.itens, valor_total: p.valor_total, numero: p.numero };
     setPedidoMap(pm);
+
+    const gm = {};
+    for (const g of gps.filter(g => g.status !== 'desfeito')) {
+      for (const pid of (g.pedidos_ids || [])) gm[pid] = g;
+    }
+    setGrupoMap(gm);
   };
 
   useEffect(() => { load(); }, []);
@@ -669,26 +675,38 @@ export default function Expedicao() {
                   </div>
                 ) : isAExpedir ? (
                   cards.map(op => (
-                    <OPFinalizadaCard
-                      key={op.id}
-                      op={op}
-                      clienteNome={op.pedido_id ? pedidoMap[op.pedido_id]?.nome : null}
-                      onEmitirNF={readonly ? null : emitirNFdaOP}
-                      emitindo={emitindoOpId === op.id}
-                    />
+                    <div key={op.id} className="relative">
+                      {grupoMap[op.pedido_id] && (
+                        <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-violet-100 text-violet-700 text-[10px] px-2 py-0.5 rounded-full font-semibold pointer-events-none">
+                          <Link2 size={9} /> Grupo
+                        </div>
+                      )}
+                      <OPFinalizadaCard
+                        op={op}
+                        clienteNome={op.pedido_id ? pedidoMap[op.pedido_id]?.nome : null}
+                        onEmitirNF={readonly ? null : emitirNFdaOP}
+                        emitindo={emitindoOpId === op.id}
+                      />
+                    </div>
                   ))
                 ) : (
                   cards.map(exp => (
-                    <ExpedicaoCard
-                       key={exp.id}
-                       exp={exp}
-                       coluna={coluna}
-                       advancing={advancingId === exp.id}
-                       onAvancar={readonly ? null : atualizarStatus}
-                       onImprimirNF={imprimirDANFE}
-                       onImprimirEtiqueta={readonly ? null : (exp) => setEtiquetaExpedicao(exp)}
-                       onConfirmarRecebimento={readonly ? null : (exp) => setModalConfirmacao(exp)}
-                     />
+                    <div key={exp.id} className="relative">
+                      {grupoMap[exp.pedido_id] && (
+                        <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-violet-100 text-violet-700 text-[10px] px-2 py-0.5 rounded-full font-semibold pointer-events-none">
+                          <Link2 size={9} /> Grupo
+                        </div>
+                      )}
+                      <ExpedicaoCard
+                         exp={exp}
+                         coluna={coluna}
+                         advancing={advancingId === exp.id}
+                         onAvancar={readonly ? null : atualizarStatus}
+                         onImprimirNF={imprimirDANFE}
+                         onImprimirEtiqueta={readonly ? null : (exp) => setEtiquetaExpedicao(exp)}
+                         onConfirmarRecebimento={readonly ? null : (exp) => setModalConfirmacao(exp)}
+                      />
+                    </div>
                   ))
                 )}
               </div>

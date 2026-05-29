@@ -1,0 +1,48 @@
+{
+  "name": "GrupoPedidos",
+  "type": "object",
+  "properties": {
+    "cliente_id": {
+      "type": "string"
+    },
+    "cliente_nome": {
+      "type": "string"
+    },
+    "pedidos_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "pedidos_numeros": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "valor_total_consolidado": {
+      "type": "number",
+      "default": 0
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ativo",
+        "desfeito"
+      ],
+      "default": "ativo"
+    },
+    "observacoes": {
+      "type": "string"
+    },
+    "criado_por": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "cliente_nome",
+    "pedidos_ids"
+  ]
+}
