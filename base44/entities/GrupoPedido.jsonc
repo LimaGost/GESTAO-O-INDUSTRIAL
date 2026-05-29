@@ -1,0 +1,57 @@
+{
+  "name": "GrupoPedido",
+  "type": "object",
+  "properties": {
+    "nome": {
+      "type": "string",
+      "description": "Nome/identificador do grupo"
+    },
+    "cliente_id": {
+      "type": "string",
+      "description": "ID do cliente"
+    },
+    "cliente_nome": {
+      "type": "string",
+      "description": "Nome do cliente"
+    },
+    "pedidos_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs dos pedidos agrupados",
+      "default": []
+    },
+    "pedidos_numeros": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "N\u00fameros dos pedidos para exibi\u00e7\u00e3o",
+      "default": []
+    },
+    "total_consolidado": {
+      "type": "number",
+      "description": "Valor total consolidado dos pedidos",
+      "default": 0
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ativo",
+        "desfeito"
+      ],
+      "default": "ativo"
+    },
+    "observacoes": {
+      "type": "string"
+    },
+    "criado_por": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "cliente_nome",
+    "pedidos_ids"
+  ]
+}
