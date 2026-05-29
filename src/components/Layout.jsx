@@ -5,7 +5,7 @@ import {
   LayoutDashboard, ShoppingCart, Factory, Package,
   Truck, Settings, ChevronLeft, ChevronRight, ChevronUp,
   Bell, Tag, Users, Archive, SlidersHorizontal, BarChart2,
-  Database, MoreHorizontal, RefreshCw, Trash2, MessageCircle, LogOut, User, AlertTriangle, HeadphonesIcon, Link2
+  Database, MoreHorizontal, RefreshCw, Trash2, MessageCircle, LogOut, User, AlertTriangle, HeadphonesIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
@@ -16,7 +16,6 @@ import { useAuth } from '@/lib/AuthContext';
 const bottomTabs = [
   { path: '/Dashboard',    label: 'Dashboard',  icon: LayoutDashboard },
   { path: '/Pedidos',      label: 'Pedidos',    icon: ShoppingCart },
-  { path: '/PedidosAgrupados', label: 'Agrupados',  icon: Link2 },
   { path: '/Kanban',       label: 'Kanban',     icon: Factory },
   { path: '/Estoque',      label: 'Estoque',    icon: Archive },
   { path: '/Configuracoes',label: 'Config.',    icon: SlidersHorizontal },
@@ -28,7 +27,6 @@ const navGroups = [
     items: [
       { path: '/Dashboard',  label: 'Dashboard',       icon: LayoutDashboard },
       { path: '/Pedidos',    label: 'Pedidos',          icon: ShoppingCart },
-      { path: '/PedidosAgrupados', label: 'Ped. Agrupados', icon: Link2 },
       { path: '/Kanban',     label: 'Kanban Produção',  icon: Factory },
       { path: '/Estoque',    label: 'Estoque',          icon: Archive },
     ],
@@ -64,7 +62,6 @@ const navGroups = [
 const allNavItems = [
   { path: '/Dashboard',      label: 'Dashboard',        icon: LayoutDashboard },
   { path: '/Pedidos',        label: 'Pedidos',           icon: ShoppingCart },
-  { path: '/PedidosAgrupados', label: 'Ped. Agrupados',  icon: Link2 },
   { path: '/Kanban',         label: 'Kanban Produção',   icon: Factory },
   { path: '/Estoque',        label: 'Estoque',           icon: Archive },
   { path: '/Etiquetas',      label: 'Etiquetas',         icon: Tag },
@@ -89,7 +86,6 @@ const PATH_MODULO = {
   '/Etiquetas':    'Etiquetas',
   '/Expedicao':    'Expedicao',
   '/CRM':                  'Clientes',
-  '/PedidosAgrupados':       'Pedidos',
   '/Clientes':     'Clientes',
   '/Produtos':     'Produtos',
   '/Relatorios':   'Relatorios',
