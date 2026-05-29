@@ -637,31 +637,57 @@ export default function Kanban() {
                     </div>
                     <p className="text-xs text-muted-foreground">Sem ordens</p>
                   </div> :
-                colOrdens.map((ordem) => {
-                  const grupoOrdem = ordem.pedido_id ? grupoMap[ordem.pedido_id] : null;
-                  return (
-                    <div key={ordem.id} className="relative">
-                      {grupoOrdem && (
-                        <div className="absolute top-2 right-2 z-10 flex items-center gap-1 bg-violet-100 text-violet-700 text-[10px] px-2 py-0.5 rounded-full font-semibold pointer-events-none">
-                          🔗 Grupo
-                        </div>
-                      )}
-                      <KanbanCard
-                        ordem={ordem}
-                        clienteNome={ordem.pedido_id ? pedidoMap[ordem.pedido_id]?.nome : null}
-                        checklistConfigs={checklistConfigs}
-                        checklistOk={checklistOk}
-                        setChecklistOk={setChecklistOk}
-                        onAvancar={readonly ? null : avancarStatus}
-                        loading={loadingId === ordem.id}
-                        onOpenModal={() => setOrdemSelecionada(ordem)}
-                        labelBotao={PROXIMOS[key] ? `→ ${kanbanColunas.find((c) => c.key === PROXIMOS[key])?.label || ''}` : null}
-                        acaoAtual={kanbanColunas.find((c) => c.key === key)?.acao || ''}
-                        onCancelar={key === 'a_produzir' && podeGerenciarProducao && !readonly ? cancelarOP : null}
-                      />
-                    </div>
+                (() => {
+                  const gruposEmColuna = {};
+                  const ordensNaoAgrupadas = [];
+                  for (const ordem of colOrdens) {
+                    const grupo = ordem.pedido_id ? grupoMap[ordem.pedido_id] : null;
+                    if (grupo) {
+                      if (!gruposEmColuna[grupo.id]) gruposEmColuna[grupo.id] = { grupo, ordens: [] };
+                      gruposEmColuna[grupo.id].ordens.push(ordem);
+                    } else {
+                      ordensNaoAgrupadas.push(ordem);
+                    }
+                  }
+                  const renderCard = (ordem) => (
+                    <KanbanCard
+                      key={ordem.id}
+                      ordem={ordem}
+                      clienteNome={ordem.pedido_id ? pedidoMap[ordem.pedido_id]?.nome : null}
+                      checklistConfigs={checklistConfigs}
+                      checklistOk={checklistOk}
+                      setChecklistOk={setChecklistOk}
+                      onAvancar={readonly ? null : avancarStatus}
+                      loading={loadingId === ordem.id}
+                      onOpenModal={() => setOrdemSelecionada(ordem)}
+                      labelBotao={PROXIMOS[key] ? `→ ${kanbanColunas.find((c) => c.key === PROXIMOS[key])?.label || ''}` : null}
+                      acaoAtual={kanbanColunas.find((c) => c.key === key)?.acao || ''}
+                      onCancelar={key === 'a_produzir' && podeGerenciarProducao && !readonly ? cancelarOP : null}
+                    />
                   );
-                })
+                  return (
+                    <>
+                      {Object.values(gruposEmColuna).map(({ grupo, ordens: ordensGrupo }) => (
+                        <div key={`grp-${grupo.id}`} className="border border-violet-300 rounded-2xl overflow-hidden mb-1.5">
+                          <div className="px-3 py-2 bg-violet-100 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="text-xs">🔗</span>
+                              <span className="text-xs font-bold text-violet-800 truncate">{grupo.cliente_nome}</span>
+                              <span className="text-[10px] text-violet-600">{(grupo.pedidos_numeros || []).map(n => `#${n}`).join(' · ')}</span>
+                            </div>
+                            <span className="text-[10px] bg-violet-200 text-violet-700 px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0">
+                              {ordensGrupo.length} OP{ordensGrupo.length !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+                          <div className="bg-violet-50/40 p-1.5 space-y-1.5">
+                            {ordensGrupo.map(renderCard)}
+                          </div>
+                        </div>
+                      ))}
+                      {ordensNaoAgrupadas.map(renderCard)}
+                    </>
+                  );
+                })()
                 }
               </div>
             </div>);
