@@ -47,17 +47,20 @@ export default function Pedidos() {
   const [showFiltros, setShowFiltros] = useState(false);
   const [sincronizandoBling, setSincronizandoBling] = useState(false);
   const loadingRef = useRef(false);
+  const staticLoadedRef = useRef(false);
 
-  // Carrega apenas pedidos + expedições + grupos (dados dinâmicos)
+  // Carrega todos os dados em paralelo, com guard contra chamadas simultâneas
   const load = async () => {
     if (loadingRef.current) return;
     loadingRef.current = true;
     try {
-      const p = await base44.entities.Pedido.list('-created_date');
+      const [p, exp, gps] = await Promise.all([
+        base44.entities.Pedido.list('-created_date'),
+        base44.entities.Expedicao.list(),
+        base44.entities.GrupoPedidos.list().catch(() => []),
+      ]);
       setPedidos(p);
-      const exp = await base44.entities.Expedicao.list();
       setExpedicoes(exp);
-      const gps = await base44.entities.GrupoPedidos.list();
       setGrupos(gps.filter(g => g.status !== 'desfeito'));
     } finally {
       loadingRef.current = false;
@@ -66,16 +69,18 @@ export default function Pedidos() {
 
   // Carrega dados estáticos (clientes, produtos) apenas uma vez
   const loadStatic = async () => {
-    const c = await base44.entities.Cliente.list();
+    if (staticLoadedRef.current) return;
+    staticLoadedRef.current = true;
+    const [c, pr] = await Promise.all([
+      base44.entities.Cliente.list(),
+      base44.entities.Produto.list(),
+    ]);
     setClientes(c);
-    const pr = await base44.entities.Produto.list();
     setProdutos(pr);
   };
 
   useEffect(() => {
-    load();
-    loadStatic();
-    base44.auth.me().then(setUser).catch(() => {});
+    Promise.all([load(), loadStatic(), base44.auth.me().then(setUser).catch(() => {})]);
   }, []);
 
   const podeEditarPrecos = user?.role === 'vendedor' || user?.role === 'admin';
