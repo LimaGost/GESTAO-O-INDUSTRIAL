@@ -91,7 +91,7 @@ const AuthenticatedApp = () => {
           <Route path="/CRM" element={<RotaProtegida modulo="Clientes"><CRM /></RotaProtegida>} />
           <Route path="/Chat" element={<Chat />} />
           <Route path="/Suporte" element={<Suporte />} />
-          <Route path="/TicketsSuporte" element={<RotaProtegida modulo="Configuracoes"><TicketsSuporte /></RotaProtegida>} />
+          <Route path="/TicketsSuporte" element={<TicketsSuporte />} />
           <Route path="/SupabaseSchemas" element={<SupabaseSchemas />} />
           <Route path="/Configuracoes"  element={<RotaProtegida modulo="Configuracoes">  <Configuracoes />  </RotaProtegida>} />
         </Route>
