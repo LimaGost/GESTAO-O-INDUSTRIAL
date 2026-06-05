@@ -64,6 +64,8 @@ Deno.serve(async (req) => {
       limite: String(Math.min(limite, 100)),
       dataInicial: dInicio,
       dataFinal: dFim,
+      dataEmissaoInicial: dInicio,
+      dataEmissaoFinal: dFim,
     });
 
     // Busca pedidos no Bling v3
