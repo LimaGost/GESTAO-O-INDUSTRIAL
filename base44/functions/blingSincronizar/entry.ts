@@ -58,12 +58,12 @@ Deno.serve(async (req) => {
     const dInicio = dataInicio || hoje;
     const dFim = dataFim || hoje;
 
-    // Monta query params (Bling v3 usa YYYY-MM-DD)
+    // Monta query params (Bling v3: dataInicial/dataFinal para filtrar por data do pedido)
     const params = new URLSearchParams({
       pagina: String(pagina),
       limite: String(Math.min(limite, 100)),
-      dataInicio: dInicio,
-      dataFim: dFim,
+      dataInicial: dInicio,
+      dataFinal: dFim,
     });
 
     // Busca pedidos no Bling v3
@@ -81,7 +81,13 @@ Deno.serve(async (req) => {
     }
 
     const json = await res.json();
-    const pedidosBling = json.data || [];
+    // Filtra localmente por data do pedido como segurança extra
+    const todosPedidosBling = json.data || [];
+    const pedidosBling = todosPedidosBling.filter(p => {
+      const dataPed = (p.data || '').split('T')[0];
+      return dataPed >= dInicio && dataPed <= dFim;
+    });
+    console.log(`[blingSincronizar] Bling retornou ${todosPedidosBling.length} pedidos, ${pedidosBling.length} dentro do período ${dInicio} a ${dFim}`);
 
     // Busca todos os pedidos existentes para checar duplicatas pelo número E pelo id Bling
     const pedidosExistentes = await base44.asServiceRole.entities.Pedido.list();
