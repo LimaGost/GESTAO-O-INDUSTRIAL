@@ -8,8 +8,20 @@ import ModalConfirmacaoRecebimento from '@/components/expedicao/ModalConfirmacao
 import NovaExpedicaoModal from '@/components/expedicao/NovaExpedicaoModal';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 import AlertaSeparacao from '@/components/expedicao/AlertaSeparacao';
-import { getExpedicaoColunasConfig } from '@/components/configuracoes/AbaExpedicao';
-import { getWhatsappKanbanConfig, getWhatsappExpedicaoConfig } from '@/components/configuracoes/AbaWhatsapp';
+const EXP_COLUNAS_DEFAULT = [
+  { key: 'a_expedir', label: 'A Expedir',    cor: 4, desc: 'OPs prontas para NF',     fixo: true },
+  { key: 'emitida',   label: 'NF Emitida',   cor: 1, desc: 'Aguardando envio',         fixo: true },
+  { key: 'enviada',   label: 'Em Trânsito',  cor: 3, desc: 'Em rota de entrega',       fixo: true },
+  { key: 'entregue',  label: 'Entregue',     cor: 2, desc: 'Entrega confirmada',       fixo: true },
+];
+
+// Lê configs do localStorage (mantido sincronizado com o banco por AbaWhatsapp/AbaExpedicao)
+function getWhatsappExpedicaoConfig() {
+  try { return JSON.parse(localStorage.getItem('whatsapp_expedicao_config') || 'null') || { etapas_notificar: ['enviada','entregue'], notificar_cliente: true }; } catch { return { etapas_notificar: ['enviada','entregue'], notificar_cliente: true }; }
+}
+function getWhatsappKanbanConfig() {
+  try { return JSON.parse(localStorage.getItem('whatsapp_kanban_config') || 'null') || { numeros_internos: [] }; } catch { return { numeros_internos: [] }; }
+}
 import EtiquetaEndereco from '@/components/expedicao/EtiquetaEndereco';
 
 const CORES_MAP = [
@@ -30,8 +42,7 @@ const ICON_MAP = {
   entregue: CheckCircle,
 };
 
-function buildColunasExp() {
-  const config = getExpedicaoColunasConfig();
+function buildColunasFromConfig(config) {
   return config.map((c, i) => {
     const cores = CORES_MAP[c.cor] || CORES_MAP[0];
     const nextCol = config[i + 1];
@@ -43,6 +54,14 @@ function buildColunasExp() {
       proximoLabel: nextCol && c.key !== 'a_expedir' ? `→ ${nextCol.label}` : null,
     };
   });
+}
+
+function buildColunasExp() {
+  try {
+    const local = JSON.parse(localStorage.getItem('expedicao_colunas_config') || 'null');
+    if (local && Array.isArray(local) && local.length > 0) return buildColunasFromConfig(local);
+  } catch {}
+  return buildColunasFromConfig(EXP_COLUNAS_DEFAULT);
 }
 
 function fmtDate(d) {

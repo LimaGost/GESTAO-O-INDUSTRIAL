@@ -1,4 +1,7 @@
-import { getPrinterConfig } from '@/components/configuracoes/AbaEtiquetas';
+// getPrinterConfig: lê do localStorage (sincronizado pelo banco via AbaEtiquetas)
+function getPrinterConfig() {
+  try { return JSON.parse(localStorage.getItem('printer_config') || '{}'); } catch { return {}; }
+}
 
 function getDimensoes(config) {
   if (config.tamanho === 'custom') {

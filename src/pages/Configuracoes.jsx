@@ -7,11 +7,11 @@ import {
 } from 'lucide-react';
 import SupabaseSchemas from '@/pages/SupabaseSchemas';
 import AbaUsuarios from '@/components/configuracoes/AbaUsuarios';
-import AbaPersonalizacao from '@/components/configuracoes/AbaPersonalizacao';
-import AbaEtiquetas from '@/components/configuracoes/AbaEtiquetas';
-import AbaKanban from '@/components/configuracoes/AbaKanban';
-import AbaWhatsapp from '@/components/configuracoes/AbaWhatsapp';
-import AbaExpedicao from '@/components/configuracoes/AbaExpedicao';
+import AbaPersonalizacao from '@/components/configuracoes/AbaPersonalizacao.jsx';
+import AbaEtiquetas from '@/components/configuracoes/AbaEtiquetas.jsx';
+import AbaKanban from '@/components/configuracoes/AbaKanban.jsx';
+import AbaWhatsapp from '@/components/configuracoes/AbaWhatsapp.jsx';
+import AbaExpedicao from '@/components/configuracoes/AbaExpedicao.jsx';
 import AbaBling from '@/components/configuracoes/AbaBling';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 
@@ -22,6 +22,12 @@ const BADGE_CORES = [
   'bg-rainbow-indigo/10 text-rainbow-indigo', 'bg-muted text-muted-foreground',
 ];
 
+const KANBAN_ETAPAS_DEFAULT = [
+  { key: 'a_produzir', label: 'A Produzir' }, { key: 'em_producao', label: 'Em Produção' },
+  { key: 'produzido', label: 'Produzido' }, { key: 'em_embalagem', label: 'Em Embalagem' },
+  { key: 'em_separacao', label: 'Em Separação' }, { key: 'finalizado', label: 'Finalizado' },
+];
+
 function buildEtapas() {
   try {
     const saved = JSON.parse(localStorage.getItem('kanban_colunas_config') || 'null');
@@ -29,15 +35,7 @@ function buildEtapas() {
       return saved.map((c, i) => ({ key: c.key, label: c.label, badge: BADGE_CORES[i % BADGE_CORES.length] }));
     }
   } catch {}
-  // fallback padrão
-  return [
-    { key: 'a_produzir',   label: 'A Produzir',   badge: BADGE_CORES[0] },
-    { key: 'em_producao',  label: 'Em Produção',  badge: BADGE_CORES[1] },
-    { key: 'produzido',    label: 'Produzido',    badge: BADGE_CORES[2] },
-    { key: 'em_embalagem', label: 'Em Embalagem', badge: BADGE_CORES[3] },
-    { key: 'em_separacao', label: 'Em Separação', badge: BADGE_CORES[7] },
-    { key: 'finalizado',   label: 'Finalizado',   badge: BADGE_CORES[4] },
-  ];
+  return KANBAN_ETAPAS_DEFAULT.map((c, i) => ({ key: c.key, label: c.label, badge: BADGE_CORES[i % BADGE_CORES.length] }));
 }
 
 const ENTIDADES = ['Todas', 'Pedido', 'OrdemProducao', 'Produto', 'Estoque', 'Expedicao', 'Cliente', 'Etiqueta'];
@@ -518,22 +516,49 @@ function AbaAuditoria() {
 
 // ── Aba: Produção ────────────────────────────────────────────────────────────
 
-const CONFIG_KEY = 'producao_capacidade_semanal';
-
 function AbaProducao() {
-  const [capacidade, setCapacidade] = useState(() => parseInt(localStorage.getItem(CONFIG_KEY) || '1000', 10));
-  const [input, setInput] = useState(() => localStorage.getItem(CONFIG_KEY) || '1000');
+  const [capacidade, setCapacidade] = useState(1000);
+  const [input, setInput] = useState('1000');
   const [saved, setSaved] = useState(false);
+  const [loadingCfg, setLoadingCfg] = useState(true);
 
-  const salvar = () => {
+  useEffect(() => {
+    import('@/lib/appConfig').then(({ loadConfig }) => {
+      loadConfig('producao_capacidade').then(val => {
+        if (val && val.capacidade) {
+          setCapacidade(val.capacidade);
+          setInput(String(val.capacidade));
+        } else {
+          // Tenta migrar do localStorage
+          const local = parseInt(localStorage.getItem('producao_capacidade_semanal') || '0', 10);
+          if (local > 0) {
+            setCapacidade(local);
+            setInput(String(local));
+            import('@/lib/appConfig').then(({ saveConfig }) => {
+              saveConfig('producao_capacidade', { capacidade: local }).then(() => {
+                localStorage.removeItem('producao_capacidade_semanal');
+              });
+            });
+          }
+        }
+        setLoadingCfg(false);
+      });
+    });
+  }, []);
+
+  const salvar = async () => {
     const val = parseInt(input, 10);
     if (!val || val <= 0) return;
-    localStorage.setItem(CONFIG_KEY, String(val));
+    const { saveConfig } = await import('@/lib/appConfig');
+    await saveConfig('producao_capacidade', { capacidade: val });
+    localStorage.setItem('producao_capacidade_semanal', String(val));
     window.dispatchEvent(new Event('settings:saved'));
     setCapacidade(val);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
+
+  if (loadingCfg) return <div className="h-40 flex items-center justify-center text-muted-foreground text-sm">Carregando configurações...</div>;
 
   return (
     <div className="space-y-4">
