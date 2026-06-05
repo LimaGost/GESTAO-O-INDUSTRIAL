@@ -48,21 +48,15 @@ export default function Pedidos() {
   const [sincronizandoBling, setSincronizandoBling] = useState(false);
 
   const load = async () => {
-    // Carrega em dois lotes para evitar rate limit (5 requests simultâneos)
-    const [p, c, pr] = await Promise.all([
-      base44.entities.Pedido.list('-created_date'),
-      base44.entities.Cliente.list(),
-      base44.entities.Produto.list(),
-    ]);
+    const p = await base44.entities.Pedido.list('-created_date');
     setPedidos(p);
+    const c = await base44.entities.Cliente.list();
     setClientes(c);
+    const pr = await base44.entities.Produto.list();
     setProdutos(pr);
-
-    const [exp, gps] = await Promise.all([
-      base44.entities.Expedicao.list(),
-      base44.entities.GrupoPedidos.list(),
-    ]);
+    const exp = await base44.entities.Expedicao.list();
     setExpedicoes(exp);
+    const gps = await base44.entities.GrupoPedidos.list();
     setGrupos(gps.filter(g => g.status !== 'desfeito'));
   };
 
