@@ -49,8 +49,8 @@ export default function Pedidos() {
   const loadingRef = useRef(false);
   const staticLoadedRef = useRef(false);
 
-  // Carrega todos os dados em paralelo, com guard contra chamadas simultâneas
-  const load = async () => {
+  // Carrega todos os dados em paralelo, com guard contra chamadas simultâneas e retry
+  const load = async (tentativa = 0) => {
     if (loadingRef.current) return;
     loadingRef.current = true;
     try {
@@ -62,6 +62,14 @@ export default function Pedidos() {
       setPedidos(p);
       setExpedicoes(exp);
       setGrupos(gps.filter(g => g.status !== 'desfeito'));
+    } catch (erro) {
+      if (erro.message?.includes('Rate limit') && tentativa < 3) {
+        const delay = Math.pow(2, tentativa) * 1000;
+        await new Promise(r => setTimeout(r, delay));
+        loadingRef.current = false;
+        return load(tentativa + 1);
+      }
+      console.error('Erro ao carregar pedidos:', erro);
     } finally {
       loadingRef.current = false;
     }
