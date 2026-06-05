@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import {
   ShoppingCart, Search, X, Plus, Link2, RefreshCw,
@@ -46,22 +46,35 @@ export default function Pedidos() {
   const [showGrupamento, setShowGrupamento] = useState(false);
   const [showFiltros, setShowFiltros] = useState(false);
   const [sincronizandoBling, setSincronizandoBling] = useState(false);
+  const loadingRef = useRef(false);
 
+  // Carrega apenas pedidos + expedições + grupos (dados dinâmicos)
   const load = async () => {
-    const p = await base44.entities.Pedido.list('-created_date');
-    setPedidos(p);
+    if (loadingRef.current) return;
+    loadingRef.current = true;
+    try {
+      const p = await base44.entities.Pedido.list('-created_date');
+      setPedidos(p);
+      const exp = await base44.entities.Expedicao.list();
+      setExpedicoes(exp);
+      const gps = await base44.entities.GrupoPedidos.list();
+      setGrupos(gps.filter(g => g.status !== 'desfeito'));
+    } finally {
+      loadingRef.current = false;
+    }
+  };
+
+  // Carrega dados estáticos (clientes, produtos) apenas uma vez
+  const loadStatic = async () => {
     const c = await base44.entities.Cliente.list();
     setClientes(c);
     const pr = await base44.entities.Produto.list();
     setProdutos(pr);
-    const exp = await base44.entities.Expedicao.list();
-    setExpedicoes(exp);
-    const gps = await base44.entities.GrupoPedidos.list();
-    setGrupos(gps.filter(g => g.status !== 'desfeito'));
   };
 
   useEffect(() => {
     load();
+    loadStatic();
     base44.auth.me().then(setUser).catch(() => {});
   }, []);
 
