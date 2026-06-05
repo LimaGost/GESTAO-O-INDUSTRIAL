@@ -10,6 +10,7 @@ import AbaUsuarios from '@/components/configuracoes/AbaUsuarios';
 import AbaPersonalizacao from '@/components/configuracoes/AbaPersonalizacao.jsx';
 import AbaEtiquetas from '@/components/configuracoes/AbaEtiquetas.jsx';
 import AbaKanban from '@/components/configuracoes/AbaKanban.jsx';
+import AbaVinculoKanbans from '@/components/configuracoes/AbaVinculoKanbans';
 import AbaWhatsapp from '@/components/configuracoes/AbaWhatsapp.jsx';
 import AbaExpedicao from '@/components/configuracoes/AbaExpedicao.jsx';
 import AbaBling from '@/components/configuracoes/AbaBling';
@@ -680,12 +681,13 @@ const TAB_GROUPS = [
     label: 'Sistema',
     items: [
       { key: 'personalizacao', label: 'Personalização', icon: Paintbrush,  desc: 'Logo, empresa e visual' },
-      { key: 'kanban',         label: 'Kanban',          icon: Columns,     desc: 'Colunas e ações' },
+      { key: 'kanban',         label: 'Kanban de Produção',          icon: Columns,     desc: 'Colunas e ações' },
+      { key: 'expedicao',      label: 'Kanban de Expedição',        icon: Truck,         desc: 'Colunas do Kanban' },
+      { key: 'vinculos',       label: 'Vínculo entre Kanbans',      icon: Link2,         desc: 'Relacionamento Produção ↔ Pedidos' },
       { key: 'producao',       label: 'Produção',        icon: Factory,     desc: 'Capacidade semanal' },
       { key: 'checklists',     label: 'Checklists',      icon: CheckSquare, desc: 'Etapas do Kanban' },
       { key: 'etiquetas',      label: 'Etiquetas',        icon: Printer,     desc: 'Configuração de impressora' },
       { key: 'whatsapp',       label: 'WhatsApp',         icon: MessageCircle, desc: 'Notificações automáticas' },
-      { key: 'expedicao',      label: 'Expedição',        icon: Truck,         desc: 'Colunas do Kanban de expedição' },
     ],
   },
   {
@@ -789,6 +791,7 @@ export default function Configuracoes() {
 
           {aba === 'personalizacao' && <AbaPersonalizacao />}
           {aba === 'kanban'         && <AbaKanban />}
+          {aba === 'vinculos'       && <AbaVinculoKanbans />}
           {aba === 'checklists'     && <AbaChecklists />}
           {aba === 'producao'       && <AbaProducao />}
           {aba === 'etiquetas'      && <AbaEtiquetas />}
