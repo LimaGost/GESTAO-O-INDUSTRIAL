@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import {
   ShoppingCart, Search, X, Plus, Link2, RefreshCw,
-  CheckCircle, Clock, Package, Truck, Ban, FileText, Eye
+  CheckCircle, Clock, Package, Truck, Ban, FileText, Eye, Zap
 } from 'lucide-react';
 import ModalGrupamento from '@/components/pedidos/ModalGrupamento';
 import ModalProcessarBling from '@/components/pedidos/ModalProcessarBling';
@@ -45,6 +45,7 @@ export default function Pedidos() {
   const [user, setUser] = useState(null);
   const [showGrupamento, setShowGrupamento] = useState(false);
   const [showFiltros, setShowFiltros] = useState(false);
+  const [sincronizandoBling, setSincronizandoBling] = useState(false);
 
   const load = async () => {
     const [p, c, pr, exp, gps] = await Promise.all([
@@ -67,6 +68,17 @@ export default function Pedidos() {
   }, []);
 
   const podeEditarPrecos = user?.role === 'vendedor' || user?.role === 'admin';
+
+  const sincronizarBling = async () => {
+    setSincronizandoBling(true);
+    try {
+      await base44.functions.invoke('blingSincronizar', {});
+    } catch (e) {
+      console.error('Erro ao sincronizar Bling:', e);
+    }
+    await load();
+    setSincronizandoBling(false);
+  };
 
   const salvarPrecos = async (pedido, precosEditados) => {
     if (!pedido?.id || Object.keys(precosEditados).length === 0) return;
@@ -373,6 +385,11 @@ export default function Pedidos() {
             </div>
             <button onClick={load} className="p-2.5 border border-border rounded-xl hover:bg-muted transition-colors">
               <RefreshCw size={15} className="text-muted-foreground" />
+            </button>
+            <button onClick={sincronizarBling} disabled={sincronizandoBling}
+              className="flex items-center gap-1.5 border border-orange-300 text-orange-700 bg-orange-50 px-3 py-2 rounded-xl text-sm font-medium hover:bg-orange-100 transition-colors disabled:opacity-50">
+              <Zap size={14} className={sincronizandoBling ? 'animate-pulse' : ''} />
+              {sincronizandoBling ? 'Buscando...' : 'Bling'}
             </button>
             <button onClick={() => setShowFiltros(v => !v)}
               className={`p-2.5 border rounded-xl hover:bg-muted transition-colors ${showFiltros ? 'border-primary/30 bg-primary/10' : 'border-border'}`}>

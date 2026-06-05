@@ -22,7 +22,7 @@ export default function PedidoKanbanCard({
   const Icon = st.icon;
   const itensTruncados = (pedido.itens || []).slice(0, 2);
   const maisItens = (pedido.itens || []).length - 2;
-  const isBling = (pedido.observacoes || '').includes('Bling');
+  const isBling = (pedido.observacoes || '').toLowerCase().includes('bling') || pedido.origem === 'bling' || (pedido.status === 'rascunho' && pedido.numero);
 
   return (
     <div
@@ -88,9 +88,9 @@ export default function PedidoKanbanCard({
         {/* Ações rápidas */}
         {!readonly && (
           <div className="flex gap-1.5 flex-wrap" onClick={e => e.stopPropagation()}>
-            {statusEfetivo === 'rascunho' && isBling && (
+            {statusEfetivo === 'rascunho' && (
               <button onClick={() => onProcessarBling(pedido)}
-                className="flex items-center gap-1 text-[10px] bg-primary/10 text-primary border border-primary/20 px-2 py-1 rounded-lg font-semibold hover:bg-primary/20 transition-colors">
+                className="flex items-center gap-1 text-[10px] bg-primary text-primary-foreground border border-primary px-2 py-1 rounded-lg font-semibold hover:opacity-90 transition-opacity">
                 <Zap size={9} /> Processar
               </button>
             )}
