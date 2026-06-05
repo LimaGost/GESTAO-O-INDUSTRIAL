@@ -266,7 +266,7 @@ export default function Kanban() {
       }));
     }
 
-    // ── Finalizado: cria expedição automaticamente ─────────────────────────
+    // ── Finalizado: marca pedido como "separado" para liberar expedição em Pedidos ──
     if (acaoProximo === 'finalizar_expedicao') {
       updates.data_finalizacao = agora;
       if (ordem.pedido_id) {
@@ -277,44 +277,9 @@ export default function Kanban() {
           const ordens_pedido = todasOrdens.filter((o) => o.pedido_id === ordem.pedido_id);
           const todasFin = ordens_pedido.every((o) => o.id === ordem.id ? true : o.status === proximo);
           if (todasFin) {
-            // Atualiza pedido para expedido e cria a expedição automaticamente
-            await base44.entities.Pedido.update(ped.id, { status: 'expedido' });
-            const numero_nf = gerarNumero('NF');
-            const hoje = new Date().toISOString().split('T')[0];
-            const expedicao = await base44.entities.Expedicao.create({
-              numero_nf,
-              pedido_id: ped.id,
-              pedido_numero: ped.numero,
-              cliente_id: ped.cliente_id || '',
-              cliente_nome: ped.cliente_nome,
-              itens: ped.itens || [],
-              status: 'emitida',
-              data_emissao: hoje,
-              valor_total: ped.valor_total || 0
-            });
-            await registrarLog('Expedicao', expedicao.id, 'EXPEDICAO_CRIADA', `Expedição NF ${numero_nf} criada automaticamente ao finalizar OP ${ordem.numero}`);
-            await registrarLog('Pedido', ped.id, 'STATUS', `Pedido ${ped.numero} expedido automaticamente.`);
-
-            // Disparo WhatsApp — NF emitida automaticamente ao finalizar OP
-            try {
-              const waCfgExp = (() => {try {return JSON.parse(localStorage.getItem('whatsapp_expedicao_config') || '{}');} catch {return {};}})();
-              const etapasNotificarExp = Array.isArray(waCfgExp.etapas_notificar) ? waCfgExp.etapas_notificar : ['enviada', 'entregue'];
-              if (etapasNotificarExp.includes('nf_emitida')) {
-                let clienteTelefone = null;
-                if (waCfgExp.notificar_cliente !== false && ped.cliente_id) {
-                  const clientes = await base44.entities.Cliente.filter({ id: ped.cliente_id });
-                  clienteTelefone = clientes[0]?.telefone || null;
-                }
-                base44.functions.invoke('enviarWhatsappExpedicao', {
-                  expedicao: { numero_nf, cliente_nome: ped.cliente_nome, pedido_numero: ped.numero },
-                  novoStatus: 'nf_emitida',
-                  clienteTelefone,
-                  numeros_internos: WHATSAPP_NUMEROS_INTERNOS,
-                  msg_interno: waCfgExp.msg_interno || null,
-                  msg_cliente: waCfgExp.msg_cliente || null
-                }).catch(() => {});
-              }
-            } catch {}
+            // Produção concluída: pedido vai para "separado" — Expedição é feita pela área de Pedidos
+            await base44.entities.Pedido.update(ped.id, { status: 'separado' });
+            await registrarLog('Pedido', ped.id, 'STATUS', `Pedido ${ped.numero} separado pela Produção. Aguardando expedição.`);
           }
         }
       }

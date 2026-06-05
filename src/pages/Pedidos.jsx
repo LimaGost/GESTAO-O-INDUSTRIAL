@@ -279,36 +279,25 @@ export default function Pedidos() {
     await load();
   };
 
-  const separarPedido = async (pedido) => {
-    const itens = pedido.itens || [];
-    for (const item of itens) {
-      const p = produtos.find(pr => pr.id === item.produto_id);
-      const estoqueAtual = p ? (p.estoque_atual || 0) : 0;
-      if (estoqueAtual < item.quantidade) {
-        alert(`❌ Bloqueado! Estoque insuficiente para "${item.produto_nome}". Disponível: ${estoqueAtual}, Necessário: ${item.quantidade}`);
-        return;
-      }
-    }
-
-    await Promise.all(
-      itens.map(item => {
-        const p = produtos.find(pr => pr.id === item.produto_id);
-        if (!p) return Promise.resolve();
-        const novoEstoque = Math.max(0, (p.estoque_atual || 0) - item.quantidade);
-        return base44.entities.Produto.update(item.produto_id, { estoque_atual: novoEstoque });
-      })
-    );
-
-    await base44.entities.Pedido.update(pedido.id, { status: 'separado' });
-    // Avança OPs vinculadas para em_embalagem no Kanban
-    const todasOPs = await base44.entities.OrdemProducao.list();
-    const opsVinculadas = todasOPs.filter(o => o.pedido_id === pedido.id && ['a_produzir', 'em_producao', 'produzido'].includes(o.status));
-    await Promise.all(opsVinculadas.map(op =>
-      base44.entities.OrdemProducao.update(op.id, { status: 'em_embalagem', data_embalagem: new Date().toISOString() })
-    ));
-    await registrarLog('Pedido', pedido.id, 'SEPARACAO', `Pedido ${pedido.numero} separado. ${opsVinculadas.length} OP(s) avançada(s) para embalagem.`);
+  const expedir = async (pedido) => {
+    if (!confirm(`Encaminhar pedido ${pedido.numero} para expedição?`)) return;
+    const numero_nf = gerarNumero('NF');
+    const hoje = new Date().toISOString().split('T')[0];
+    await base44.entities.Expedicao.create({
+      numero_nf,
+      pedido_id: pedido.id,
+      pedido_numero: pedido.numero,
+      cliente_id: pedido.cliente_id || '',
+      cliente_nome: pedido.cliente_nome,
+      itens: pedido.itens || [],
+      status: 'emitida',
+      data_emissao: hoje,
+      valor_total: pedido.valor_total || 0,
+    });
+    await base44.entities.Pedido.update(pedido.id, { status: 'expedido' });
+    await registrarLog('Pedido', pedido.id, 'EXPEDICAO', `Pedido ${pedido.numero} encaminhado para expedição. NF: ${numero_nf}`);
     await load();
-    alert(`✅ Pedido ${pedido.numero} separado! Estoque atualizado.${opsVinculadas.length > 0 ? ` ${opsVinculadas.length} OP(s) avançada(s) para embalagem no Kanban.` : ''}`);
+    alert(`✅ Pedido ${pedido.numero} encaminhado para expedição!`);
   };
 
   const statusEfetivo = (pedido) => {
@@ -532,7 +521,7 @@ export default function Pedidos() {
                               ocultarValores={ocultarValores}
                               readonly={readonly}
                               onVerDetalhes={setPedidoDetalhes}
-                              onSeparar={separarPedido}
+                              onExpedir={expedir}
                               onCancelar={cancelarPedido}
                               onProcessarBling={setPedidoBlingProcessar}
                             />
@@ -551,7 +540,7 @@ export default function Pedidos() {
                         ocultarValores={ocultarValores}
                         readonly={readonly}
                         onVerDetalhes={setPedidoDetalhes}
-                        onSeparar={separarPedido}
+                        onExpedir={expedir}
                         onCancelar={cancelarPedido}
                         onProcessarBling={setPedidoBlingProcessar}
                       />

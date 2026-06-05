@@ -16,7 +16,7 @@ function fmtVal(v) {
 
 export default function PedidoKanbanCard({
   pedido, grupo, statusEfetivo, ocultarValores,
-  readonly, onVerDetalhes, onSeparar, onCancelar, onProcessarBling,
+  readonly, onVerDetalhes, onExpedir, onCancelar, onProcessarBling,
 }) {
   const st = STATUS_CONFIG[statusEfetivo] || STATUS_CONFIG.rascunho;
   const Icon = st.icon;
@@ -94,13 +94,13 @@ export default function PedidoKanbanCard({
                 <Zap size={9} /> Processar
               </button>
             )}
-            {statusEfetivo === 'separacao' && (
-              <button onClick={() => onSeparar(pedido)}
-                className="flex items-center gap-1 text-[10px] bg-green-100 text-green-700 border border-green-200 px-2 py-1 rounded-lg font-semibold hover:bg-green-200 transition-colors">
-                <CheckCircle size={9} /> Separar
+            {statusEfetivo === 'separado' && (
+              <button onClick={() => onExpedir(pedido)}
+                className="flex items-center gap-1 text-[10px] bg-orange-100 text-orange-700 border border-orange-200 px-2 py-1 rounded-lg font-semibold hover:bg-orange-200 transition-colors">
+                <Truck size={9} /> Expedir
               </button>
             )}
-            {!['expedido', 'cancelado', 'separado', 'entregue'].includes(statusEfetivo) && (
+            {!['expedido', 'cancelado', 'separado', 'entregue', 'separacao', 'aguardando_estoque'].includes(statusEfetivo) && (
               <button onClick={() => onCancelar(pedido.id, pedido.numero)}
                 className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-red-600 border border-border px-2 py-1 rounded-lg hover:border-red-200 hover:bg-red-50 transition-colors">
                 <Ban size={9} /> Cancelar
