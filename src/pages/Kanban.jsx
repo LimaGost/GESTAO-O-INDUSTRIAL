@@ -324,6 +324,16 @@ export default function Kanban() {
       // ── Chamada à API (otimistic já aconteceu acima) ──
       await base44.entities.OrdemProducao.update(ordem.id, updates);
 
+      // ── Sincronização de status do Pedido (configurada em Configurações > Kanban) ──
+      const statusPedidoConfigurado = colunaProximo?.status_pedido;
+      if (statusPedidoConfigurado && ordem.pedido_id && acaoProximo !== 'finalizar_expedicao') {
+        // finalizar_expedicao já cuida do status do pedido internamente
+        base44.entities.Pedido.update(ordem.pedido_id, { status: statusPedidoConfigurado })
+          .then(() => registrarLog('Pedido', ordem.pedido_id, 'STATUS',
+            `Status do pedido sincronizado para "${statusPedidoConfigurado}" via avanço da OP ${ordem.numero}`).catch(() => {}))
+          .catch(() => {});
+      }
+
       // Atualiza o cache sem re-fetch bloqueante
       const cachedOrdens = cacheGet('OrdemProducao');
       if (cachedOrdens) {

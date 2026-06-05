@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Save, Plus, Trash2, Check, GripVertical, ArrowRight } from 'lucide-react';
+import { Save, Plus, Trash2, Check, GripVertical, ArrowRight, Link2 } from 'lucide-react';
 
 const ICONES_OPCOES = [
   { key: 'Clock', label: '🕐 Aguardando' },
@@ -32,13 +32,24 @@ const ACOES_DISPONIVEIS = [
   { key: 'finalizar_expedicao',        label: 'Finalizar — cai no Kanban de Expedição' },
 ];
 
+const STATUS_PEDIDO_OPCOES = [
+  { key: '',                  label: 'Não alterar pedido' },
+  { key: 'rascunho',          label: '📝 Rascunho' },
+  { key: 'aguardando_estoque',label: '⏳ Aguardando Estoque' },
+  { key: 'separacao',         label: '📦 Em Separação' },
+  { key: 'separado',          label: '✅ Separado' },
+  { key: 'expedido',          label: '🚚 Expedido' },
+  { key: 'entregue',          label: '🎉 Entregue' },
+  { key: 'cancelado',         label: '❌ Cancelado' },
+];
+
 const COLUNAS_DEFAULT = [
-  { key: 'a_produzir',    label: 'A Produzir',    icone: 'Clock',       cor: 0, acao: 'nenhuma',                     fixo: true },
-  { key: 'em_producao',   label: 'Em Produção',   icone: 'Factory',     cor: 1, acao: 'registrar_data_inicio',       fixo: true },
-  { key: 'produzido',     label: 'Produzido',     icone: 'CheckCircle', cor: 2, acao: 'registrar_data_fim_producao', fixo: true },
-  { key: 'em_embalagem',  label: 'Em Embalagem',  icone: 'Package',     cor: 3, acao: 'registrar_data_embalagem',   fixo: true },
-  { key: 'em_separacao',  label: 'Em Separação',  icone: 'Layers',      cor: 7, acao: 'saida_estoque',              fixo: true },
-  { key: 'finalizado',    label: 'Finalizado',    icone: 'Flag',        cor: 4, acao: 'finalizar_expedicao',        fixo: true },
+  { key: 'a_produzir',    label: 'A Produzir',    icone: 'Clock',       cor: 0, acao: 'nenhuma',                     fixo: true,  status_pedido: 'aguardando_estoque' },
+  { key: 'em_producao',   label: 'Em Produção',   icone: 'Factory',     cor: 1, acao: 'registrar_data_inicio',       fixo: true,  status_pedido: '' },
+  { key: 'produzido',     label: 'Produzido',     icone: 'CheckCircle', cor: 2, acao: 'registrar_data_fim_producao', fixo: true,  status_pedido: '' },
+  { key: 'em_embalagem',  label: 'Em Embalagem',  icone: 'Package',     cor: 3, acao: 'registrar_data_embalagem',   fixo: true,  status_pedido: 'separacao' },
+  { key: 'em_separacao',  label: 'Em Separação',  icone: 'Layers',      cor: 7, acao: 'saida_estoque',              fixo: true,  status_pedido: 'separado' },
+  { key: 'finalizado',    label: 'Finalizado',    icone: 'Flag',        cor: 4, acao: 'finalizar_expedicao',        fixo: true,  status_pedido: 'expedido' },
 ];
 
 function gerarKey(label) {
@@ -135,12 +146,20 @@ export default function AbaKanban() {
         <div className="flex items-center gap-1 flex-wrap">
           {colunas.map((col, idx) => {
             const cor = CORES_OPCOES[col.cor] || CORES_OPCOES[0];
+            const spOpcao = STATUS_PEDIDO_OPCOES.find(s => s.key === col.status_pedido);
             return (
               <div key={col.key} className="flex items-center gap-1">
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white"
-                  style={{ background: cor.accent }}>
-                  <span className="w-1.5 h-1.5 rounded-full bg-white/50" />
-                  {col.label}
+                <div className="flex flex-col items-center gap-1">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white"
+                    style={{ background: cor.accent }}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-white/50" />
+                    {col.label}
+                  </div>
+                  {col.status_pedido && spOpcao && (
+                    <div className="flex items-center gap-1 text-[9px] text-sky-blue bg-sky-blue/10 border border-sky-blue/20 px-1.5 py-0.5 rounded-full font-semibold">
+                      <Link2 size={7} /> {spOpcao.label.replace(/^[^\s]+ /, '')}
+                    </div>
+                  )}
                 </div>
                 {idx < colunas.length - 1 && <ArrowRight size={12} className="text-muted-foreground flex-shrink-0" />}
               </div>
@@ -242,6 +261,26 @@ export default function AbaKanban() {
                       <p className="text-xs text-muted-foreground mt-1.5">
                         Esta ação será executada automaticamente quando uma OP avançar para esta etapa.
                       </p>
+                    </div>
+
+                    {/* Sincronização com Pedidos */}
+                    <div className="border border-border rounded-xl p-4 space-y-2 bg-sky-blue/5">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Link2 size={13} className="text-sky-blue" />
+                        <label className="text-xs font-semibold text-foreground">Sincronizar status do Pedido</label>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Quando uma OP vinculada a um pedido avançar para esta etapa, o status do pedido será atualizado automaticamente.
+                      </p>
+                      <select
+                        value={col.status_pedido || ''}
+                        onChange={e => atualizarColuna(idx, 'status_pedido', e.target.value)}
+                        className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        {STATUS_PEDIDO_OPCOES.map(s => (
+                          <option key={s.key} value={s.key}>{s.label}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                 )}
