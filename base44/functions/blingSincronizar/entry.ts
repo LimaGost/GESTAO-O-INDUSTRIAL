@@ -52,13 +52,19 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Usa hoje como padrão se não informado
+    const agoraBR = new Date(Date.now() - 3 * 60 * 60 * 1000);
+    const hoje = agoraBR.toISOString().split('T')[0];
+    const dInicio = dataInicio || hoje;
+    const dFim = dataFim || hoje;
+
     // Monta query params (Bling v3 usa YYYY-MM-DD)
     const params = new URLSearchParams({
       pagina: String(pagina),
       limite: String(Math.min(limite, 100)),
+      dataInicio: dInicio,
+      dataFim: dFim,
     });
-    if (dataInicio) params.set('dataInicio', dataInicio);
-    if (dataFim) params.set('dataFim', dataFim);
 
     // Busca pedidos no Bling v3
     const res = await fetch(`https://www.bling.com.br/Api/v3/pedidos/vendas?${params}`, {
@@ -77,9 +83,14 @@ Deno.serve(async (req) => {
     const json = await res.json();
     const pedidosBling = json.data || [];
 
-    // Busca todos os números de uma vez (evita rate limit no loop)
+    // Busca todos os pedidos existentes para checar duplicatas pelo número E pelo id Bling
     const pedidosExistentes = await base44.asServiceRole.entities.Pedido.list();
     const numerosExistentes = new Set(pedidosExistentes.map(p => String(p.numero)));
+    const blingIdsExistentes = new Set(
+      pedidosExistentes
+        .map(p => (p.observacoes || '').match(/\[bling_id:(\d+)\]/i)?.[1])
+        .filter(Boolean)
+    );
 
     let importados = 0;
     let duplicados = 0;
@@ -87,9 +98,10 @@ Deno.serve(async (req) => {
 
     for (const pedidoBling of pedidosBling) {
       try {
-        const numero = String(pedidoBling.numero || pedidoBling.id || '');
+        const numero = String(pedidoBling.numero || '');
+        const blingId = String(pedidoBling.id || '');
 
-        if (numerosExistentes.has(numero)) { duplicados++; continue; }
+        if (numerosExistentes.has(numero) || blingIdsExistentes.has(blingId)) { duplicados++; continue; }
 
         // Busca detalhes completos
         let detalhes = pedidoBling;
@@ -125,7 +137,7 @@ Deno.serve(async (req) => {
           data_pedido: dataPedido,
           itens,
           valor_total: valorTotal,
-          observacoes: observacoes ? `[Bling] ${observacoes}` : '[Importado do Bling]',
+          observacoes: `[bling_id:${blingId}] ${observacoes || ''}`.trim(),
         });
 
         importados++;

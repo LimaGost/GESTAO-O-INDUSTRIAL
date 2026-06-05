@@ -72,9 +72,13 @@ export default function Pedidos() {
   const sincronizarBling = async () => {
     setSincronizandoBling(true);
     try {
-      await base44.functions.invoke('blingSincronizar', {});
+      const hoje = new Date().toISOString().split('T')[0];
+      const res = await base44.functions.invoke('blingSincronizar', { dataInicio: hoje, dataFim: hoje });
+      const { importados = 0, duplicados = 0 } = res?.data || {};
+      if (importados > 0) alert(`✅ ${importados} pedido(s) importado(s) do Bling!`);
+      else alert(`Nenhum pedido novo encontrado hoje. (${duplicados} já existiam)`);
     } catch (e) {
-      console.error('Erro ao sincronizar Bling:', e);
+      alert('Erro ao sincronizar com o Bling. Verifique a conexão nas Configurações.');
     }
     await load();
     setSincronizandoBling(false);
