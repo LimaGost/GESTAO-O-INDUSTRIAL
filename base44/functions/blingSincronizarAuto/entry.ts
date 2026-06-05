@@ -54,22 +54,20 @@ Deno.serve(async (req) => {
       console.log('[blingSincronizarAuto] Token renovado');
     }
 
-    // Obtém timestamp do último sincronismo bem-sucedido
+    // Sempre sincroniza apenas o dia de hoje (sem retroativo)
     const ultimaSincs = await base44.asServiceRole.entities.UltimaSincronizacao.filter({ tipo: 'bling_pedidos' });
-    let dataInicio = hoje;
-    let dataFim = hoje;
+    const dataInicio = hoje;
+    const dataFim = hoje;
+    console.log(`[blingSincronizarAuto] Sincronizando apenas hoje: ${hoje}`);
 
-    if (ultimaSincs.length > 0) {
-      // Se existe último sync, usa como data de início (em UTC-0 para API Bling)
-      const ultimoTs = ultimaSincs[0].timestamp;
-      const ultimaData = new Date(ultimoTs);
-      dataInicio = ultimaData.toISOString().split('T')[0]; // apenas data YYYY-MM-DD
-      console.log(`[blingSincronizarAuto] Sincronizando desde ${ultimaData.toISOString()}`);
-    } else {
-      console.log('[blingSincronizarAuto] Primeira sincronização, puxando apenas de hoje');
-    }
-
-    const params = new URLSearchParams({ pagina: '1', limite: '100', dataInicio, dataFim });
+    const params = new URLSearchParams({
+      pagina: '1',
+      limite: '100',
+      dataInicial: dataInicio,
+      dataFinal: dataFim,
+      dataEmissaoInicial: dataInicio,
+      dataEmissaoFinal: dataFim,
+    });
 
     const res = await fetch(`https://www.bling.com.br/Api/v3/pedidos/vendas?${params}`, {
       headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' },
@@ -82,8 +80,13 @@ Deno.serve(async (req) => {
     }
 
     const json = await res.json();
-    const pedidosBling = json.data || [];
-    console.log(`[blingSincronizarAuto] ${pedidosBling.length} pedido(s) encontrado(s) para ${hoje}`);
+    // Filtra localmente garantindo apenas pedidos de hoje (sem retroativos)
+    const todosPedidos = json.data || [];
+    const pedidosBling = todosPedidos.filter(p => {
+      const dataPed = (p.data || '').split('T')[0];
+      return dataPed === hoje;
+    });
+    console.log(`[blingSincronizarAuto] Bling retornou ${todosPedidos.length}, ${pedidosBling.length} são de hoje (${hoje})`);
 
     // Busca todos os pedidos existentes para checar duplicatas pelo número E pelo bling_id
     const pedidosExistentes = await base44.asServiceRole.entities.Pedido.list();
