@@ -15,6 +15,10 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Bling não autorizado' }, { status: 401 });
     }
 
+    // Data atual em horário de Brasília
+    const agoraBR = new Date(Date.now() - 3 * 60 * 60 * 1000);
+    const hoje = agoraBR.toISOString().split('T')[0];
+
     let accessToken = config.access_token;
 
     // Renova se expirado (com margem de 5 min)
@@ -81,9 +85,14 @@ Deno.serve(async (req) => {
     const pedidosBling = json.data || [];
     console.log(`[blingSincronizarAuto] ${pedidosBling.length} pedido(s) encontrado(s) para ${hoje}`);
 
-    // Busca todos os números já importados de uma vez (evita rate limit no loop)
+    // Busca todos os pedidos existentes para checar duplicatas pelo número E pelo bling_id
     const pedidosExistentes = await base44.asServiceRole.entities.Pedido.list();
     const numerosExistentes = new Set(pedidosExistentes.map(p => String(p.numero)));
+    const blingIdsExistentes = new Set(
+      pedidosExistentes
+        .map(p => (p.observacoes || '').match(/\[bling_id:(\d+)\]/i)?.[1])
+        .filter(Boolean)
+    );
     console.log(`[blingSincronizarAuto] ${numerosExistentes.size} pedidos já cadastrados no sistema`);
 
     let importados = 0;
@@ -92,9 +101,10 @@ Deno.serve(async (req) => {
 
     for (const pedidoBling of pedidosBling) {
       try {
-        const numero = String(pedidoBling.numero || pedidoBling.id || '');
+        const numero = String(pedidoBling.numero || '');
+        const blingId = String(pedidoBling.id || '');
 
-        if (numerosExistentes.has(numero)) { duplicados++; continue; }
+        if (numerosExistentes.has(numero) || blingIdsExistentes.has(blingId)) { duplicados++; continue; }
 
         let detalhes = pedidoBling;
         if (pedidoBling.id) {
@@ -128,7 +138,7 @@ Deno.serve(async (req) => {
           data_pedido: dataPedido,
           itens,
           valor_total: valorTotal,
-          observacoes: observacoes ? `[Bling] ${observacoes}` : '[Importado do Bling]',
+          observacoes: `[bling_id:${blingId}] ${observacoes || ''}`.trim(),
         });
 
         importados++;
