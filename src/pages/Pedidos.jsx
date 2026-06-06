@@ -90,7 +90,13 @@ export default function Pedidos() {
   };
 
   useEffect(() => {
-    Promise.all([load(), loadStatic(), base44.auth.me().then(setUser).catch(() => {})]);
+    const init = async () => {
+      await load();
+      await new Promise(r => setTimeout(r, 300));
+      await loadStatic();
+      base44.auth.me().then(setUser).catch(() => {});
+    };
+    init();
   }, []);
 
   const podeEditarPrecos = user?.role === 'vendedor' || user?.role === 'admin';
