@@ -313,6 +313,12 @@ export default function Pedidos() {
     await load();
   };
 
+  const avancarParaSeparado = async (pedido) => {
+    await base44.entities.Pedido.update(pedido.id, { status: 'separado' });
+    await registrarLog('Pedido', pedido.id, 'STATUS', `Pedido ${pedido.numero} marcado como Separado manualmente`);
+    await load();
+  };
+
   const expedir = async (pedido) => {
     if (!confirm(`Encaminhar pedido ${pedido.numero} para expedição?`)) return;
     const numero_nf = gerarNumero('NF');
@@ -558,6 +564,7 @@ export default function Pedidos() {
                               onExpedir={expedir}
                               onCancelar={cancelarPedido}
                               onProcessarBling={setPedidoBlingProcessar}
+                              onAvancarSeparado={avancarParaSeparado}
                             />
                           ))}
                         </div>
@@ -577,6 +584,7 @@ export default function Pedidos() {
                         onExpedir={expedir}
                         onCancelar={cancelarPedido}
                         onProcessarBling={setPedidoBlingProcessar}
+                        onAvancarSeparado={avancarParaSeparado}
                       />
                     ))}
                   </>

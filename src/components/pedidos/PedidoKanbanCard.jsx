@@ -1,4 +1,4 @@
-import { Clock, Package, CheckCircle, Truck, Ban, FileText, AlertTriangle, Link2, Zap, Eye } from 'lucide-react';
+import { Clock, Package, CheckCircle, Truck, Ban, FileText, AlertTriangle, Link2, Zap, Eye, ArrowRight } from 'lucide-react';
 
 const STATUS_CONFIG = {
   rascunho:           { label: 'Rascunho',       color: '#64748B', bg: '#F8FAFC', icon: FileText },
@@ -16,7 +16,7 @@ function fmtVal(v) {
 
 export default function PedidoKanbanCard({
   pedido, grupo, statusEfetivo, ocultarValores,
-  readonly, onVerDetalhes, onExpedir, onCancelar, onProcessarBling,
+  readonly, onVerDetalhes, onExpedir, onCancelar, onProcessarBling, onAvancarSeparado,
 }) {
   const st = STATUS_CONFIG[statusEfetivo] || STATUS_CONFIG.rascunho;
   const Icon = st.icon;
@@ -99,6 +99,12 @@ export default function PedidoKanbanCard({
               <button onClick={() => onProcessarBling(pedido)}
                 className="flex items-center gap-1 text-[10px] bg-primary text-primary-foreground border border-primary px-2 py-1 rounded-lg font-semibold hover:opacity-90 transition-opacity">
                 <Zap size={9} /> Processar
+              </button>
+            )}
+            {statusEfetivo === 'separacao' && onAvancarSeparado && (
+              <button onClick={() => onAvancarSeparado(pedido)}
+                className="flex items-center gap-1 text-[10px] bg-green-100 text-green-700 border border-green-200 px-2 py-1 rounded-lg font-semibold hover:bg-green-200 transition-colors">
+                <ArrowRight size={9} /> Separado
               </button>
             )}
             {statusEfetivo === 'separado' && (
