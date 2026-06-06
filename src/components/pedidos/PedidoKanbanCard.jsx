@@ -71,11 +71,18 @@ export default function PedidoKanbanCard({
           <span className="text-sm font-bold text-foreground">
             {ocultarValores ? '••••••' : fmtVal(pedido.valor_total)}
           </span>
-          {pedido.data_entrega_prevista && (
-            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-              <Clock size={9} /> {new Date(pedido.data_entrega_prevista + 'T12:00:00').toLocaleDateString('pt-BR')}
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {statusEfetivo === 'rascunho' && pedido.data_pedido && (
+              <span className="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded flex items-center gap-1 font-mono">
+                <Clock size={9} /> {new Date(pedido.data_pedido + 'T12:00:00').toLocaleDateString('pt-BR')}
+              </span>
+            )}
+            {pedido.data_entrega_prevista && (
+              <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                <Clock size={9} /> {new Date(pedido.data_entrega_prevista + 'T12:00:00').toLocaleDateString('pt-BR')}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Alertas */}
