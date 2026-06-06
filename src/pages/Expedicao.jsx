@@ -216,12 +216,13 @@ export default function Expedicao() {
   const [grupoMap, setGrupoMap] = useState({});
 
   const load = async () => {
-    const [exps, ordens, pedidos, gps] = await Promise.all([
-      base44.entities.Expedicao.list('-created_date'),
-      base44.entities.OrdemProducao.list('-created_date'),
-      base44.entities.Pedido.list(),
-      base44.entities.GrupoPedidos.list().catch(() => []),
-    ]);
+    const exps = await base44.entities.Expedicao.list('-created_date');
+    await new Promise(r => setTimeout(r, 150));
+    const ordens = await base44.entities.OrdemProducao.list('-created_date');
+    await new Promise(r => setTimeout(r, 150));
+    const pedidos = await base44.entities.Pedido.list();
+    await new Promise(r => setTimeout(r, 150));
+    const gps = await base44.entities.GrupoPedidos.list().catch(() => []);
 
     setExpedicoes(exps);
 
