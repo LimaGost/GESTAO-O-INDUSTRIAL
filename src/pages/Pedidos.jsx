@@ -9,6 +9,7 @@ import ModalProcessarBling from '@/components/pedidos/ModalProcessarBling';
 import ModalNovoPedido from '@/components/pedidos/ModalNovoPedido';
 import PedidoKanbanCard from '@/components/pedidos/PedidoKanbanCard';
 import ModalDetalhesPedido from '@/components/pedidos/ModalDetalhesPedido';
+import ModalSincronizarBling from '@/components/pedidos/ModalSincronizarBling';
 import { gerarNumero, gerarLote } from '@/lib/numeracao';
 import { registrarLog } from '@/lib/audit';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
@@ -46,6 +47,7 @@ export default function Pedidos() {
   const [showGrupamento, setShowGrupamento] = useState(false);
   const [showFiltros, setShowFiltros] = useState(false);
   const [sincronizandoBling, setSincronizandoBling] = useState(false);
+  const [showModalBling, setShowModalBling] = useState(false);
   const loadingRef = useRef(false);
   const staticLoadedRef = useRef(false);
 
@@ -93,14 +95,14 @@ export default function Pedidos() {
 
   const podeEditarPrecos = user?.role === 'vendedor' || user?.role === 'admin';
 
-  const sincronizarBling = async () => {
+  const sincronizarBling = async ({ dataInicio, dataFim }) => {
     setSincronizandoBling(true);
+    setShowModalBling(false);
     try {
-      const hoje = new Date().toISOString().split('T')[0];
-      const res = await base44.functions.invoke('blingSincronizar', { dataInicio: hoje, dataFim: hoje });
+      const res = await base44.functions.invoke('blingSincronizar', { dataInicio, dataFim });
       const { importados = 0, duplicados = 0 } = res?.data || {};
       if (importados > 0) alert(`✅ ${importados} pedido(s) importado(s) do Bling!`);
-      else alert(`Nenhum pedido novo encontrado hoje. (${duplicados} já existiam)`);
+      else alert(`Nenhum pedido novo encontrado no período. (${duplicados} já existiam)`);
     } catch (e) {
       alert('Erro ao sincronizar com o Bling. Verifique a conexão nas Configurações.');
     }
@@ -403,7 +405,7 @@ export default function Pedidos() {
             <button onClick={load} className="p-2.5 border border-border rounded-xl hover:bg-muted transition-colors">
               <RefreshCw size={15} className="text-muted-foreground" />
             </button>
-            <button onClick={sincronizarBling} disabled={sincronizandoBling}
+            <button onClick={() => setShowModalBling(true)} disabled={sincronizandoBling}
               className="flex items-center gap-1.5 border border-orange-300 text-orange-700 bg-orange-50 px-3 py-2 rounded-xl text-sm font-medium hover:bg-orange-100 transition-colors disabled:opacity-50">
               <Zap size={14} className={sincronizandoBling ? 'animate-pulse' : ''} />
               {sincronizandoBling ? 'Buscando...' : 'Bling'}
@@ -606,6 +608,14 @@ export default function Pedidos() {
           grupos={grupos}
           onClose={() => setShowGrupamento(false)}
           onRefresh={load}
+        />
+      )}
+
+      {showModalBling && (
+        <ModalSincronizarBling
+          loading={sincronizandoBling}
+          onConfirmar={sincronizarBling}
+          onClose={() => setShowModalBling(false)}
         />
       )}
 
