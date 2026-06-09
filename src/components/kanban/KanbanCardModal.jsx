@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { X, ArrowRight, CheckCircle, CheckSquare, Square, Trash2, Printer, User, AlertTriangle, Plus, Minus, PackagePlus, Search, Save, Tag } from 'lucide-react';
+import { X, ArrowRight, CheckCircle, CheckSquare, Square, Trash2, Printer, User, AlertTriangle, Plus, Minus, PackagePlus, Search, Save, Tag, Layers } from 'lucide-react';
 import ModalDescarte from './ModalDescarte';
 import { imprimirEtiquetaProduto } from '@/lib/imprimirEtiquetaProduto';
 
@@ -39,7 +39,7 @@ function agruparPorCategoria(itens, produtos) {
   return map;
 }
 
-export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos = [], kanbanColunas: kanbanColunasProps, clienteNome, isWhiteLabel, whiteLabelMarca, onAvancar, onSalvarItens, loading, onClose }) {
+export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos = [], kanbanColunas: kanbanColunasProps, clienteNome, isWhiteLabel, whiteLabelMarca, grupoOrigem, onAvancar, onSalvarItens, loading, onClose }) {
   const kanbanColunas = kanbanColunasProps || loadKanbanColunas();
   const PROXIMOS = buildProximos(kanbanColunas);
   const checkKey = `${ordem.id}_${ordem.status}`;
@@ -187,9 +187,19 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
             <p className="text-xs text-muted-foreground mt-0.5">
               {totalItens > 1 ? `${totalItens} produto(s) — ${qtdTotal} un` : `${ordem.produto_nome} — ${qtdTotal} un`}
             </p>
-            <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-medium mt-1 inline-block">
-              {kanbanColunas.find(c => c.key === ordem.status)?.label || ordem.status}
-            </span>
+            <div className="flex items-center gap-1.5 flex-wrap mt-1">
+              <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-medium">
+                {kanbanColunas.find(c => c.key === ordem.status)?.label || ordem.status}
+              </span>
+              {grupoOrigem && (
+                <span className="inline-flex items-center gap-1 text-[10px] bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded font-semibold">
+                  <Layers size={8} /> Grupo · {grupoOrigem.cliente_nome}
+                  {(grupoOrigem.pedidos_numeros || []).length > 0 && (
+                    <span className="opacity-70">({(grupoOrigem.pedidos_numeros || []).map(n => `#${n}`).join(' ')}) </span>
+                  )}
+                </span>
+              )}
+            </div>
           </div>
           <button onClick={onClose} className="p-1.5 hover:bg-muted rounded-lg">
             <X size={16} className="text-muted-foreground" />

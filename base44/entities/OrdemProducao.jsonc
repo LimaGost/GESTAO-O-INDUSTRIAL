@@ -42,6 +42,14 @@
     "pedido_numero": {
       "type": "string"
     },
+    "grupo_id": {
+      "type": "string",
+      "description": "ID do GrupoPedidos que originou esta OP"
+    },
+    "grupo_cliente_nome": {
+      "type": "string",
+      "description": "Nome do cliente do grupo de origem"
+    },
     "origem": {
       "type": "string"
     },

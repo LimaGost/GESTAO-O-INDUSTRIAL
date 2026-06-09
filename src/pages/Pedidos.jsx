@@ -13,6 +13,7 @@ import ModalSincronizarBling from '@/components/pedidos/ModalSincronizarBling';
 import { gerarNumero, gerarLote } from '@/lib/numeracao';
 import { registrarLog } from '@/lib/audit';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
+import { useNavigate } from 'react-router-dom';
 
 const VALOR_OCULTO = '••••••';
 
@@ -30,6 +31,7 @@ export default function Pedidos() {
   const { somenteLeitura, ocultarFinanceiro } = usePermissoes();
   const readonly = somenteLeitura('Pedidos');
   const ocultarValores = ocultarFinanceiro('Pedidos');
+  const navigate = useNavigate();
 
   const [pedidos, setPedidos] = useState([]);
   const [clientes, setClientes] = useState([]);
@@ -214,6 +216,28 @@ export default function Pedidos() {
       await registrarLog('OrdemProducao', ordem.id, 'CRIACAO_AUTOMATICA',
         `OP para pedido ${numero} — ${itensSemEstoque.length} item(s) para produção`);
       await base44.entities.Pedido.update(pedido.id, { ordens_producao_ids: idsOrdens });
+
+      // Vincular OP ao grupo se este pedido pertencer a algum grupo ativo
+      const gruposAtivos = await base44.entities.GrupoPedidos.list().catch(() => []);
+      const grupoVinculado = gruposAtivos.find(g => g.status === 'ativo' && (g.pedidos_ids || []).includes(pedido.id));
+      if (grupoVinculado && !grupoVinculado.ordem_producao_id) {
+        const qtdTotal = grupoVinculado.pedidos_ids.reduce((s, pid) => {
+          const ped = pedidos.find(pp => pp.id === pid);
+          return s + (ped?.itens || []).reduce((ss, i) => ss + (i.quantidade || 0), 0);
+        }, 0);
+        await base44.entities.GrupoPedidos.update(grupoVinculado.id, {
+          ordem_producao_id: ordem.id,
+          ordem_producao_numero: ordem.numero,
+          status_op: 'a_produzir',
+          quantidade_total: qtdTotal || opData.quantidade,
+        });
+        await base44.entities.OrdemProducao.update(ordem.id, {
+          grupo_id: grupoVinculado.id,
+          grupo_cliente_nome: grupoVinculado.cliente_nome,
+        });
+        await registrarLog('GrupoPedidos', grupoVinculado.id, 'VINCULO_OP_AUTO',
+          `OP ${ordem.numero} vinculada automaticamente ao grupo ${grupoVinculado.cliente_nome}`);
+      }
     }
 
     await registrarLog('Pedido', pedido.id, 'CRIACAO', `Pedido ${numero} criado. Status: ${status}`);
@@ -552,9 +576,16 @@ export default function Pedidos() {
                             <span className="text-xs">🔗</span>
                             <span className="text-xs font-bold text-violet-800 truncate">{grupo.cliente_nome}</span>
                           </div>
-                          <span className="text-[10px] bg-violet-200 text-violet-700 px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0">
-                            {cards.length} ped.
-                          </span>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            {grupo.ordem_producao_numero && (
+                              <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-semibold">
+                                {grupo.ordem_producao_numero}
+                              </span>
+                            )}
+                            <span className="text-[10px] bg-violet-200 text-violet-700 px-1.5 py-0.5 rounded-full font-semibold">
+                              {cards.length} ped.
+                            </span>
+                          </div>
                         </div>
                         <div className="bg-violet-50/50 p-2 space-y-2">
                           {cards.map(card => (
@@ -627,6 +658,7 @@ export default function Pedidos() {
           grupos={grupos}
           onClose={() => setShowGrupamento(false)}
           onRefresh={load}
+          onNavigateToKanban={() => navigate('/Kanban')}
         />
       )}
 

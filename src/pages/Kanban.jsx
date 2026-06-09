@@ -99,6 +99,7 @@ export default function Kanban() {
   const [produtos, setProdutos] = useState([]);
   const [pedidoMap, setPedidoMap] = useState({});
   const [grupoMap, setGrupoMap] = useState({});
+  const [grupoMapById, setGrupoMapById] = useState({});
   const [checklistConfigs, setChecklistConfigs] = useState({});
   const [checklistOk, setChecklistOk] = useState({});
   const [loadingId, setLoadingId] = useState(null);
@@ -177,10 +178,13 @@ export default function Kanban() {
     for (const p of peds) pm[p.id] = { nome: p.cliente_nome, cliente_id: p.cliente_id, white_label: p.white_label, white_label_marca: p.white_label_marca };
     setPedidoMap(pm);
     const gm = {};
+    const gmById = {};
     for (const g of gps.filter(g => g.status !== 'desfeito')) {
+      gmById[g.id] = g;
       for (const pid of (g.pedidos_ids || [])) gm[pid] = g;
     }
     setGrupoMap(gm);
+    setGrupoMapById(gmById);
     const map = {};
     for (const c of checklists) map[c.etapa] = c;
     setChecklistConfigs(map);
@@ -297,6 +301,22 @@ export default function Kanban() {
           .then(() => registrarLog('Pedido', ordem.pedido_id, 'STATUS',
             `Status do pedido sincronizado para "${statusPedidoConfigurado}" via avanço da OP ${ordem.numero}`).catch(() => {}))
           .catch(() => {});
+      }
+
+      // Sincroniza status_op e quantidade_produzida no GrupoPedidos (fire-and-forget)
+      if (ordem.grupo_id) {
+        const grupoUpdates = { status_op: proximo };
+        if (acaoProximo === 'registrar_data_fim_producao') {
+          // Quando OP produzida: atualizar quantidade_produzida no grupo
+          const grupo = grupoMapById[ordem.grupo_id];
+          if (grupo) {
+            const qtdProduzida = ordem.itens?.length > 0
+              ? ordem.itens.reduce((s, i) => s + (i.quantidade || 0), 0)
+              : (ordem.quantidade || 0);
+            grupoUpdates.quantidade_produzida = (grupo.quantidade_produzida || 0) + qtdProduzida;
+          }
+        }
+        base44.entities.GrupoPedidos.update(ordem.grupo_id, grupoUpdates).catch(() => {});
       }
 
       // Atualiza o cache sem re-fetch bloqueante
@@ -656,9 +676,16 @@ export default function Kanban() {
                               <span className="text-xs font-bold text-violet-800 truncate">{grupo.cliente_nome}</span>
                               <span className="text-[10px] text-violet-600">{(grupo.pedidos_numeros || []).map(n => `#${n}`).join(' · ')}</span>
                             </div>
-                            <span className="text-[10px] bg-violet-200 text-violet-700 px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0">
-                              {ordensGrupo.length} OP{ordensGrupo.length !== 1 ? 's' : ''}
-                            </span>
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                              {grupo.ordem_producao_numero && (
+                                <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-semibold">
+                                  {grupo.ordem_producao_numero}
+                                </span>
+                              )}
+                              <span className="text-[10px] bg-violet-200 text-violet-700 px-1.5 py-0.5 rounded-full font-semibold">
+                                {ordensGrupo.length} OP{ordensGrupo.length !== 1 ? 's' : ''}
+                              </span>
+                            </div>
                           </div>
                           <div className="bg-violet-50/40 p-1.5 space-y-1.5">
                             {ordensGrupo.map(renderCard)}
@@ -755,6 +782,7 @@ export default function Kanban() {
         clienteNome={ordemSelecionada.pedido_id ? pedidoMap[ordemSelecionada.pedido_id]?.nome : null}
         whiteLabelMarca={ordemSelecionada.pedido_id ? pedidoMap[ordemSelecionada.pedido_id]?.white_label_marca : null}
         isWhiteLabel={!!(ordemSelecionada.pedido_id && pedidoMap[ordemSelecionada.pedido_id]?.white_label)}
+        grupoOrigem={ordemSelecionada.grupo_id ? grupoMapById[ordemSelecionada.grupo_id] || null : null}
         onAvancar={readonly ? null : async (ordem, descarte) => {await avancarStatus(ordem, descarte);setOrdemSelecionada(null);}}
         onSalvarItens={readonly ? null : salvarItensOP}
         loading={loadingId === ordemSelecionada.id}
