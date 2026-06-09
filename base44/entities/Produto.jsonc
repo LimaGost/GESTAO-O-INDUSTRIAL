@@ -70,24 +70,56 @@
       "default": false
     },
     "peso_liquido_kg": {
-      "type": "number",
-      "description": "Peso l\u00edquido em quilogramas"
+      "type": "number"
     },
     "peso_bruto_kg": {
-      "type": "number",
-      "description": "Peso bruto em quilogramas"
+      "type": "number"
     },
     "largura_cm": {
-      "type": "number",
-      "description": "Largura em cent\u00edmetros"
+      "type": "number"
     },
     "altura_cm": {
-      "type": "number",
-      "description": "Altura em cent\u00edmetros"
+      "type": "number"
     },
     "profundidade_cm": {
-      "type": "number",
-      "description": "Profundidade em cent\u00edmetros"
+      "type": "number"
+    },
+    "tipo_produto": {
+      "type": "string",
+      "enum": [
+        "marca_propria",
+        "white_label"
+      ],
+      "default": "marca_propria",
+      "description": "Tipo de produto: Marca Pr\u00f3pria ou White Label"
+    },
+    "wl_cliente_id": {
+      "type": "string",
+      "description": "ID do cliente White Label"
+    },
+    "wl_cliente_nome": {
+      "type": "string",
+      "description": "Nome comercial do cliente White Label"
+    },
+    "wl_logotipo_url": {
+      "type": "string",
+      "description": "URL do logotipo utilizado neste produto WL"
+    },
+    "wl_nome_comercial": {
+      "type": "string",
+      "description": "Nome comercial do produto para o cliente"
+    },
+    "wl_codigo_cliente": {
+      "type": "string",
+      "description": "C\u00f3digo interno do cliente para este produto"
+    },
+    "wl_obs_embalagem": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es de embalagem"
+    },
+    "wl_obs_rotulagem": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es de rotulagem"
     }
   },
   "required": [
