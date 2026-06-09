@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { X, CheckCircle, ChevronRight, ChevronLeft, User, Package, FileText } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { X, CheckCircle, ChevronRight, ChevronLeft, User, Package, FileText, Search } from 'lucide-react';
 import SeletorProdutos from './SeletorProdutos';
 
 const STEPS = [
@@ -10,6 +10,7 @@ const STEPS = [
 
 export default function ModalNovoPedido({ clientes, produtos, loading, onConfirmar, onClose }) {
   const [step, setStep] = useState(1);
+  const [buscaCliente, setBuscaCliente] = useState('');
   const [form, setForm] = useState({
     cliente_id: '',
     cliente_nome: '',
@@ -20,6 +21,16 @@ export default function ModalNovoPedido({ clientes, produtos, loading, onConfirm
   });
 
   const totalPedido = form.itens.reduce((s, i) => s + (i.total || 0), 0);
+
+  const clientesFiltrados = useMemo(() => {
+    if (!buscaCliente.trim()) return clientes;
+    const b = buscaCliente.toLowerCase();
+    return clientes.filter(c =>
+      (c.nome || '').toLowerCase().includes(b) ||
+      (c.email || '').toLowerCase().includes(b) ||
+      (c.cnpj_cpf || '').toLowerCase().includes(b)
+    );
+  }, [clientes, buscaCliente]);
 
   const canNext = () => {
     if (step === 1) return !!form.cliente_nome;
@@ -81,10 +92,27 @@ export default function ModalNovoPedido({ clientes, produtos, loading, onConfirm
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-semibold text-foreground mb-2 block">Selecione o cliente *</label>
-                <div className="space-y-2 max-h-72 overflow-y-auto">
-                  {clientes.map(c => (
+                {/* Busca */}
+                <div className="relative mb-3">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type="text"
+                    value={buscaCliente}
+                    onChange={e => setBuscaCliente(e.target.value)}
+                    placeholder="Buscar por nome, e-mail ou CNPJ/CPF..."
+                    className="w-full border border-border rounded-xl pl-9 pr-3 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    autoFocus
+                  />
+                </div>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {clientesFiltrados.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <User size={28} className="mx-auto mb-2 opacity-20" />
+                      <p className="text-sm">Nenhum cliente encontrado</p>
+                    </div>
+                  ) : clientesFiltrados.map(c => (
                     <div key={c.id}
-                      onClick={() => setForm(f => ({ ...f, cliente_id: c.id, cliente_nome: c.nome }))}
+                      onClick={() => { setForm(f => ({ ...f, cliente_id: c.id, cliente_nome: c.nome })); setBuscaCliente(''); }}
                       className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
                         form.cliente_id === c.id
                           ? 'border-primary bg-primary/5 shadow-sm'
@@ -96,6 +124,7 @@ export default function ModalNovoPedido({ clientes, produtos, loading, onConfirm
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-foreground truncate">{c.nome}</p>
                         {c.email && <p className="text-xs text-muted-foreground truncate">{c.email}</p>}
+                        {c.cnpj_cpf && <p className="text-xs text-muted-foreground truncate">{c.cnpj_cpf}</p>}
                       </div>
                       {form.cliente_id === c.id && (
                         <CheckCircle size={16} className="text-primary flex-shrink-0" />
