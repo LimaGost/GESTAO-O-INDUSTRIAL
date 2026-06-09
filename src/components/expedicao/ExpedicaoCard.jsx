@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, Truck, CheckCircle, Printer, ChevronDown, ChevronUp, MapPin, Package, Send, Clock } from 'lucide-react';
+import { FileText, Truck, CheckCircle, Printer, ChevronDown, ChevronUp, MapPin, Package, Send, Clock, Tag } from 'lucide-react';
 
 const STATUS_CONFIG = {
   emitida: { label: 'Emitida', color: 'bg-blue-100 text-blue-700 border-blue-300', icon: FileText, dot: 'bg-blue-500' },
@@ -32,6 +32,11 @@ export default function ExpedicaoCard({ exp, onAtualizarStatus, onImprimirNF, on
               <div className="flex items-center gap-2 flex-wrap">
                 <p className="font-bold text-foreground">{exp.numero_nf}</p>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${st.color}`}>{st.label}</span>
+                {exp.white_label && (
+                  <span className="inline-flex items-center gap-1 text-xs bg-purple-100 text-purple-700 border border-purple-300 px-2 py-0.5 rounded-full font-bold">
+                    <Tag size={10} /> WL{exp.white_label_marca ? ` · ${exp.white_label_marca}` : ''}
+                  </span>
+                )}
                 {exp.confirmado_pelo_cliente && (
                   <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Recebido</span>
                 )}

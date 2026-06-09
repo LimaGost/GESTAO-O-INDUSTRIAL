@@ -174,7 +174,7 @@ export default function Kanban() {
     setOrdens(ords);
     setProdutos(prods);
     const pm = {};
-    for (const p of peds) pm[p.id] = { nome: p.cliente_nome, cliente_id: p.cliente_id };
+    for (const p of peds) pm[p.id] = { nome: p.cliente_nome, cliente_id: p.cliente_id, white_label: p.white_label, white_label_marca: p.white_label_marca };
     setPedidoMap(pm);
     const gm = {};
     for (const g of gps.filter(g => g.status !== 'desfeito')) {
@@ -624,11 +624,16 @@ export default function Kanban() {
                       ordensNaoAgrupadas.push(ordem);
                     }
                   }
-                  const renderCard = (ordem) => (
-                    <KanbanCard
-                      key={ordem.id}
-                      ordem={ordem}
-                      clienteNome={ordem.pedido_id ? pedidoMap[ordem.pedido_id]?.nome : null}
+                  const renderCard = (ordem) => {
+                   const pedInfo = ordem.pedido_id ? pedidoMap[ordem.pedido_id] : null;
+                   const ordemEnriquecida = pedInfo?.white_label
+                     ? { ...ordem, white_label: true, white_label_marca: pedInfo.white_label_marca }
+                     : ordem;
+                   return (
+                   <KanbanCard
+                     key={ordem.id}
+                     ordem={ordemEnriquecida}
+                     clienteNome={pedInfo?.nome || null}
                       checklistConfigs={checklistConfigs}
                       checklistOk={checklistOk}
                       setChecklistOk={setChecklistOk}
@@ -638,9 +643,10 @@ export default function Kanban() {
                       labelBotao={PROXIMOS[key] ? `→ ${kanbanColunas.find((c) => c.key === PROXIMOS[key])?.label || ''}` : null}
                       acaoAtual={kanbanColunas.find((c) => c.key === key)?.acao || ''}
                       onCancelar={key === 'a_produzir' && podeGerenciarProducao && !readonly ? cancelarOP : null}
-                    />
-                  );
-                  return (
+                      />
+                      );
+                      };
+                      return (
                     <>
                       {Object.values(gruposEmColuna).map(({ grupo, ordens: ordensGrupo }) => (
                         <div key={`grp-${grupo.id}`} className="border border-violet-300 rounded-2xl overflow-hidden mb-1.5">
@@ -747,6 +753,8 @@ export default function Kanban() {
         produtos={produtos}
         kanbanColunas={kanbanColunas}
         clienteNome={ordemSelecionada.pedido_id ? pedidoMap[ordemSelecionada.pedido_id]?.nome : null}
+        whiteLabelMarca={ordemSelecionada.pedido_id ? pedidoMap[ordemSelecionada.pedido_id]?.white_label_marca : null}
+        isWhiteLabel={!!(ordemSelecionada.pedido_id && pedidoMap[ordemSelecionada.pedido_id]?.white_label)}
         onAvancar={readonly ? null : async (ordem, descarte) => {await avancarStatus(ordem, descarte);setOrdemSelecionada(null);}}
         onSalvarItens={readonly ? null : salvarItensOP}
         loading={loadingId === ordemSelecionada.id}

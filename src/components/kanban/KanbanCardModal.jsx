@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { X, ArrowRight, CheckCircle, CheckSquare, Square, Trash2, Printer, User, AlertTriangle, Plus, Minus, PackagePlus, Search, Save } from 'lucide-react';
+import { X, ArrowRight, CheckCircle, CheckSquare, Square, Trash2, Printer, User, AlertTriangle, Plus, Minus, PackagePlus, Search, Save, Tag } from 'lucide-react';
 import ModalDescarte from './ModalDescarte';
 import { imprimirEtiquetaProduto } from '@/lib/imprimirEtiquetaProduto';
 
@@ -39,7 +39,7 @@ function agruparPorCategoria(itens, produtos) {
   return map;
 }
 
-export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos = [], kanbanColunas: kanbanColunasProps, clienteNome, onAvancar, onSalvarItens, loading, onClose }) {
+export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos = [], kanbanColunas: kanbanColunasProps, clienteNome, isWhiteLabel, whiteLabelMarca, onAvancar, onSalvarItens, loading, onClose }) {
   const kanbanColunas = kanbanColunasProps || loadKanbanColunas();
   const PROXIMOS = buildProximos(kanbanColunas);
   const checkKey = `${ordem.id}_${ordem.status}`;
@@ -168,10 +168,15 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-card z-10">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h3 className="font-bold text-foreground">{ordem.numero}</h3>
               {ordem.pedido_numero && (
                 <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-medium">📋 {ordem.pedido_numero}</span>
+              )}
+              {isWhiteLabel && (
+                <span className="inline-flex items-center gap-1 text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-bold">
+                  <Tag size={8} /> WL{whiteLabelMarca ? ` · ${whiteLabelMarca}` : ''}
+                </span>
               )}
             </div>
             {(clienteNome || ordem.pedido_numero) && (

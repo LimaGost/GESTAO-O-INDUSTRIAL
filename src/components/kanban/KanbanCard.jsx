@@ -1,4 +1,4 @@
-import { ArrowRight, Clock, Package, AlertTriangle, CheckCircle, User, Calendar, ExternalLink, Printer, XCircle } from 'lucide-react';
+import { ArrowRight, Clock, Package, AlertTriangle, CheckCircle, User, Calendar, ExternalLink, Printer, XCircle, Tag } from 'lucide-react';
 import { imprimirEtiquetaProduto } from '@/lib/imprimirEtiquetaProduto';
 import CardChecklist from './CardChecklist';
 
@@ -77,10 +77,15 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
       {/* Header */}
       <div className="px-3 pt-3 pb-2">
         <div className="flex items-start justify-between gap-2 mb-2">
-          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 flex-1 min-w-0 flex-wrap">
             <span className="text-xs font-bold text-foreground truncate">{ordem.numero}</span>
             {ordem.pedido_numero && (
               <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-medium flex-shrink-0">📋 {ordem.pedido_numero}</span>
+            )}
+            {ordem.white_label && (
+              <span className="inline-flex items-center gap-0.5 text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-bold flex-shrink-0">
+                <Tag size={8} /> WL
+              </span>
             )}
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
