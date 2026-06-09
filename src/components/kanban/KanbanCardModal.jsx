@@ -417,9 +417,21 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
 
           {/* Lote / Obs */}
           {(ordem.lote || ordem.observacoes) && (
-            <div className="bg-muted/30 rounded-xl p-3 space-y-1 text-xs">
-              {ordem.lote && <p className="text-muted-foreground">Lote: <strong className="text-foreground">{ordem.lote}</strong></p>}
-              {ordem.observacoes && <p className="text-muted-foreground italic">{ordem.observacoes}</p>}
+            <div className="space-y-2">
+              {ordem.lote && (
+                <div className="bg-muted/30 rounded-xl px-3 py-2 text-xs">
+                  <p className="text-muted-foreground">Lote: <strong className="text-foreground">{ordem.lote}</strong></p>
+                </div>
+              )}
+              {ordem.observacoes && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-xs flex gap-2">
+                  <span className="text-amber-500 text-base leading-none flex-shrink-0">📝</span>
+                  <div>
+                    <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wide mb-0.5">Obs. do Pedido</p>
+                    <p className="text-amber-900">{ordem.observacoes}</p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

@@ -206,6 +206,7 @@ export default function Pedidos() {
         pedido_id: pedido.id,
         pedido_numero: numero,
         origem: 'pedido',
+        observacoes: form.observacoes || '',
       };
       const ordem = await base44.entities.OrdemProducao.create(opData);
       idsOrdens.push(ordem.id);
@@ -279,6 +280,7 @@ export default function Pedidos() {
         pedido_id: pedido.id,
         pedido_numero: numero,
         origem: 'bling',
+        observacoes: pedido.observacoes || '',
       };
       const ordem = await base44.entities.OrdemProducao.create(opData);
       await base44.entities.Pedido.update(pedido.id, { ordens_producao_ids: [ordem.id] });
