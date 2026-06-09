@@ -415,24 +415,6 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
             </div>
           )}
 
-          {/* Info White Label */}
-          {ordem.wl_cliente_nome && (
-            <div className="bg-purple-50 border border-purple-200 rounded-xl px-3 py-2.5 flex items-center gap-3">
-              {ordem.wl_logotipo_url && (
-                <img src={ordem.wl_logotipo_url} alt="logo" className="w-10 h-10 object-contain rounded-lg border border-purple-100 bg-white flex-shrink-0" />
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[9px] bg-purple-600 text-white px-1.5 py-0.5 rounded-full font-bold">WHITE LABEL</span>
-                </div>
-                <p className="text-sm font-bold text-purple-800 mt-0.5 truncate">{ordem.wl_cliente_nome}</p>
-                {ordem.wl_nome_comercial && <p className="text-xs text-purple-600 truncate">"{ordem.wl_nome_comercial}"</p>}
-                {ordem.wl_obs_embalagem && <p className="text-[10px] text-purple-700 mt-0.5">📦 {ordem.wl_obs_embalagem}</p>}
-                {ordem.wl_obs_rotulagem && <p className="text-[10px] text-purple-700">🏷️ {ordem.wl_obs_rotulagem}</p>}
-              </div>
-            </div>
-          )}
-
           {/* Lote / Obs */}
           {(ordem.lote || ordem.observacoes) && (
             <div className="space-y-2">

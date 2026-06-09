@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { X, Check, Loader2, Tag } from 'lucide-react';
+import { useState } from 'react';
+import { X, Check, Loader2 } from 'lucide-react';
 import FotoProduto from './FotoProduto';
 import { base44 } from '@/api/base44Client';
 
@@ -40,21 +40,8 @@ export default function ModalEditarSku({ produto, onClose, onSaved }) {
     altura_cm: produto.altura_cm || 0,
     profundidade_cm: produto.profundidade_cm || 0,
     foto_url: produto.foto_url || '',
-    tipo_produto: produto.tipo_produto || 'marca_propria',
-    wl_cliente_id: produto.wl_cliente_id || '',
-    wl_cliente_nome: produto.wl_cliente_nome || '',
-    wl_logotipo_url: produto.wl_logotipo_url || '',
-    wl_nome_comercial: produto.wl_nome_comercial || '',
-    wl_codigo_cliente: produto.wl_codigo_cliente || '',
-    wl_obs_embalagem: produto.wl_obs_embalagem || '',
-    wl_obs_rotulagem: produto.wl_obs_rotulagem || '',
   });
   const [loading, setLoading] = useState(false);
-  const [clientesWL, setClientesWL] = useState([]);
-
-  useEffect(() => {
-    base44.entities.ClienteWhiteLabel.list().then(list => setClientesWL(list.filter(c => c.ativo !== false)));
-  }, []);
 
   const handleSave = async () => {
     if (!form.nome.trim()) { alert('Nome é obrigatório.'); return; }
@@ -119,85 +106,6 @@ export default function ModalEditarSku({ produto, onClose, onSaved }) {
               />
             </div>
           </div>
-
-          {/* Tipo de produto */}
-          <div>
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-3">Tipo de Produto</p>
-            <div className="flex gap-3">
-              {[
-                { key: 'marca_propria', label: 'Marca Própria', desc: 'Produto da sua marca', color: 'border-primary bg-primary/5 text-primary' },
-                { key: 'white_label', label: 'White Label', desc: 'Produto para outra marca', color: 'border-purple-400 bg-purple-50 text-purple-700' },
-              ].map(opt => (
-                <button key={opt.key} type="button"
-                  onClick={() => set('tipo_produto', opt.key)}
-                  className={`flex-1 border-2 rounded-xl p-3 text-left transition-all ${form.tipo_produto === opt.key ? opt.color : 'border-border text-muted-foreground hover:bg-muted/50'}`}>
-                  <p className="text-sm font-bold">{opt.label}</p>
-                  <p className="text-[10px] mt-0.5 opacity-70">{opt.desc}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Campos White Label */}
-          {form.tipo_produto === 'white_label' && (
-            <div className="border border-purple-200 bg-purple-50/30 rounded-2xl p-4 space-y-3">
-              <div className="flex items-center gap-2 mb-1">
-                <Tag size={13} className="text-purple-600" />
-                <p className="text-xs font-bold text-purple-700 uppercase tracking-wide">Configuração White Label</p>
-              </div>
-
-              {/* Cliente WL */}
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Cliente White Label</label>
-                <select value={form.wl_cliente_id}
-                  onChange={e => {
-                    const cli = clientesWL.find(c => c.id === e.target.value);
-                    set('wl_cliente_id', e.target.value);
-                    set('wl_cliente_nome', cli?.nome_fantasia || cli?.razao_social || '');
-                    set('wl_logotipo_url', cli?.logotipo_url || form.wl_logotipo_url);
-                  }}
-                  className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50">
-                  <option value="">Selecione o cliente...</option>
-                  {clientesWL.map(c => (
-                    <option key={c.id} value={c.id}>{c.nome_fantasia || c.razao_social}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Logotipo WL (auto-preenchido ou manual) */}
-              {form.wl_logotipo_url && (
-                <div className="flex items-center gap-3 bg-white rounded-xl border border-purple-200 p-3">
-                  <img src={form.wl_logotipo_url} alt="logo wl" className="w-10 h-10 object-contain rounded" />
-                  <p className="text-xs text-muted-foreground">Logotipo vinculado automaticamente do cliente.</p>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Nome Comercial do Cliente</label>
-                  <input value={form.wl_nome_comercial} onChange={e => set('wl_nome_comercial', e.target.value)}
-                    placeholder="Ex: Vela Zen Lavanda"
-                    className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Código Interno do Cliente</label>
-                  <input value={form.wl_codigo_cliente} onChange={e => set('wl_codigo_cliente', e.target.value)}
-                    placeholder="Ex: CLI-001"
-                    className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                </div>
-                <div className="col-span-2">
-                  <label className="text-xs text-muted-foreground mb-1 block">Observações de Embalagem</label>
-                  <textarea rows={2} value={form.wl_obs_embalagem} onChange={e => set('wl_obs_embalagem', e.target.value)}
-                    className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none" />
-                </div>
-                <div className="col-span-2">
-                  <label className="text-xs text-muted-foreground mb-1 block">Observações de Rotulagem</label>
-                  <textarea rows={2} value={form.wl_obs_rotulagem} onChange={e => set('wl_obs_rotulagem', e.target.value)}
-                    className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none" />
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Preview barra de estoque */}
           <div className="bg-muted/30 rounded-xl p-3 space-y-1">

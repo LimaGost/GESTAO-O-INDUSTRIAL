@@ -7,7 +7,6 @@ import {
   FileSpreadsheet, Settings
 } from 'lucide-react';
 import FotoProduto from '@/components/produtos/FotoProduto';
-import { Tag } from 'lucide-react';
 import ModalEditarSku from '@/components/produtos/ModalEditarSku';
 import ModalImportarPlanilha from '@/components/produtos/ModalImportarPlanilha';
 import GerenciadorVariaveisCategoria from '@/components/produtos/GerenciadorVariaveisCategoria';
@@ -492,11 +491,6 @@ export default function Produtos() {
                               <span className={`absolute top-2 right-2 text-[10px] px-2 py-1 rounded-full font-bold shadow-sm ${zerado ? 'bg-rainbow-red text-white' : alerta ? 'bg-sun-yellow text-white' : 'bg-rainbow-green text-white'}`}>
                                 {zerado ? '● Zerado' : alerta ? '▲ Alerta' : '✓ OK'}
                               </span>
-                              {p.tipo_produto === 'white_label' && (
-                                <span className="absolute bottom-2 right-2 text-[9px] px-1.5 py-0.5 rounded-full font-bold bg-purple-600 text-white shadow-sm">
-                                  WL
-                                </span>
-                              )}
                               {!readonly && (
                                 <div className="absolute top-2 left-2 flex gap-1">
                                   <button onClick={() => setEditingSku(p)}
@@ -513,12 +507,7 @@ export default function Produtos() {
 
                             {/* Info do produto */}
                             <div className="p-3">
-                             <div className="flex items-center gap-1.5 flex-wrap">
-                               <p className="text-xs font-bold text-foreground leading-tight truncate flex-1">{p.nome}</p>
-                               {p.tipo_produto === 'white_label' && p.wl_cliente_nome && (
-                                 <span className="text-[9px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-bold flex-shrink-0 truncate max-w-[80px]">{p.wl_cliente_nome}</span>
-                               )}
-                             </div>
+                              <p className="text-xs font-bold text-foreground leading-tight truncate">{p.nome}</p>
                               <div className="flex items-center justify-between mt-0.5">
                                 <p className="text-[10px] text-muted-foreground font-mono">{p.codigo || '—'}</p>
                                 <p className="text-[10px] text-muted-foreground">{p.unidade || 'un'} · R$ {(p.preco_unitario || 0).toFixed(2)}</p>
