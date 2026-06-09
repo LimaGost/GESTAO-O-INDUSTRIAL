@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { gerarDANFEHTML } from '@/lib/danfeGenerator';
-import { Truck, FileText, CheckCircle, Plus, Search, X, Send, Printer, ExternalLink, RefreshCw, Package, ArrowRight, Link2 } from 'lucide-react';
+import { Truck, FileText, CheckCircle, Plus, Search, X, Send, Printer, ExternalLink, RefreshCw, Package, ArrowRight } from 'lucide-react';
 import { gerarNumero } from '@/lib/numeracao';
 import { registrarLog } from '@/lib/audit';
 import ModalConfirmacaoRecebimento from '@/components/expedicao/ModalConfirmacaoRecebimento';
@@ -214,8 +214,6 @@ export default function Expedicao() {
   const [advancingId, setAdvancingId] = useState(null);
   const [emitindoOpId, setEmitindoOpId] = useState(null);
   const [etiquetaExpedicao, setEtiquetaExpedicao] = useState(null);
-  const [grupoMap, setGrupoMap] = useState({});
-  const [grupos, setGrupos] = useState([]);
   const [pedidosSeparados, setPedidosSeparados] = useState([]);
   const [aba, setAba] = useState('kanban'); // 'kanban' | 'rapida'
 
@@ -226,8 +224,6 @@ export default function Expedicao() {
     await new Promise(r => setTimeout(r, 150));
     const pedidos = await base44.entities.Pedido.list();
     await new Promise(r => setTimeout(r, 150));
-    const gps = await base44.entities.GrupoPedidos.list().catch(() => []);
-
     setExpedicoes(exps);
 
     const expPedidoIds = new Set(exps.map(e => e.pedido_id).filter(Boolean));
@@ -244,13 +240,6 @@ export default function Expedicao() {
     for (const p of pedidos) pm[p.id] = { nome: p.cliente_nome, cliente_id: p.cliente_id, itens: p.itens, valor_total: p.valor_total, numero: p.numero };
     setPedidoMap(pm);
 
-    const gpsAtivos = gps.filter(g => g.status !== 'desfeito');
-    const gm = {};
-    for (const g of gpsAtivos) {
-      for (const pid of (g.pedidos_ids || [])) gm[pid] = g;
-    }
-    setGrupoMap(gm);
-    setGrupos(gpsAtivos);
     setPedidosSeparados(pedidos.filter(p => p.status === 'separado'));
   };
 
@@ -489,7 +478,7 @@ export default function Expedicao() {
       {/* Painel Etiquetas em Lote */}
       {aba === 'rapida' && (
         <div className="flex-1 bg-card border border-border rounded-2xl p-5 overflow-auto">
-          <PainelExpedicaoRapida pedidos={pedidosSeparados} grupos={grupos} />
+          <PainelExpedicaoRapida pedidos={pedidosSeparados} />
         </div>
       )}
 
@@ -500,19 +489,6 @@ export default function Expedicao() {
           const isAExpedir = coluna.key === 'a_expedir';
           const cards = isAExpedir ? opsFiltradas : expFiltradas.filter(e => e.status === coluna.key);
           const count = counts[coluna.key];
-
-          // Build group structure for this column
-          const gruposNaColuna = {};
-          const naoAgrupados = [];
-          for (const card of cards) {
-            const grupo = grupoMap[card.pedido_id];
-            if (grupo) {
-              if (!gruposNaColuna[grupo.id]) gruposNaColuna[grupo.id] = { grupo, cards: [] };
-              gruposNaColuna[grupo.id].cards.push(card);
-            } else {
-              naoAgrupados.push(card);
-            }
-          }
 
           const renderCard = (card) => isAExpedir ? (
             <OPFinalizadaCard
@@ -573,26 +549,7 @@ export default function Expedicao() {
                     </p>
                   </div>
                 ) : (
-                  <>
-                    {Object.values(gruposNaColuna).map(({ grupo, cards: grupoCards }) => (
-                      <div key={`grp-${grupo.id}`} className="border border-violet-300 rounded-2xl overflow-hidden">
-                        <div className="px-3 py-2 bg-violet-100 flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="text-xs">🔗</span>
-                            <span className="text-xs font-bold text-violet-800 truncate">{grupo.cliente_nome}</span>
-                            <span className="text-[10px] text-violet-600">{(grupo.pedidos_numeros || []).map(n => `#${n}`).join(' · ')}</span>
-                          </div>
-                          <span className="text-[10px] bg-violet-200 text-violet-700 px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0">
-                            {grupoCards.length} item{grupoCards.length !== 1 ? 's' : ''}
-                          </span>
-                        </div>
-                        <div className="bg-violet-50/40 p-2 space-y-2">
-                          {grupoCards.map(renderCard)}
-                        </div>
-                      </div>
-                    ))}
-                    {naoAgrupados.map(renderCard)}
-                  </>
+                  cards.map(renderCard)
                 )}
               </div>
             </div>

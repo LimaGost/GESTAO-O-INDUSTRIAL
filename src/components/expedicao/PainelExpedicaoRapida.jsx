@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Package, Printer, CheckCircle, Search, X, Tag, Download, RefreshCw, Layers } from 'lucide-react';
+import { Package, Printer, CheckCircle, Search, X, Tag, Download, RefreshCw } from 'lucide-react';
 
 function getEmpresa() {
   try { return JSON.parse(localStorage.getItem('empresa_config') || '{}'); } catch { return {}; }
@@ -160,7 +160,7 @@ function PedidoRow({ pedido, selecionado, onToggle, volumesPorPedido, onSetVolum
   );
 }
 
-export default function PainelExpedicaoRapida({ pedidos, grupos }) {
+export default function PainelExpedicaoRapida({ pedidos }) {
   const [busca, setBusca] = useState('');
   const [selecionados, setSelecionados] = useState(new Set());
   const [volumesPorPedido, setVolumesPorPedido] = useState({});
@@ -276,32 +276,6 @@ export default function PainelExpedicaoRapida({ pedidos, grupos }) {
     URL.revokeObjectURL(url);
   };
 
-  // Mapa de grupos por pedido
-  const grupoMap = useMemo(() => {
-    const m = {};
-    if (!grupos) return m;
-    for (const g of grupos) {
-      for (const pid of (g.pedidos_ids || [])) m[pid] = g;
-    }
-    return m;
-  }, [grupos]);
-
-  // Agrupa pedidos por grupo
-  const { pedidosAgrupados, pedidosLivres } = useMemo(() => {
-    const grupoIds = {};
-    const livres = [];
-    for (const p of pedidosFiltrados) {
-      const g = grupoMap[p.id];
-      if (g) {
-        if (!grupoIds[g.id]) grupoIds[g.id] = { grupo: g, pedidos: [] };
-        grupoIds[g.id].pedidos.push(p);
-      } else {
-        livres.push(p);
-      }
-    }
-    return { pedidosAgrupados: Object.values(grupoIds), pedidosLivres: livres };
-  }, [pedidosFiltrados, grupoMap]);
-
   if (pedidosSeparados.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center px-6">
@@ -345,31 +319,9 @@ export default function PainelExpedicaoRapida({ pedidos, grupos }) {
           </button>
         </div>
 
-        {/* Pedidos agrupados */}
+        {/* Lista de pedidos */}
         <div className="space-y-3 overflow-y-auto flex-1">
-          {pedidosAgrupados.map(({ grupo, pedidos: gpPedidos }) => (
-            <div key={grupo.id} className="border border-violet-200 rounded-2xl overflow-hidden">
-              <div className="px-3 py-2 bg-violet-100 flex items-center gap-2">
-                <Layers size={12} className="text-violet-600 flex-shrink-0" />
-                <span className="text-xs font-bold text-violet-800 truncate">{grupo.cliente_nome}</span>
-                <span className="text-[10px] text-violet-600 ml-auto flex-shrink-0">{gpPedidos.length} pedido(s)</span>
-              </div>
-              <div className="p-2 space-y-2 bg-violet-50/30">
-                {gpPedidos.map(pedido => (
-                  <PedidoRow
-                    key={pedido.id}
-                    pedido={pedido}
-                    selecionado={selecionados.has(pedido.id)}
-                    onToggle={togglePedido}
-                    volumesPorPedido={volumesPorPedido}
-                    onSetVolumes={setVolumes}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
-
-          {pedidosLivres.map(pedido => (
+          {pedidosFiltrados.map(pedido => (
             <PedidoRow
               key={pedido.id}
               pedido={pedido}

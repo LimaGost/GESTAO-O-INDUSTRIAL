@@ -1,4 +1,4 @@
-import { Clock, Package, CheckCircle, Truck, Ban, FileText, AlertTriangle, Link2, Zap, Eye, ArrowRight, Tag } from 'lucide-react';
+import { Clock, Package, CheckCircle, Truck, Ban, FileText, AlertTriangle, Zap, Eye, ArrowRight, Tag } from 'lucide-react';
 
 const STATUS_CONFIG = {
   rascunho:           { label: 'Rascunho',       color: '#64748B', bg: '#F8FAFC', icon: FileText },
@@ -15,7 +15,7 @@ function fmtVal(v) {
 }
 
 export default function PedidoKanbanCard({
-  pedido, grupo, statusEfetivo, ocultarValores,
+  pedido, statusEfetivo, ocultarValores,
   readonly, onVerDetalhes, onExpedir, onCancelar, onProcessarBling, onAvancarSeparado,
 }) {
   const st = STATUS_CONFIG[statusEfetivo] || STATUS_CONFIG.rascunho;
@@ -35,13 +35,8 @@ export default function PedidoKanbanCard({
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-bold text-muted-foreground">{pedido.numero || 'Rascunho'}</span>
-                {grupo && (
-                  <span className="inline-flex items-center gap-1 text-[10px] bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded-full font-semibold">
-                    <Link2 size={8} /> Grupo
-                  </span>
-                )}
-                {pedido.white_label && (
+              <span className="text-xs font-bold text-muted-foreground">{pedido.numero || 'Rascunho'}</span>
+              {pedido.white_label && (
                   <span className="inline-flex items-center gap-1 text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-bold">
                     <Tag size={8} /> WL
                   </span>
