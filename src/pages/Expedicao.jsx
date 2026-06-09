@@ -23,6 +23,7 @@ function getWhatsappKanbanConfig() {
   try { return JSON.parse(localStorage.getItem('whatsapp_kanban_config') || 'null') || { numeros_internos: [] }; } catch { return { numeros_internos: [] }; }
 }
 import EtiquetaEndereco from '@/components/expedicao/EtiquetaEndereco';
+import PainelExpedicaoRapida from '@/components/expedicao/PainelExpedicaoRapida';
 
 const CORES_MAP = [
   { accent: '#64748B', bg: '#F8FAFC', border: '#CBD5E1', dot: '#94A3B8' },
@@ -214,6 +215,9 @@ export default function Expedicao() {
   const [emitindoOpId, setEmitindoOpId] = useState(null);
   const [etiquetaExpedicao, setEtiquetaExpedicao] = useState(null);
   const [grupoMap, setGrupoMap] = useState({});
+  const [grupos, setGrupos] = useState([]);
+  const [pedidosSeparados, setPedidosSeparados] = useState([]);
+  const [aba, setAba] = useState('kanban'); // 'kanban' | 'rapida'
 
   const load = async () => {
     const exps = await base44.entities.Expedicao.list('-created_date');
@@ -240,11 +244,14 @@ export default function Expedicao() {
     for (const p of pedidos) pm[p.id] = { nome: p.cliente_nome, cliente_id: p.cliente_id, itens: p.itens, valor_total: p.valor_total, numero: p.numero };
     setPedidoMap(pm);
 
+    const gpsAtivos = gps.filter(g => g.status !== 'desfeito');
     const gm = {};
-    for (const g of gps.filter(g => g.status !== 'desfeito')) {
+    for (const g of gpsAtivos) {
       for (const pid of (g.pedidos_ids || [])) gm[pid] = g;
     }
     setGrupoMap(gm);
+    setGrupos(gpsAtivos);
+    setPedidosSeparados(pedidos.filter(p => p.status === 'separado'));
   };
 
   useEffect(() => { load(); }, []);
@@ -445,8 +452,27 @@ export default function Expedicao() {
           </div>
         </div>
 
-        {/* Progress summary */}
-        <div className="mt-4 grid gap-2" style={{ gridTemplateColumns: `repeat(${colunasExp.length}, 1fr)` }}>
+        {/* Abas */}
+        <div className="mt-4 flex gap-2 border-b border-border pb-1">
+          <button
+            onClick={() => setAba('kanban')}
+            className={`text-xs font-semibold px-4 py-2 rounded-t-lg transition-colors border-b-2 ${aba === 'kanban' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+          >
+            📦 Kanban Expedição
+          </button>
+          <button
+            onClick={() => setAba('rapida')}
+            className={`flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-t-lg transition-colors border-b-2 ${aba === 'rapida' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+          >
+            🏷️ Etiquetas em Lote
+            {pedidosSeparados.length > 0 && (
+              <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-bold">{pedidosSeparados.length}</span>
+            )}
+          </button>
+        </div>
+
+        {/* Progress summary — apenas no kanban */}
+        {aba === 'kanban' && <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: `repeat(${colunasExp.length}, 1fr)` }}>
           {colunasExp.map(col => (
             <div key={col.key} className="text-center">
               <div className="h-1.5 rounded-full mb-1.5 overflow-hidden bg-muted">
@@ -457,11 +483,18 @@ export default function Expedicao() {
               <p className="text-[10px] text-muted-foreground leading-tight hidden sm:block">{col.label}</p>
             </div>
           ))}
-        </div>
+        </div>}
       </div>
 
+      {/* Painel Etiquetas em Lote */}
+      {aba === 'rapida' && (
+        <div className="flex-1 bg-card border border-border rounded-2xl p-5 overflow-auto">
+          <PainelExpedicaoRapida pedidos={pedidosSeparados} grupos={grupos} />
+        </div>
+      )}
+
       {/* Kanban integrado */}
-      <div className="flex gap-4 overflow-x-auto pb-4 flex-1 items-start">
+      {aba === 'kanban' && <div className="flex gap-4 overflow-x-auto pb-4 flex-1 items-start">
         {colunasExp.map((coluna) => {
           const Icon = coluna.icon;
           const isAExpedir = coluna.key === 'a_expedir';
@@ -565,7 +598,7 @@ export default function Expedicao() {
             </div>
           );
         })}
-      </div>
+      </div>}
 
       {showForm && (
         <NovaExpedicaoModal
