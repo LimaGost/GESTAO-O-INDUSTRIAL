@@ -491,6 +491,9 @@ export default function Produtos() {
                               <span className={`absolute top-2 right-2 text-[10px] px-2 py-1 rounded-full font-bold shadow-sm ${zerado ? 'bg-rainbow-red text-white' : alerta ? 'bg-sun-yellow text-white' : 'bg-rainbow-green text-white'}`}>
                                 {zerado ? '● Zerado' : alerta ? '▲ Alerta' : '✓ OK'}
                               </span>
+                              {p.white_label && (
+                                <span className="absolute bottom-2 right-2 text-[10px] bg-purple-600 text-white px-1.5 py-0.5 rounded-full font-bold shadow-sm">WL</span>
+                              )}
                               {!readonly && (
                                 <div className="absolute top-2 left-2 flex gap-1">
                                   <button onClick={() => setEditingSku(p)}
@@ -562,7 +565,10 @@ export default function Produtos() {
                   <tr key={p.id} className="border-t border-border hover:bg-muted/20 transition-colors">
                     <td className="px-3 py-2"><FotoProduto fotoUrl={p.foto_url} size="sm" readOnly /></td>
                     <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{p.codigo || '—'}</td>
-                    <td className="px-3 py-2 font-medium text-foreground">{p.nome}</td>
+                    <td className="px-3 py-2 font-medium text-foreground">
+                      {p.nome}
+                      {p.white_label && <span className="ml-2 text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-bold align-middle">WL</span>}
+                    </td>
                     <td className="px-3 py-2 text-muted-foreground text-xs">{p.categoria || '—'}</td>
                     <td className="px-3 py-2 text-muted-foreground text-xs">{p.unidade || '—'}</td>
                     <td className="px-3 py-2 font-bold text-foreground">{p.estoque_atual || 0}</td>

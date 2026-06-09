@@ -23,6 +23,11 @@
     "ativo": {
       "type": "boolean",
       "default": true
+    },
+    "white_label": {
+      "type": "boolean",
+      "default": false,
+      "description": "Indica que este cliente \u00e9 uma marca White Label"
     }
   },
   "required": [

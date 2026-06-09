@@ -88,6 +88,11 @@
     "profundidade_cm": {
       "type": "number",
       "description": "Profundidade em cent\u00edmetros"
+    },
+    "white_label": {
+      "type": "boolean",
+      "default": false,
+      "description": "Produto White Label"
     }
   },
   "required": [

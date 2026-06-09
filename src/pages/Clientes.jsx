@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Plus, Edit2, X, Check, Users, Eye, TrendingUp, Search } from 'lucide-react';
+import { Plus, Edit2, X, Check, Users, Eye, TrendingUp, Search, Tag } from 'lucide-react';
 import PerfilCliente from '@/components/clientes/PerfilCliente';
 import CampoCNPJ from '@/components/clientes/CampoCNPJ';
 import CrmDashboard from '@/components/clientes/CrmDashboard';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 
-const emptyForm = { nome: '', cnpj_cpf: '', email: '', telefone: '', endereco: '', bairro: '', cep: '', cidade: '', estado: '', ativo: true };
+const emptyForm = { nome: '', cnpj_cpf: '', email: '', telefone: '', endereco: '', bairro: '', cep: '', cidade: '', estado: '', ativo: true, white_label: false };
 
 export default function Clientes() {
   const { somenteLeitura } = usePermissoes();
@@ -20,6 +20,7 @@ export default function Clientes() {
   const [busca, setBusca] = useState('');
   const [filtroCidade, setFiltroCidade] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('');
+  const [filtroWL, setFiltroWL] = useState(false);
   const [perfilCliente, setPerfilCliente] = useState(null);
   const [aba, setAba] = useState('lista');
 
@@ -51,7 +52,7 @@ export default function Clientes() {
   };
 
   const startEdit = (c) => {
-    setForm({ nome: c.nome, cnpj_cpf: c.cnpj_cpf || '', email: c.email || '', telefone: c.telefone || '', endereco: c.endereco || '', bairro: c.bairro || '', cep: c.cep || '', cidade: c.cidade || '', estado: c.estado || '', ativo: c.ativo !== false });
+    setForm({ nome: c.nome, cnpj_cpf: c.cnpj_cpf || '', email: c.email || '', telefone: c.telefone || '', endereco: c.endereco || '', bairro: c.bairro || '', cep: c.cep || '', cidade: c.cidade || '', estado: c.estado || '', ativo: c.ativo !== false, white_label: c.white_label || false });
     setEditing(c.id);
     setShowForm(true);
   };
@@ -69,7 +70,8 @@ export default function Clientes() {
   const filtered = clientes.filter(c =>
     c.nome.toLowerCase().includes(busca.toLowerCase()) &&
     (!filtroCidade || c.cidade === filtroCidade) &&
-    (!filtroEstado || c.estado === filtroEstado)
+    (!filtroEstado || c.estado === filtroEstado) &&
+    (!filtroWL || c.white_label === true)
   );
 
   return (
@@ -131,8 +133,12 @@ export default function Clientes() {
             <option value="">Todos os estados</option>
             {estados.map(e => <option key={e} value={e}>{e}</option>)}
           </select>
-          {(filtroCidade || filtroEstado) && (
-            <button onClick={() => { setFiltroCidade(''); setFiltroEstado(''); }}
+          <button onClick={() => setFiltroWL(v => !v)}
+            className={`flex items-center gap-1.5 border rounded-xl px-3 py-2 text-xs font-semibold transition-all ${filtroWL ? 'border-purple-400 bg-purple-50 text-purple-700' : 'border-border text-muted-foreground hover:bg-muted'}`}>
+            <Tag size={12} /> White Label
+          </button>
+          {(filtroCidade || filtroEstado || filtroWL) && (
+            <button onClick={() => { setFiltroCidade(''); setFiltroEstado(''); setFiltroWL(false); }}
               className="text-xs text-muted-foreground hover:text-destructive border border-border rounded-xl px-3 py-2 bg-card flex items-center gap-1">
               <X size={12} /> Limpar
             </button>
@@ -156,6 +162,19 @@ export default function Clientes() {
                   className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
               </div>
             ))}
+            <div className="col-span-full">
+              <label className="flex items-center gap-3 cursor-pointer select-none p-3 rounded-xl border border-border hover:bg-muted/30 transition-colors">
+                <div onClick={() => setForm(f => ({ ...f, white_label: !f.white_label }))}
+                  className={`w-10 h-6 rounded-full transition-colors flex items-center px-0.5 ${form.white_label ? 'bg-purple-500' : 'bg-border'}`}>
+                  <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${form.white_label ? 'translate-x-4' : 'translate-x-0'}`} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Cliente White Label</p>
+                  <p className="text-xs text-muted-foreground">Indica que fabricamos produtos para esta marca</p>
+                </div>
+                {form.white_label && <span className="ml-auto text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-bold">WL</span>}
+              </label>
+            </div>
           </div>
           <div className="flex gap-3 pt-2">
             <button onClick={save} disabled={loading} className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2 rounded-xl text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50">
@@ -186,7 +205,12 @@ export default function Clientes() {
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
                         {(c.nome || 'C').charAt(0).toUpperCase()}
                       </div>
-                      <span className="font-semibold text-foreground">{c.nome}</span>
+                      <div>
+                        <span className="font-semibold text-foreground">{c.nome}</span>
+                        {c.white_label && (
+                          <span className="ml-2 text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-bold align-middle">WL</span>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{c.cnpj_cpf || '—'}</td>

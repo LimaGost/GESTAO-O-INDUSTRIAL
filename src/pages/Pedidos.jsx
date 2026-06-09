@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import {
   ShoppingCart, Search, X, Plus, Link2, RefreshCw,
-  CheckCircle, Clock, Package, Truck, Ban, FileText, Eye, Zap
+  CheckCircle, Clock, Package, Truck, Ban, FileText, Eye, Zap, Tag
 } from 'lucide-react';
 import ModalGrupamento from '@/components/pedidos/ModalGrupamento';
 import ModalProcessarBling from '@/components/pedidos/ModalProcessarBling';
@@ -46,6 +46,7 @@ export default function Pedidos() {
   const [user, setUser] = useState(null);
   const [showGrupamento, setShowGrupamento] = useState(false);
   const [showFiltros, setShowFiltros] = useState(false);
+  const [filtroWL, setFiltroWL] = useState(false);
   const [sincronizandoBling, setSincronizandoBling] = useState(false);
   const [showModalBling, setShowModalBling] = useState(false);
   const loadingRef = useRef(false);
@@ -353,14 +354,18 @@ export default function Pedidos() {
   }, [grupos]);
 
   const pedidosFiltrados = useMemo(() => {
-    if (!busca.trim()) return pedidos;
-    const b = busca.toLowerCase();
-    return pedidos.filter(p =>
-      (p.numero || '').toLowerCase().includes(b) ||
-      (p.cliente_nome || '').toLowerCase().includes(b) ||
-      (p.itens || []).some(i => (i.produto_nome || '').toLowerCase().includes(b))
-    );
-  }, [pedidos, busca]);
+    return pedidos.filter(p => {
+      if (filtroWL && !p.white_label) return false;
+      if (!busca.trim()) return true;
+      const b = busca.toLowerCase();
+      return (
+        (p.numero || '').toLowerCase().includes(b) ||
+        (p.cliente_nome || '').toLowerCase().includes(b) ||
+        (p.white_label_marca || '').toLowerCase().includes(b) ||
+        (p.itens || []).some(i => (i.produto_nome || '').toLowerCase().includes(b))
+      );
+    });
+  }, [pedidos, busca, filtroWL]);
 
   const totalPorStatus = useMemo(() => {
     const m = {};
@@ -421,6 +426,10 @@ export default function Pedidos() {
             <button onClick={() => setShowFiltros(v => !v)}
               className={`p-2.5 border rounded-xl hover:bg-muted transition-colors ${showFiltros ? 'border-primary/30 bg-primary/10' : 'border-border'}`}>
               <Eye size={15} className={showFiltros ? 'text-primary' : 'text-muted-foreground'} />
+            </button>
+            <button onClick={() => setFiltroWL(v => !v)}
+              className={`flex items-center gap-1.5 border px-3 py-2 rounded-xl text-sm font-medium transition-colors ${filtroWL ? 'border-purple-400 bg-purple-50 text-purple-700' : 'border-border text-muted-foreground hover:bg-muted'}`}>
+              <Tag size={14} /> WL
             </button>
             <button onClick={() => setShowGrupamento(true)}
               className="flex items-center gap-1.5 border border-violet-300 text-violet-700 bg-violet-50 px-3 py-2 rounded-xl text-sm font-medium hover:bg-violet-100 transition-colors">

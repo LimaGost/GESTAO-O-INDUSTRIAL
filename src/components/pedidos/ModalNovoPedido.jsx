@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { X, CheckCircle, ChevronRight, ChevronLeft, User, Package, FileText, Search } from 'lucide-react';
+import { X, CheckCircle, ChevronRight, ChevronLeft, User, Package, FileText, Search, Tag } from 'lucide-react';
 import SeletorProdutos from './SeletorProdutos';
 
 const STEPS = [
@@ -18,6 +18,8 @@ export default function ModalNovoPedido({ clientes, produtos, loading, onConfirm
     data_entrega_prevista: '',
     observacoes: '',
     itens: [],
+    white_label: false,
+    white_label_marca: '',
   });
 
   const totalPedido = form.itens.reduce((s, i) => s + (i.total || 0), 0);
@@ -154,6 +156,29 @@ export default function ModalNovoPedido({ clientes, produtos, loading, onConfirm
           {/* Step 3: Detalhes */}
           {step === 3 && (
             <div className="space-y-4">
+              {/* White Label */}
+              <label className="flex items-center gap-3 cursor-pointer select-none p-3 rounded-xl border border-border hover:bg-muted/30 transition-colors">
+                <div onClick={() => setForm(f => ({ ...f, white_label: !f.white_label, white_label_marca: !f.white_label ? f.white_label_marca : '' }))}
+                  className={`w-10 h-6 rounded-full transition-colors flex items-center px-0.5 flex-shrink-0 ${form.white_label ? 'bg-purple-500' : 'bg-border'}`}>
+                  <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${form.white_label ? 'translate-x-4' : 'translate-x-0'}`} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                    <Tag size={12} className="text-purple-600" /> Pedido White Label
+                  </p>
+                  <p className="text-xs text-muted-foreground">Produto fabricado para outra marca</p>
+                </div>
+                {form.white_label && <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-bold">WL</span>}
+              </label>
+              {form.white_label && (
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Marca / Cliente para quem está fabricando</label>
+                  <input value={form.white_label_marca}
+                    onChange={e => setForm(f => ({ ...f, white_label_marca: e.target.value }))}
+                    placeholder="Ex: Marca XYZ"
+                    className="w-full border border-purple-300 rounded-xl px-3 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-purple-400" />
+                </div>
+              )}
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Entrega Prevista</label>
                 <input type="date" value={form.data_entrega_prevista}
