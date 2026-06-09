@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import {
   X, CheckCircle, Clock, Package, Truck, Ban, FileText, Factory,
-  Flag, AlertTriangle, Pencil, Save, ExternalLink, RefreshCw, Link2
+  Flag, AlertTriangle, Pencil, Save, ExternalLink, RefreshCw, Link2, Layers
 } from 'lucide-react';
 
 const VALOR_OCULTO = '••••••';
@@ -33,12 +33,23 @@ const STATUS_EXP = {
   entregue: { label: 'Entregue',    color: 'text-green-700',  bg: 'bg-green-100' },
 };
 
-// Timeline de fluxo completo do pedido
-const PIPELINE = [
-  { id: 'pedido_criado',  label: 'Pedido Criado',      icon: FileText },
-  { id: 'op_kanban',      label: 'Produção (Kanban)',   icon: Factory },
-  { id: 'expedido',       label: 'Expedição',           icon: Truck },
-  { id: 'entregue',       label: 'Entregue',            icon: CheckCircle },
+// Pipeline com produção (quando há OP)
+const PIPELINE_COM_PRODUCAO = [
+  { id: 'criado',    label: 'Pedido',      icon: FileText },
+  { id: 'producao',  label: 'Produção',    icon: Factory },
+  { id: 'separacao', label: 'Separação',   icon: Package },
+  { id: 'separado',  label: 'Separado',    icon: Layers },
+  { id: 'expedido',  label: 'Expedição',   icon: Truck },
+  { id: 'entregue',  label: 'Entregue',    icon: CheckCircle },
+];
+
+// Pipeline sem produção (estoque disponível)
+const PIPELINE_SEM_PRODUCAO = [
+  { id: 'criado',    label: 'Pedido',      icon: FileText },
+  { id: 'separacao', label: 'Separação',   icon: Package },
+  { id: 'separado',  label: 'Separado',    icon: Layers },
+  { id: 'expedido',  label: 'Expedição',   icon: Truck },
+  { id: 'entregue',  label: 'Entregue',    icon: CheckCircle },
 ];
 
 export default function ModalDetalhesPedido({
@@ -81,12 +92,17 @@ export default function ModalDetalhesPedido({
     carregarExtra();
   };
 
+  const temProducao = ordens.length > 0;
+  const PIPELINE = temProducao ? PIPELINE_COM_PRODUCAO : PIPELINE_SEM_PRODUCAO;
+
   // Determina etapa atual no pipeline
   const getPipelineStep = () => {
     if (pedido.status === 'cancelado') return -1;
-    if (expedicao?.status === 'entregue' || expedicao?.confirmado_pelo_cliente) return 3;
-    if (expedicao) return 2;
-    if (ordens.some(o => ['finalizado', 'em_separacao', 'em_embalagem', 'produzido', 'em_producao', 'a_produzir'].includes(o.status))) return 1;
+    if (expedicao?.status === 'entregue' || expedicao?.confirmado_pelo_cliente) return PIPELINE.length - 1;
+    if (expedicao) return PIPELINE.findIndex(s => s.id === 'expedido');
+    if (pedido.status === 'separado') return PIPELINE.findIndex(s => s.id === 'separado');
+    if (pedido.status === 'separacao') return PIPELINE.findIndex(s => s.id === 'separacao');
+    if (temProducao) return PIPELINE.findIndex(s => s.id === 'producao');
     return 0;
   };
 
@@ -270,9 +286,10 @@ export default function ModalDetalhesPedido({
 
                   {/* OPs no Kanban */}
                   {ordens.length === 0 ? (
-                    <div className="text-center py-6 text-muted-foreground">
-                      <Factory size={28} className="mx-auto mb-2 opacity-20" />
-                      <p className="text-sm">Nenhuma OP vinculada a este pedido.</p>
+                    <div className="text-center py-4 border border-dashed border-green-200 bg-green-50 rounded-xl text-green-700">
+                      <CheckCircle size={24} className="mx-auto mb-1.5 text-green-500" />
+                      <p className="text-sm font-semibold">Estoque disponível</p>
+                      <p className="text-xs text-green-600 mt-0.5">Pedido vai direto para Separação — sem necessidade de produção.</p>
                     </div>
                   ) : (
                     <div>
@@ -334,7 +351,7 @@ export default function ModalDetalhesPedido({
                       <div className="text-center py-4 border border-dashed border-border rounded-xl text-muted-foreground">
                         <Truck size={22} className="mx-auto mb-1 opacity-20" />
                         <p className="text-xs">Expedição ainda não gerada.</p>
-                        <p className="text-[10px] mt-0.5 opacity-60">Será criada automaticamente ao finalizar a OP no Kanban.</p>
+                        <p className="text-[10px] mt-0.5 opacity-60">Disponível quando o pedido estiver no status "Separado".</p>
                       </div>
                     ) : (
                       <div className="bg-card border border-border rounded-xl p-3 space-y-2">
