@@ -188,35 +188,29 @@ export default function Pedidos() {
       await registrarLog('Produto', item.produto_id, 'BAIXA_ESTOQUE', `Baixa de ${item.quantidade} para pedido ${numero}`);
     }
 
-    const todosItensOP = [
-      ...itensComEstoque.map(i => ({ produto_id: i.produto_id, produto_nome: i.produto_nome, quantidade: i.quantidade, disponivel: true })),
-      ...itensSemEstoque.map(i => ({ produto_id: i.produto_id, produto_nome: i.produto_nome, quantidade: i.quantidadeFalta, disponivel: false })),
-    ];
+    if (precisaProducao) {
+      // Só cria OP se houver itens que precisam de produção
+      const itensParaProducao = itensSemEstoque.map(i => ({
+        produto_id: i.produto_id,
+        produto_nome: i.produto_nome,
+        quantidade: i.quantidadeFalta,
+        disponivel: false,
+      }));
 
-    const statusOP = precisaProducao ? 'a_produzir' : 'em_embalagem';
-    const opData = {
-      numero: gerarNumero('OP'),
-      produto_nome: `Pedido ${numero}`,
-      quantidade: todosItensOP.reduce((s, i) => s + i.quantidade, 0),
-      itens: todosItensOP,
-      status: statusOP,
-      pedido_id: pedido.id,
-      pedido_numero: numero,
-      origem: 'pedido',
-    };
-    if (!precisaProducao) {
-      opData.data_embalagem = new Date().toISOString();
-      opData.lote = gerarLote(pedido.id);
-    }
-    const ordem = await base44.entities.OrdemProducao.create(opData);
-    idsOrdens.push(ordem.id);
-
-    const logMsg = precisaProducao
-      ? `OP única para pedido ${numero} — ${itensComEstoque.length} item(s) com estoque + ${itensSemEstoque.length} item(s) para produção`
-      : `OP única para pedido ${numero} — todos os ${itensComEstoque.length} item(s) disponíveis em estoque`;
-    await registrarLog('OrdemProducao', ordem.id, precisaProducao ? 'CRIACAO_AUTOMATICA' : 'CRIACAO_EMBALAGEM_DIRETA', logMsg);
-
-    if (idsOrdens.length > 0) {
+      const opData = {
+        numero: gerarNumero('OP'),
+        produto_nome: `Pedido ${numero}`,
+        quantidade: itensParaProducao.reduce((s, i) => s + i.quantidade, 0),
+        itens: itensParaProducao,
+        status: 'a_produzir',
+        pedido_id: pedido.id,
+        pedido_numero: numero,
+        origem: 'pedido',
+      };
+      const ordem = await base44.entities.OrdemProducao.create(opData);
+      idsOrdens.push(ordem.id);
+      await registrarLog('OrdemProducao', ordem.id, 'CRIACAO_AUTOMATICA',
+        `OP para pedido ${numero} — ${itensSemEstoque.length} item(s) para produção`);
       await base44.entities.Pedido.update(pedido.id, { ordens_producao_ids: idsOrdens });
     }
 
@@ -269,28 +263,28 @@ export default function Pedidos() {
       await registrarLog('Produto', item.produto_id, 'BAIXA_ESTOQUE', `Baixa de ${item.quantidade} para pedido Bling ${numero}`);
     }
 
-    const todosItensOP = [
-      ...itensComEstoque.map(i => ({ produto_id: i.produto_id, produto_nome: i.produto_nome, quantidade: i.quantidade, disponivel: true })),
-      ...itensSemEstoque.map(i => ({ produto_id: i.produto_id, produto_nome: i.produto_nome, quantidade: i.quantidadeFalta, disponivel: false })),
-    ];
-
-    const statusOP = precisaProducao ? 'a_produzir' : 'em_embalagem';
-    const opData = {
-      numero: gerarNumero('OP'),
-      produto_nome: `Pedido ${numero}`,
-      quantidade: todosItensOP.reduce((s, i) => s + i.quantidade, 0),
-      itens: todosItensOP,
-      status: statusOP,
-      pedido_id: pedido.id,
-      pedido_numero: numero,
-      origem: 'bling',
-    };
-    if (!precisaProducao) {
-      opData.data_embalagem = new Date().toISOString();
-      opData.lote = gerarLote(pedido.id);
+    if (precisaProducao) {
+      const itensParaProducao = itensSemEstoque.map(i => ({
+        produto_id: i.produto_id,
+        produto_nome: i.produto_nome,
+        quantidade: i.quantidadeFalta,
+        disponivel: false,
+      }));
+      const opData = {
+        numero: gerarNumero('OP'),
+        produto_nome: `Pedido ${numero}`,
+        quantidade: itensParaProducao.reduce((s, i) => s + i.quantidade, 0),
+        itens: itensParaProducao,
+        status: 'a_produzir',
+        pedido_id: pedido.id,
+        pedido_numero: numero,
+        origem: 'bling',
+      };
+      const ordem = await base44.entities.OrdemProducao.create(opData);
+      await base44.entities.Pedido.update(pedido.id, { ordens_producao_ids: [ordem.id] });
+      await registrarLog('OrdemProducao', ordem.id, 'CRIACAO_AUTOMATICA',
+        `OP Bling para pedido ${numero} — ${itensSemEstoque.length} item(s) para produção`);
     }
-    const ordem = await base44.entities.OrdemProducao.create(opData);
-    await base44.entities.Pedido.update(pedido.id, { ordens_producao_ids: [ordem.id] });
     await registrarLog('Pedido', pedido.id, 'PROCESSAMENTO_BLING', `Pedido Bling ${numero} processado. Status: ${status}`);
 
     setProcessandoBling(false);
