@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import {
   X, CheckCircle, Clock, Package, Truck, Ban, FileText, Factory,
-  Flag, AlertTriangle, Pencil, Save, ExternalLink, RefreshCw, Link2, Layers, Edit2, Tag
+  Flag, AlertTriangle, Pencil, Save, ExternalLink, RefreshCw, Link2, Layers, Edit2, Tag, ShoppingBag
 } from 'lucide-react';
+import SeletorProdutos from './SeletorProdutos';
 
 const VALOR_OCULTO = '••••••';
 
@@ -54,14 +55,14 @@ const PIPELINE_SEM_PRODUCAO = [
 
 export default function ModalDetalhesPedido({
   pedido, ocultarValores, podeEditarPrecos,
-  onClose, onRefresh, onSalvarPrecos,
+  onClose, onRefresh, onSalvarPrecos, produtos = [],
 }) {
   const [ordens, setOrdens] = useState([]);
   const [expedicao, setExpedicao] = useState(null);
   const [loadingExtra, setLoadingExtra] = useState(true);
   const [precosEditados, setPrecosEditados] = useState({});
   const [salvando, setSalvando] = useState(false);
-  const [aba, setAba] = useState('resumo'); // 'resumo' | 'rastreamento' | 'itens' | 'editar'
+  const [aba, setAba] = useState('resumo'); // 'resumo' | 'rastreamento' | 'itens' | 'editar' | 'editar_itens'
   const [formEdicao, setFormEdicao] = useState({
     cliente_nome: pedido.cliente_nome || '',
     data_pedido: pedido.data_pedido || '',
@@ -71,6 +72,8 @@ export default function ModalDetalhesPedido({
     white_label_marca: pedido.white_label_marca || '',
   });
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
+  const [itensEditados, setItensEditados] = useState(pedido.itens || []);
+  const [salvandoItens, setSalvandoItens] = useState(false);
 
   useEffect(() => {
     carregarExtra();
@@ -105,6 +108,73 @@ export default function ModalDetalhesPedido({
     setSalvandoEdicao(true);
     await base44.entities.Pedido.update(pedido.id, formEdicao);
     setSalvandoEdicao(false);
+    onRefresh();
+    setAba('resumo');
+  };
+
+  // Salva alterações nos itens E propaga para OPs vinculadas
+  const handleSalvarItens = async () => {
+    setSalvandoItens(true);
+
+    const novoTotal = itensEditados.reduce((s, i) => s + (i.total || 0), 0);
+
+    // 1. Atualiza o pedido
+    await base44.entities.Pedido.update(pedido.id, { itens: itensEditados, valor_total: novoTotal });
+
+    // 2. Propaga para OPs vinculadas (apenas as ainda não finalizadas/canceladas)
+    const opsAtualizaveis = ordens.filter(op =>
+      ['a_produzir', 'em_producao'].includes(op.status)
+    );
+
+    for (const op of opsAtualizaveis) {
+      // Recalcula os itens da OP baseado no que mudou no pedido
+      // A OP só contém itens que NÃO tinham estoque — disponivel: false
+      const itensOpAtualizados = (op.itens || []).map(opItem => {
+        const itemPedidoAtualizado = itensEditados.find(i => i.produto_id === opItem.produto_id);
+        if (!itemPedidoAtualizado) {
+          // Item removido do pedido → zera a quantidade na OP
+          return { ...opItem, quantidade: 0 };
+        }
+        // Busca produto para verificar estoque atual
+        const produto = produtos.find(p => p.id === opItem.produto_id);
+        const estoqueAtual = produto?.estoque_atual || 0;
+        const qtdNecessaria = itemPedidoAtualizado.quantidade;
+        const qtdFalta = Math.max(0, qtdNecessaria - estoqueAtual);
+        return { ...opItem, quantidade: qtdFalta };
+      }).filter(i => i.quantidade > 0);
+
+      // Verifica se há novos itens no pedido que antes não estavam na OP
+      for (const itemPedido of itensEditados) {
+        const jaExisteNaOp = (op.itens || []).some(oi => oi.produto_id === itemPedido.produto_id);
+        if (!jaExisteNaOp) {
+          const produto = produtos.find(p => p.id === itemPedido.produto_id);
+          const estoqueAtual = produto?.estoque_atual || 0;
+          const qtdFalta = Math.max(0, itemPedido.quantidade - estoqueAtual);
+          if (qtdFalta > 0) {
+            itensOpAtualizados.push({
+              produto_id: itemPedido.produto_id,
+              produto_nome: itemPedido.produto_nome,
+              quantidade: qtdFalta,
+              disponivel: false,
+            });
+          }
+        }
+      }
+
+      if (itensOpAtualizados.length === 0) {
+        // Sem itens restantes → cancela a OP
+        await base44.entities.OrdemProducao.update(op.id, { status: 'cancelado' });
+      } else {
+        const novaQtdTotal = itensOpAtualizados.reduce((s, i) => s + i.quantidade, 0);
+        await base44.entities.OrdemProducao.update(op.id, {
+          itens: itensOpAtualizados,
+          quantidade: novaQtdTotal,
+        });
+      }
+    }
+
+    setSalvandoItens(false);
+    await carregarExtra();
     onRefresh();
     setAba('resumo');
   };
@@ -170,6 +240,7 @@ export default function ModalDetalhesPedido({
             { id: 'rastreamento', label: '🔍 Rastreamento' },
             { id: 'itens', label: `Itens (${itens.length})` },
             { id: 'editar', label: '✏️ Editar' },
+            { id: 'editar_itens', label: '🛍️ Itens' },
           ].map(a => (
             <button key={a.id} onClick={() => setAba(a.id)}
               className={`flex-1 py-2.5 text-xs font-semibold transition-colors border-b-2 ${
@@ -474,6 +545,52 @@ export default function ModalDetalhesPedido({
               >
                 <Save size={14} />
                 {salvandoEdicao ? 'Salvando...' : 'Salvar Alterações'}
+              </button>
+            </div>
+          )}
+
+          {/* ABA: Editar Itens */}
+          {aba === 'editar_itens' && (
+            <div className="p-5 space-y-4">
+              {/* Aviso se há OPs vinculadas */}
+              {ordens.filter(op => ['a_produzir', 'em_producao'].includes(op.status)).length > 0 && (
+                <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                  <AlertTriangle size={14} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-bold text-amber-800">Atenção: há OP(s) vinculada(s)</p>
+                    <p className="text-xs text-amber-700 mt-0.5">
+                      Ao salvar, as ordens de produção em andamento serão atualizadas automaticamente para refletir as novas quantidades.
+                    </p>
+                  </div>
+                </div>
+              )}
+              {ordens.filter(op => ['produzido', 'em_embalagem', 'em_separacao', 'finalizado'].includes(op.status)).length > 0 && (
+                <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3">
+                  <AlertTriangle size={14} className="text-red-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-bold text-red-800">OPs em estágio avançado não serão alteradas</p>
+                    <p className="text-xs text-red-700 mt-0.5">
+                      Ordens já produzidas ou em embalagem precisam ser ajustadas manualmente no Kanban.
+                    </p>
+                  </div>
+                </div>
+              )}
+              {produtos.length > 0 ? (
+                <SeletorProdutos
+                  produtos={produtos}
+                  itens={itensEditados}
+                  onChange={setItensEditados}
+                />
+              ) : (
+                <p className="text-xs text-muted-foreground text-center py-6">Carregando produtos...</p>
+              )}
+              <button
+                onClick={handleSalvarItens}
+                disabled={salvandoItens || itensEditados.length === 0}
+                className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity"
+              >
+                <Save size={14} />
+                {salvandoItens ? 'Salvando e atualizando OPs...' : 'Salvar Itens e Propagar para OPs'}
               </button>
             </div>
           )}

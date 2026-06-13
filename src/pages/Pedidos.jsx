@@ -567,6 +567,7 @@ export default function Pedidos() {
           pedido={pedidoDetalhes}
           ocultarValores={ocultarValores}
           podeEditarPrecos={podeEditarPrecos}
+          produtos={produtos}
           onClose={() => setPedidoDetalhes(null)}
           onRefresh={load}
           onSalvarPrecos={salvarPrecos}
