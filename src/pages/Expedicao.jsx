@@ -1,13 +1,14 @@
 import { useEffect, useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { gerarDANFEHTML } from '@/lib/danfeGenerator';
-import { Truck, FileText, CheckCircle, Plus, Search, X, Send, Printer, ExternalLink, RefreshCw, Package, ArrowRight } from 'lucide-react';
+import { Truck, FileText, CheckCircle, Plus, Search, X, Send, Printer, ExternalLink, RefreshCw, Package, ArrowRight, Eye } from 'lucide-react';
 import { gerarNumero } from '@/lib/numeracao';
 import { registrarLog } from '@/lib/audit';
 import ModalConfirmacaoRecebimento from '@/components/expedicao/ModalConfirmacaoRecebimento';
 import NovaExpedicaoModal from '@/components/expedicao/NovaExpedicaoModal';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 import AlertaSeparacao from '@/components/expedicao/AlertaSeparacao';
+import ModalDetalhesPedido from '@/components/pedidos/ModalDetalhesPedido';
 const EXP_COLUNAS_DEFAULT = [
   { key: 'a_expedir', label: 'A Expedir',    cor: 4, desc: 'OPs prontas para NF',     fixo: true },
   { key: 'emitida',   label: 'NF Emitida',   cor: 1, desc: 'Aguardando envio',         fixo: true },
@@ -74,7 +75,7 @@ function fmtR(v) {
 }
 
 // Card para OPs finalizadas (ainda sem NF)
-function OPFinalizadaCard({ op, clienteNome, onEmitirNF, emitindo }) {
+function OPFinalizadaCard({ op, clienteNome, onEmitirNF, emitindo, onVerPedido }) {
   const qtdTotal = op.itens?.length > 0
     ? op.itens.reduce((s, i) => s + (i.quantidade || 0), 0)
     : (op.quantidade || 0);
@@ -111,23 +112,33 @@ function OPFinalizadaCard({ op, clienteNome, onEmitirNF, emitindo }) {
         </div>
       )}
 
-      {onEmitirNF && (
-        <button
-          onClick={() => onEmitirNF(op)}
-          disabled={emitindo}
-          className="w-full flex items-center justify-center gap-2 text-sm font-semibold px-3 py-2 rounded-xl text-white transition-all disabled:opacity-50"
-          style={{ background: '#A855F7' }}
-        >
-          {emitindo ? <RefreshCw size={13} className="animate-spin" /> : <ArrowRight size={13} />}
-          Emitir NF
-        </button>
-      )}
+      <div className="flex gap-2">
+        {onVerPedido && op.pedido_id && (
+          <button
+            onClick={() => onVerPedido(op.pedido_id)}
+            className="flex items-center gap-1.5 text-xs border border-border px-2.5 py-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground"
+          >
+            <Eye size={11} /> Ver Pedido
+          </button>
+        )}
+        {onEmitirNF && (
+          <button
+            onClick={() => onEmitirNF(op)}
+            disabled={emitindo}
+            className="flex-1 flex items-center justify-center gap-2 text-sm font-semibold px-3 py-2 rounded-xl text-white transition-all disabled:opacity-50"
+            style={{ background: '#A855F7' }}
+          >
+            {emitindo ? <RefreshCw size={13} className="animate-spin" /> : <ArrowRight size={13} />}
+            Emitir NF
+          </button>
+        )}
+      </div>
     </div>
   );
 }
 
 // Card para expedições existentes
-function ExpedicaoCard({ exp, coluna, onAvancar, onImprimirNF, onImprimirEtiqueta, onConfirmarRecebimento, advancing }) {
+function ExpedicaoCard({ exp, coluna, onAvancar, onImprimirNF, onImprimirEtiqueta, onConfirmarRecebimento, advancing, onVerPedido }) {
   const totalItens = (exp.itens || []).reduce((s, i) => s + (i.quantidade || 0), 0);
 
   return (
@@ -175,6 +186,12 @@ function ExpedicaoCard({ exp, coluna, onAvancar, onImprimirNF, onImprimirEtiquet
           className="flex items-center gap-1.5 text-xs border border-border px-2.5 py-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
           <Printer size={11} /> Etiqueta
          </button>
+         {exp.pedido_id && onVerPedido && (
+           <button onClick={() => onVerPedido(exp.pedido_id)}
+            className="flex items-center gap-1.5 text-xs border border-primary/30 bg-primary/5 text-primary px-2.5 py-1.5 rounded-lg hover:bg-primary/10 transition-colors font-medium">
+            <Eye size={11} /> Ver Pedido
+           </button>
+         )}
 
         {exp.status !== 'entregue' && onConfirmarRecebimento && (
           <button onClick={() => onConfirmarRecebimento(exp)}
@@ -216,6 +233,8 @@ export default function Expedicao() {
   const [etiquetaExpedicao, setEtiquetaExpedicao] = useState(null);
   const [pedidosSeparados, setPedidosSeparados] = useState([]);
   const [aba, setAba] = useState('kanban'); // 'kanban' | 'rapida'
+  const [pedidoDetalhes, setPedidoDetalhes] = useState(null);
+  const [todosProdutos, setTodosProdutos] = useState([]);
 
   const load = async () => {
     const exps = await base44.entities.Expedicao.list('-created_date');
@@ -241,6 +260,12 @@ export default function Expedicao() {
     setPedidoMap(pm);
 
     setPedidosSeparados(pedidos.filter(p => p.status === 'separado'));
+
+    // Carrega produtos para o modal de detalhes (só uma vez se ainda não carregou)
+    setTodosProdutos(prev => prev.length > 0 ? prev : []);
+    if (todosProdutos.length === 0) {
+      base44.entities.Produto.list().then(setTodosProdutos).catch(() => {});
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -366,6 +391,14 @@ export default function Expedicao() {
     const win = window.open('', '_blank', 'width=960,height=1200');
     win.document.write(html);
     win.document.close();
+  };
+
+  const abrirPedido = async (pedidoId) => {
+    const pedidos = await base44.entities.Pedido.filter({ id: pedidoId });
+    if (pedidos[0]) setPedidoDetalhes(pedidos[0]);
+    if (todosProdutos.length === 0) {
+      base44.entities.Produto.list().then(setTodosProdutos).catch(() => {});
+    }
   };
 
   const expFiltradas = useMemo(() => {
@@ -497,6 +530,7 @@ export default function Expedicao() {
               clienteNome={card.pedido_id ? pedidoMap[card.pedido_id]?.nome : null}
               onEmitirNF={readonly ? null : emitirNFdaOP}
               emitindo={emitindoOpId === card.id}
+              onVerPedido={abrirPedido}
             />
           ) : (
             <ExpedicaoCard
@@ -508,6 +542,7 @@ export default function Expedicao() {
               onImprimirNF={imprimirDANFE}
               onImprimirEtiqueta={readonly ? null : (exp) => setEtiquetaExpedicao(exp)}
               onConfirmarRecebimento={readonly ? null : (exp) => setModalConfirmacao(exp)}
+              onVerPedido={abrirPedido}
             />
           );
 
@@ -576,6 +611,17 @@ export default function Expedicao() {
         <EtiquetaEndereco
           expedicao={etiquetaExpedicao}
           onClose={() => setEtiquetaExpedicao(null)}
+        />
+      )}
+      {pedidoDetalhes && (
+        <ModalDetalhesPedido
+          pedido={pedidoDetalhes}
+          ocultarValores={false}
+          podeEditarPrecos={false}
+          produtos={todosProdutos}
+          onClose={() => setPedidoDetalhes(null)}
+          onRefresh={load}
+          onSalvarPrecos={() => {}}
         />
       )}
     </div>
