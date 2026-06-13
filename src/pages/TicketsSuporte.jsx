@@ -3,10 +3,10 @@ import { base44 } from '@/api/base44Client';
 import { MessageSquare, CheckCircle, Send, X, RefreshCw, Clock, User, Circle, MessageCircle } from 'lucide-react';
 
 const STATUS_CONFIG = {
-  aberto:         { label: 'Aberto',          color: 'bg-red-100 text-red-700',    dot: 'bg-red-500' },
-  em_atendimento: { label: 'Em Atendimento',  color: 'bg-blue-100 text-blue-700',  dot: 'bg-blue-500' },
-  respondido:     { label: 'Respondido',      color: 'bg-green-100 text-green-700', dot: 'bg-green-500' },
-  fechado:        { label: 'Fechado',         color: 'bg-gray-100 text-gray-600',  dot: 'bg-gray-400' },
+  aberto:         { label: 'Aberto',          color: 'bg-red-100 text-red-700',       dot: 'bg-red-500' },
+  em_atendimento: { label: 'Em Atendimento',  color: 'bg-blue-100 text-blue-700',     dot: 'bg-blue-500' },
+  respondido:     { label: 'Respondido',      color: 'bg-green-100 text-green-700',   dot: 'bg-green-500' },
+  concluido:      { label: '✅ Concluído',    color: 'bg-emerald-500 text-white',     dot: 'bg-emerald-300' },
   cancelado:      { label: 'Cancelado',       color: 'bg-orange-100 text-orange-700', dot: 'bg-orange-500' },
 };
 
@@ -95,7 +95,7 @@ export default function TicketsSuporte() {
     const STATUS_MSG = {
       em_atendimento: 'Seu ticket está sendo atendido',
       respondido: 'Seu ticket foi respondido',
-      fechado: 'Seu ticket foi encerrado',
+      concluido: 'Seu ticket foi concluído',
     };
     if (STATUS_MSG[novoStatus] && ticketAberto?.created_by_id) {
       await base44.entities.Notificacao.create({
@@ -145,7 +145,7 @@ export default function TicketsSuporte() {
 
       {/* Filtros */}
       <div className="flex gap-2 flex-wrap">
-        {[{ k: 'todos', l: 'Todos' }, { k: 'aberto', l: 'Abertos' }, { k: 'em_atendimento', l: 'Em Atendimento' }, { k: 'respondido', l: 'Respondidos' }, { k: 'fechado', l: 'Fechados' }, { k: 'cancelado', l: 'Cancelados' }].map(f => (
+        {[{ k: 'todos', l: 'Todos' }, { k: 'aberto', l: 'Abertos' }, { k: 'em_atendimento', l: 'Em Atendimento' }, { k: 'respondido', l: 'Respondidos' }, { k: 'concluido', l: 'Concluídos' }, { k: 'cancelado', l: 'Cancelados' }].map(f => (
           <button key={f.k} onClick={() => setFiltroStatus(f.k)}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${filtroStatus === f.k ? 'bg-primary text-primary-foreground' : 'bg-card border border-border text-muted-foreground hover:bg-muted'}`}>
             {f.l} {f.k !== 'todos' && <span className="ml-1 opacity-70">{tickets.filter(t => t.status === f.k).length}</span>}
@@ -290,7 +290,7 @@ export default function TicketsSuporte() {
               </div>
 
               {/* Campo de resposta */}
-              {ticketAberto.status !== 'fechado' && (
+              {ticketAberto.status !== 'concluido' && (
                 <div>
                   <label className="text-sm font-semibold text-foreground mb-1.5 block">
                     {ticketAberto.resposta ? 'Editar resposta' : 'Sua resposta'}
@@ -319,7 +319,7 @@ export default function TicketsSuporte() {
               </div>
             </div>
 
-            {ticketAberto.status !== 'fechado' && ticketAberto.status !== 'cancelado' && (
+            {ticketAberto.status !== 'concluido' && ticketAberto.status !== 'cancelado' && (
               <div className="px-5 py-4 border-t border-border flex gap-3 flex-shrink-0">
                 <button onClick={enviarResposta} disabled={salvando || !resposta.trim()}
                   className="flex-1 flex items-center justify-center gap-2 bg-primary text-primary-foreground py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity">
