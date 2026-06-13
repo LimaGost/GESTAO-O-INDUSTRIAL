@@ -13,6 +13,7 @@ import {
 import ExportButtons from '@/components/relatorios/ExportButtons';
 import ExportableChart from '@/components/dashboard/ExportableChart';
 import PeriodFilter from '@/components/dashboard/PeriodFilter';
+import TabelaEstoquePlanilha from '@/components/relatorios/TabelaEstoquePlanilha';
 import { diffHoras, fmtHoras } from '@/lib/brasilia';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 
@@ -577,6 +578,8 @@ function TabClientes({ pedidos, clientes, produtos, ocultar }) {
 
 /* ── PRODUTOS ─────────────────────────────────────────────────────────────── */
 function TabProdutos({ pedidos, ordens, produtos, ocultar }) {
+  const [subTab, setSubTab] = useState('vendas');
+
   const vendidos = useMemo(() => {
     const map = {};
     for (const ped of pedidos.filter(p => p.status !== 'cancelado')) {
@@ -608,6 +611,22 @@ function TabProdutos({ pedidos, ordens, produtos, ocultar }) {
 
   return (
     <div className="space-y-5">
+      {/* Sub-abas */}
+      <div className="flex gap-2">
+        {[
+          { key: 'vendas', label: '📊 Análise de Vendas' },
+          { key: 'estoque', label: '📋 Planilha de Estoque' },
+        ].map(s => (
+          <button key={s.key} onClick={() => setSubTab(s.key)}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${subTab === s.key ? 'bg-primary text-primary-foreground shadow' : 'bg-card border border-border text-muted-foreground hover:bg-muted'}`}>
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {subTab === 'estoque' && <TabelaEstoquePlanilha produtos={produtos} />}
+
+      {subTab === 'vendas' && <>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <KpiCard label="Produtos Vendidos" value={vendidos.length} sub="tipos distintos" icon={Package} color="bg-sky-500" />
         <KpiCard label="Mais Vendido" value={topVendidos[0]?.nome?.split(' ').slice(0,2).join(' ') || '—'} sub={topVendidos[0] ? `${fmt(topVendidos[0].qtd)} un` : ''} icon={Award} color="bg-amber-500" />
@@ -694,6 +713,7 @@ function TabProdutos({ pedidos, ordens, produtos, ocultar }) {
           </div>
         )}
       </div>
+      </>}
     </div>
   );
 }
