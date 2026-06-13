@@ -1,43 +1,71 @@
 import { useEffect, useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { gerarDANFEHTML } from '@/lib/danfeGenerator';
-import {
-  Truck, FileText, CheckCircle, Plus, Search, X, Send, Printer,
-  RefreshCw, Package, ArrowRight, Eye, Tag, Filter, ChevronDown,
-  Clock, AlertTriangle, ClipboardCheck
-} from 'lucide-react';
+import { Truck, FileText, CheckCircle, Plus, Search, X, Send, Printer, ExternalLink, RefreshCw, Package, ArrowRight, Eye, Tag, MapPin, Factory, Building2, Home } from 'lucide-react';
 import { getDestinoLabel, DestinoBadge } from '@/components/pedidos/DestinoPedido';
 import { gerarNumero } from '@/lib/numeracao';
 import { registrarLog } from '@/lib/audit';
 import ModalConfirmacaoRecebimento from '@/components/expedicao/ModalConfirmacaoRecebimento';
 import NovaExpedicaoModal from '@/components/expedicao/NovaExpedicaoModal';
-import ModalConferencia from '@/components/expedicao/ModalConferencia';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 import AlertaSeparacao from '@/components/expedicao/AlertaSeparacao';
 import ModalItensPedido from '@/components/expedicao/ModalItensPedido';
+const EXP_COLUNAS_DEFAULT = [
+  { key: 'a_expedir', label: 'A Expedir',    cor: 4, desc: 'OPs prontas para NF',     fixo: true },
+  { key: 'emitida',   label: 'NF Emitida',   cor: 1, desc: 'Aguardando envio',         fixo: true },
+  { key: 'enviada',   label: 'Em Trânsito',  cor: 3, desc: 'Em rota de entrega',       fixo: true },
+  { key: 'entregue',  label: 'Entregue',     cor: 2, desc: 'Entrega confirmada',       fixo: true },
+];
+
+// Lê configs do localStorage (mantido sincronizado com o banco por AbaWhatsapp/AbaExpedicao)
+function getWhatsappExpedicaoConfig() {
+  try { return JSON.parse(localStorage.getItem('whatsapp_expedicao_config') || 'null') || { etapas_notificar: ['enviada','entregue'], notificar_cliente: true }; } catch { return { etapas_notificar: ['enviada','entregue'], notificar_cliente: true }; }
+}
+function getWhatsappKanbanConfig() {
+  try { return JSON.parse(localStorage.getItem('whatsapp_kanban_config') || 'null') || { numeros_internos: [] }; } catch { return { numeros_internos: [] }; }
+}
 import EtiquetaEndereco from '@/components/expedicao/EtiquetaEndereco';
 import PainelExpedicaoRapida from '@/components/expedicao/PainelExpedicaoRapida';
 
-// ── Status visuais ─────────────────────────────────────────────────────────
-const STATUS_PEDIDO = {
-  aguardando_separacao: { label: 'Ag. Separação',  bg: 'bg-amber-50',   border: 'border-amber-200',  dot: '#F59E0B', accent: '#F59E0B', icon: Clock },
-  separacao:           { label: 'Em Separação',   bg: 'bg-blue-50',    border: 'border-blue-200',   dot: '#3B82F6', accent: '#3B82F6', icon: Package },
-  separado:            { label: 'Separado',       bg: 'bg-green-50',   border: 'border-green-200',  dot: '#22C55E', accent: '#22C55E', icon: CheckCircle },
-  emitida:             { label: 'NF Emitida',     bg: 'bg-purple-50',  border: 'border-purple-200', dot: '#A855F7', accent: '#A855F7', icon: FileText },
-  enviada:             { label: 'Em Trânsito',    bg: 'bg-orange-50',  border: 'border-orange-200', dot: '#F97316', accent: '#F97316', icon: Truck },
-  entregue:            { label: 'Entregue',       bg: 'bg-emerald-50', border: 'border-emerald-200',dot: '#10B981', accent: '#10B981', icon: CheckCircle },
-  atrasado:            { label: 'Atrasado',       bg: 'bg-red-50',     border: 'border-red-200',    dot: '#EF4444', accent: '#EF4444', icon: AlertTriangle },
+const CORES_MAP = [
+  { accent: '#64748B', bg: '#F8FAFC', border: '#CBD5E1', dot: '#94A3B8' },
+  { accent: '#3B82F6', bg: '#EFF6FF', border: '#BFDBFE', dot: '#3B82F6' },
+  { accent: '#22C55E', bg: '#F0FDF4', border: '#86EFAC', dot: '#22C55E' },
+  { accent: '#F59E0B', bg: '#FFFBEB', border: '#FCD34D', dot: '#F59E0B' },
+  { accent: '#A855F7', bg: '#FAF5FF', border: '#D8B4FE', dot: '#A855F7' },
+  { accent: '#EF4444', bg: '#FFF5F5', border: '#FCA5A5', dot: '#EF4444' },
+  { accent: '#F97316', bg: '#FFF7ED', border: '#FDBA74', dot: '#F97316' },
+  { accent: '#14B8A6', bg: '#F0FDFA', border: '#99F6E4', dot: '#14B8A6' },
+];
+
+const ICON_MAP = {
+  a_expedir: Package,
+  emitida: FileText,
+  enviada: Truck,
+  entregue: CheckCircle,
 };
 
-const COLUNAS_EXP = [
-  { key: 'aguardando_separacao', label: 'Ag. Separação' },
-  { key: 'separacao',            label: 'Em Separação' },
-  { key: 'separado',             label: 'Separado' },
-  { key: 'emitida',              label: 'NF Emitida' },
-  { key: 'enviada',              label: 'Em Trânsito' },
-  { key: 'entregue',             label: 'Entregue' },
-  { key: 'atrasado',             label: 'Atrasados' },
-];
+function buildColunasFromConfig(config) {
+  return config.map((c, i) => {
+    const cores = CORES_MAP[c.cor] || CORES_MAP[0];
+    const nextCol = config[i + 1];
+    return {
+      ...c,
+      ...cores,
+      icon: ICON_MAP[c.key] || Package,
+      proximo: nextCol && c.key !== 'a_expedir' ? nextCol.key : null,
+      proximoLabel: nextCol && c.key !== 'a_expedir' ? `→ ${nextCol.label}` : null,
+    };
+  });
+}
+
+function buildColunasExp() {
+  try {
+    const local = JSON.parse(localStorage.getItem('expedicao_colunas_config') || 'null');
+    if (local && Array.isArray(local) && local.length > 0) return buildColunasFromConfig(local);
+  } catch {}
+  return buildColunasFromConfig(EXP_COLUNAS_DEFAULT);
+}
 
 function fmtDate(d) {
   if (!d) return '—';
@@ -46,429 +74,304 @@ function fmtDate(d) {
 function fmtR(v) {
   return `R$ ${(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 }
-function isAtrasado(p) {
-  if (!p.data_entrega_prevista) return false;
-  if (['cancelado', 'entregue', 'expedido'].includes(p.status)) return false;
-  return p.data_entrega_prevista < new Date().toISOString().split('T')[0];
-}
 
-// ── Card de Pedido ─────────────────────────────────────────────────────────
-function PedidoCard({ pedido, expedicao, cliente, ordemProducao, statusKey, onVerPedido, onConferencia, onConfirmarRecebimento, onEmitirNF, emitindo, onAvancar, advancing, onImprimirNF, onEtiqueta, readonly }) {
-  const st = STATUS_PEDIDO[statusKey] || STATUS_PEDIDO.separado;
-  const Icon = st.icon;
-  const totalItens = (pedido?.itens || expedicao?.itens || []).reduce((s, i) => s + (i.quantidade || 0), 0);
-  const atrasado = isAtrasado(pedido || {});
+// Card para OPs finalizadas (ainda sem NF)
+function OPFinalizadaCard({ op, clienteNome, onEmitirNF, emitindo, onVerPedido }) {
+  const qtdTotal = op.itens?.length > 0
+    ? op.itens.reduce((s, i) => s + (i.quantidade || 0), 0)
+    : (op.quantidade || 0);
 
   return (
-    <div className={`rounded-2xl border shadow-sm hover:shadow-md transition-shadow overflow-hidden ${st.bg} ${st.border}`}>
-      {/* Stripe colorida no topo */}
-      <div className="h-1" style={{ background: st.accent }} />
-
-      <div className="p-4 space-y-2.5">
-        {/* Header do card */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] font-bold text-muted-foreground font-mono">
-                #{pedido?.numero || expedicao?.pedido_numero}
-              </span>
-              {expedicao?.numero_nf && (
-                <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-bold">
-                  NF {expedicao.numero_nf}
-                </span>
-              )}
-              {atrasado && (
-                <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5">
-                  <AlertTriangle size={8} /> Atrasado
-                </span>
-              )}
-              {pedido?.white_label && (
-                <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5">
-                  <Tag size={8} /> WL
-                </span>
-              )}
-            </div>
-            <p className="text-sm font-bold text-foreground leading-tight mt-0.5 truncate">
-              {pedido?.cliente_nome || expedicao?.cliente_nome}
-            </p>
-            {cliente?.telefone && (
-              <p className="text-[10px] text-muted-foreground">📞 {cliente.telefone}</p>
-            )}
-          </div>
-          <div className="text-right flex-shrink-0">
-            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: st.accent }}>
-              {st.label}
-            </span>
-            <p className="text-xs font-bold text-foreground mt-1">{fmtR(pedido?.valor_total || expedicao?.valor_total)}</p>
-          </div>
-        </div>
-
-        {/* Datas */}
-        <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground">
-          {pedido?.data_pedido && <span>📅 Pedido: {fmtDate(pedido.data_pedido)}</span>}
-          {pedido?.data_entrega_prevista && (
-            <span className={atrasado ? 'text-red-600 font-bold' : ''}>
-              🎯 Entrega: {fmtDate(pedido.data_entrega_prevista)}
-            </span>
-          )}
-          {expedicao?.data_emissao && <span>📄 NF: {fmtDate(expedicao.data_emissao)}</span>}
-          {expedicao?.data_envio && <span>🚛 Envio: {fmtDate(expedicao.data_envio)}</span>}
-          {expedicao?.data_entrega && <span>✅ Entregue: {fmtDate(expedicao.data_entrega)}</span>}
-        </div>
-
-        {/* Destino */}
-        {pedido?.destino_tipo && <DestinoBadge pedido={pedido} />}
-
-        {/* OP vinculada */}
-        {ordemProducao?.numero && (
-          <p className="text-[10px] text-muted-foreground">⚙️ OP: <strong className="text-foreground">{ordemProducao.numero}</strong></p>
-        )}
-
-        {/* Itens resumo */}
-        {(pedido?.itens || expedicao?.itens || []).length > 0 && (
-          <div className="bg-white/60 rounded-xl px-3 py-2">
-            {(pedido?.itens || expedicao?.itens || []).slice(0, 2).map((item, i) => (
-              <p key={i} className="text-[10px] text-foreground truncate">{item.produto_nome} × {item.quantidade}</p>
-            ))}
-            {(pedido?.itens || expedicao?.itens || []).length > 2 && (
-              <p className="text-[10px] text-muted-foreground">+{(pedido?.itens || expedicao?.itens || []).length - 2} mais…</p>
-            )}
-            <p className="text-[10px] font-bold text-primary mt-0.5">{totalItens} unidades total</p>
-          </div>
-        )}
-
-        {/* Observações */}
-        {pedido?.observacoes && (
-          <p className="text-[10px] text-muted-foreground italic truncate">💬 {pedido.observacoes}</p>
-        )}
-
-        {/* Ações — linha 1 (secundárias) */}
-        <div className="flex flex-wrap gap-1.5 pt-1">
-          {onVerPedido && (
-            <button onClick={() => onVerPedido(pedido?.id || expedicao?.pedido_id)}
-              className="flex items-center gap-1 text-[10px] border border-primary/30 bg-primary/5 text-primary px-2 py-1 rounded-lg hover:bg-primary/10 transition-colors font-medium">
-              <Eye size={10} /> Ver Pedido
-            </button>
-          )}
-          {onConferencia && (
-            <button onClick={() => onConferencia()}
-              className="flex items-center gap-1 text-[10px] border border-blue-200 bg-blue-50 text-blue-700 px-2 py-1 rounded-lg hover:bg-blue-100 transition-colors font-medium">
-              <ClipboardCheck size={10} /> Conferência / NF
-            </button>
-          )}
-          {expedicao && onImprimirNF && (
-            <button onClick={() => onImprimirNF(expedicao)}
-              className="flex items-center gap-1 text-[10px] border border-border px-2 py-1 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
-              <Printer size={10} /> NF
-            </button>
-          )}
-          {expedicao && onEtiqueta && (
-            <button onClick={() => onEtiqueta(expedicao)}
-              className="flex items-center gap-1 text-[10px] border border-border px-2 py-1 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
-              <Tag size={10} /> Etiqueta
-            </button>
-          )}
-        </div>
-
-        {/* Ações — linha 2 (primárias) */}
-        {!readonly && (
-          <div className="flex flex-col gap-1.5">
-            {statusKey === 'separado' && onEmitirNF && (
-              <button onClick={() => onEmitirNF()}
-                disabled={emitindo}
-                className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl text-white transition-all disabled:opacity-50"
-                style={{ background: '#A855F7' }}>
-                {emitindo ? <RefreshCw size={11} className="animate-spin" /> : <ArrowRight size={11} />}
-                Emitir NF
-              </button>
-            )}
-            {expedicao && expedicao.status !== 'entregue' && onConfirmarRecebimento && (
-              <button onClick={() => onConfirmarRecebimento()}
-                className="w-full flex items-center justify-center gap-1.5 text-xs border border-green-200 bg-green-50 text-green-700 px-3 py-2 rounded-xl hover:bg-green-100 transition-colors font-semibold">
-                <CheckCircle size={11} /> Confirmar Recebimento
-              </button>
-            )}
-            {expedicao && expedicao.status === 'emitida' && onAvancar && (
-              <button onClick={() => onAvancar(expedicao.id, 'enviada')}
-                disabled={advancing}
-                className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl text-white disabled:opacity-50"
-                style={{ background: '#F97316' }}>
-                {advancing ? <RefreshCw size={11} className="animate-spin" /> : <Send size={11} />}
-                → Enviar
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ── Painel de filtros ──────────────────────────────────────────────────────
-function PainelFiltros({ filtros, setFiltros, clientes, transportadoras, unidades, onClose }) {
-  return (
-    <div className="bg-card border border-border rounded-2xl p-5 space-y-4 shadow-lg">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-bold text-foreground flex items-center gap-2"><Filter size={14} /> Filtros Avançados</p>
-        <button onClick={onClose} className="p-1 hover:bg-muted rounded-lg"><X size={14} className="text-muted-foreground" /></button>
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-        {[
-          { key: 'cliente', label: 'Cliente', type: 'text', placeholder: 'Nome do cliente...' },
-          { key: 'numero_pedido', label: 'Nº Pedido', type: 'text', placeholder: 'Ex: PED-001' },
-          { key: 'numero_op', label: 'Nº OP', type: 'text', placeholder: 'Ex: OP-001' },
-          { key: 'cidade', label: 'Cidade', type: 'text', placeholder: 'Cidade...' },
-          { key: 'estado', label: 'Estado', type: 'text', placeholder: 'Ex: SP' },
-          { key: 'data_pedido_de', label: 'Pedido de', type: 'date' },
-          { key: 'data_pedido_ate', label: 'Pedido até', type: 'date' },
-          { key: 'data_expedicao_de', label: 'Expedição de', type: 'date' },
-          { key: 'data_expedicao_ate', label: 'Expedição até', type: 'date' },
-        ].map(f => (
-          <div key={f.key}>
-            <label className="text-xs font-semibold text-muted-foreground mb-1 block">{f.label}</label>
-            <input type={f.type || 'text'} placeholder={f.placeholder}
-              value={filtros[f.key] || ''}
-              onChange={e => setFiltros(prev => ({ ...prev, [f.key]: e.target.value }))}
-              className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
-          </div>
-        ))}
-
+    <div className="bg-white rounded-2xl border border-border shadow-sm p-4 space-y-3 hover:shadow-md transition-shadow">
+      <div className="flex items-start justify-between gap-2">
         <div>
-          <label className="text-xs font-semibold text-muted-foreground mb-1 block">Transportadora</label>
-          <select value={filtros.transportadora || ''} onChange={e => setFiltros(p => ({ ...p, transportadora: e.target.value }))}
-            className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
-            <option value="">Todas</option>
-            {transportadoras.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
+          <p className="text-xs font-bold text-muted-foreground">{op.numero}</p>
+          <p className="text-sm font-bold text-foreground leading-tight mt-0.5">{op.produto_nome}</p>
+          {clienteNome && (
+            <p className="text-xs text-purple-600 mt-0.5">👤 {clienteNome}</p>
+          )}
         </div>
-
-        <div>
-          <label className="text-xs font-semibold text-muted-foreground mb-1 block">Unidade de Retirada</label>
-          <select value={filtros.unidade || ''} onChange={e => setFiltros(p => ({ ...p, unidade: e.target.value }))}
-            className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
-            <option value="">Todas</option>
-            {unidades.map(u => <option key={u} value={u}>{u}</option>)}
-          </select>
-        </div>
-
-        <div>
-          <label className="text-xs font-semibold text-muted-foreground mb-1 block">White Label</label>
-          <select value={filtros.white_label || ''} onChange={e => setFiltros(p => ({ ...p, white_label: e.target.value }))}
-            className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
-            <option value="">Todos</option>
-            <option value="sim">Somente WL</option>
-            <option value="nao">Excluir WL</option>
-          </select>
+        <div className="text-right flex-shrink-0">
+          <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-semibold">Finalizado</span>
+          <p className="text-xs text-muted-foreground mt-1">{qtdTotal} un</p>
         </div>
       </div>
+
+      {op.pedido_numero && (
+        <p className="text-xs text-muted-foreground">📦 Pedido <strong className="text-foreground">#{op.pedido_numero}</strong></p>
+      )}
+      {op.data_finalizacao && (
+        <p className="text-xs text-muted-foreground">✅ Finalizado em: <strong className="text-foreground">{fmtDate(op.data_finalizacao)}</strong></p>
+      )}
+
+      {op.itens?.length > 0 && (
+        <div className="bg-muted/30 rounded-xl px-3 py-2">
+          {op.itens.slice(0, 2).map((item, i) => (
+            <p key={i} className="text-xs text-foreground truncate">{item.produto_nome} × {item.quantidade}</p>
+          ))}
+          {op.itens.length > 2 && <p className="text-xs text-muted-foreground">+{op.itens.length - 2} mais...</p>}
+        </div>
+      )}
 
       <div className="flex gap-2">
-        <button onClick={() => setFiltros({})}
-          className="px-4 py-2 border border-border rounded-xl text-sm text-muted-foreground hover:bg-muted transition-colors">
-          Limpar filtros
-        </button>
+        {onVerPedido && op.pedido_id && (
+          <button
+            onClick={() => onVerPedido(op.pedido_id)}
+            className="flex items-center gap-1.5 text-xs border border-border px-2.5 py-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground"
+          >
+            <Eye size={11} /> Ver Pedido
+          </button>
+        )}
+        {onEmitirNF && (
+          <button
+            onClick={() => onEmitirNF(op)}
+            disabled={emitindo}
+            className="flex-1 flex items-center justify-center gap-2 text-sm font-semibold px-3 py-2 rounded-xl text-white transition-all disabled:opacity-50"
+            style={{ background: '#A855F7' }}
+          >
+            {emitindo ? <RefreshCw size={13} className="animate-spin" /> : <ArrowRight size={13} />}
+            Emitir NF
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
-// ── Página principal ───────────────────────────────────────────────────────
+// Card para expedições existentes
+function ExpedicaoCard({ exp, coluna, onAvancar, onImprimirNF, onImprimirEtiqueta, onConfirmarRecebimento, advancing, onVerPedido }) {
+  const totalItens = (exp.itens || []).reduce((s, i) => s + (i.quantidade || 0), 0);
+
+  return (
+    <div className="bg-white rounded-2xl border border-border shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+      {/* Topo colorido com acento da coluna */}
+      <div className="px-4 pt-4 pb-3 space-y-1">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">NF {exp.numero_nf}</p>
+            <p className="text-sm font-bold text-foreground leading-tight truncate">{exp.cliente_nome}</p>
+            {exp.pedido_numero && (
+              <p className="text-xs text-muted-foreground mt-0.5">Pedido <span className="font-semibold text-foreground">#{exp.pedido_numero}</span></p>
+            )}
+          </div>
+          <div className="flex-shrink-0 text-right">
+            <p className="text-sm font-bold text-foreground">{fmtR(exp.valor_total)}</p>
+            <p className="text-[10px] text-muted-foreground">{totalItens} un</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Detalhes */}
+      <div className="px-4 pb-3 space-y-1.5">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <span>📅 {fmtDate(exp.data_emissao)}</span>
+          {exp.transportadora && <span>🚛 {exp.transportadora}</span>}
+          {exp.data_envio && <span>📤 {fmtDate(exp.data_envio)}</span>}
+          {exp.data_entrega && <span>✅ {fmtDate(exp.data_entrega)}</span>}
+        </div>
+        {exp._pedidoDestino && <DestinoBadge pedido={exp._pedidoDestino} />}
+
+        {exp.confirmado_pelo_cliente && (
+          <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold text-[10px]">
+            ✓ Confirmado pelo cliente
+          </span>
+        )}
+
+        {(exp.itens || []).length > 0 && (
+          <div className="bg-muted/30 rounded-lg px-2.5 py-2 mt-1">
+            {exp.itens.slice(0, 2).map((item, i) => (
+              <p key={i} className="text-xs text-foreground truncate">{item.produto_nome} × {item.quantidade}</p>
+            ))}
+            {exp.itens.length > 2 && <p className="text-xs text-muted-foreground">+{exp.itens.length - 2} mais...</p>}
+          </div>
+        )}
+      </div>
+
+      {/* Ações */}
+      <div className="border-t border-border px-4 py-3 space-y-2">
+        {/* Linha 1: ações secundárias */}
+        <div className="flex gap-2">
+          <button onClick={() => onImprimirNF(exp)}
+            className="flex items-center gap-1.5 text-xs border border-border px-2.5 py-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
+            <Printer size={11} /> NF
+          </button>
+
+          {onImprimirEtiqueta && (
+            <button onClick={() => onImprimirEtiqueta(exp)}
+              className="flex items-center gap-1.5 text-xs border border-border px-2.5 py-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
+              <Tag size={11} /> Etiqueta Entrega
+            </button>
+          )}
+
+          {exp.pedido_id && onVerPedido && (
+            <button onClick={() => onVerPedido(exp.pedido_id)}
+              className="flex items-center gap-1.5 text-xs border border-primary/30 bg-primary/5 text-primary px-2.5 py-1.5 rounded-lg hover:bg-primary/10 transition-colors font-medium">
+              <Eye size={11} /> Ver Pedido
+            </button>
+          )}
+        </div>
+
+        {/* Linha 2: ações primárias (full width) */}
+        <div className="flex flex-col gap-2">
+          {exp.status !== 'entregue' && onConfirmarRecebimento && (
+            <button onClick={() => onConfirmarRecebimento(exp)}
+              className="w-full flex items-center justify-center gap-1.5 text-xs border border-green-200 bg-green-50 text-green-700 px-3 py-2 rounded-lg hover:bg-green-100 transition-colors font-semibold">
+              <CheckCircle size={11} /> Confirmar Recebimento
+            </button>
+          )}
+
+          {coluna?.proximo && onAvancar && (
+            <button
+              onClick={() => onAvancar(exp.id, coluna.proximo)}
+              disabled={advancing}
+              className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg text-white transition-all disabled:opacity-50"
+              style={{ background: '#22C55E' }}
+            >
+              {advancing ? <RefreshCw size={11} className="animate-spin" /> : <Send size={11} />}
+              {coluna.proximoLabel}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Expedicao() {
   const { somenteLeitura } = usePermissoes();
   const readonly = somenteLeitura('Expedicao');
 
+  const [colunasExp, setColunasExp] = useState(buildColunasExp);
   const [expedicoes, setExpedicoes] = useState([]);
-  const [pedidos, setPedidos] = useState([]);
-  const [clientes, setClientes] = useState([]);
-  const [ordens, setOrdens] = useState([]);
+  const [opsFinalizadas, setOpsFinalizadas] = useState([]);
+  const [pedidoMap, setPedidoMap] = useState({});
   const [showForm, setShowForm] = useState(false);
   const [loadingForm, setLoadingForm] = useState(false);
   const [modalConfirmacao, setModalConfirmacao] = useState(null);
-  const [modalConferencia, setModalConferencia] = useState(null); // { pedido, expedicao, cliente, ordemProducao }
-  const [pedidoDetalhes, setPedidoDetalhes] = useState(null);
-  const [etiquetaExpedicao, setEtiquetaExpedicao] = useState(null);
   const [busca, setBusca] = useState('');
   const [advancingId, setAdvancingId] = useState(null);
-  const [emitindoId, setEmitindoId] = useState(null);
-  const [aba, setAba] = useState('kanban');
-  const [statusFiltro, setStatusFiltro] = useState('todos');
-  const [showFiltros, setShowFiltros] = useState(false);
-  const [filtros, setFiltros] = useState({});
-  const [loading, setLoading] = useState(false);
+  const [emitindoOpId, setEmitindoOpId] = useState(null);
+  const [etiquetaExpedicao, setEtiquetaExpedicao] = useState(null);
+  const [pedidosSeparados, setPedidosSeparados] = useState([]);
+  const [aba, setAba] = useState('kanban'); // 'kanban' | 'rapida'
+  const [pedidoDetalhes, setPedidoDetalhes] = useState(null);
+  const [filtroDestino, setFiltroDestino] = useState('todos');
 
   const load = async () => {
-    setLoading(true);
-    const [exps, peds, cls, ords] = await Promise.all([
-      base44.entities.Expedicao.list('-created_date'),
-      base44.entities.Pedido.list('-created_date'),
-      base44.entities.Cliente.list(),
-      base44.entities.OrdemProducao.list('-created_date'),
-    ]);
+    const exps = await base44.entities.Expedicao.list('-created_date');
+    await new Promise(r => setTimeout(r, 150));
+    const ordens = await base44.entities.OrdemProducao.list('-created_date');
+    await new Promise(r => setTimeout(r, 150));
+    const pedidos = await base44.entities.Pedido.list();
+    await new Promise(r => setTimeout(r, 150));
     setExpedicoes(exps);
-    setPedidos(peds);
-    setClientes(cls);
-    setOrdens(ords);
-    setLoading(false);
+
+    const expPedidoIds = new Set(exps.map(e => e.pedido_id).filter(Boolean));
+
+    const finalizadas = ordens.filter(o => {
+      if (o.status !== 'finalizado') return false;
+      if (!o.pedido_id) return false;
+      return !expPedidoIds.has(o.pedido_id);
+    });
+
+    setOpsFinalizadas(finalizadas);
+
+    const pm = {};
+    for (const p of pedidos) pm[p.id] = {
+      nome: p.cliente_nome,
+      cliente_id: p.cliente_id,
+      itens: p.itens,
+      valor_total: p.valor_total,
+      numero: p.numero,
+      destino_tipo: p.destino_tipo,
+      destino_unidade: p.destino_unidade,
+      destino_transportadora: p.destino_transportadora,
+      destino_endereco: p.destino_endereco,
+    };
+    setPedidoMap(pm);
+
+    setPedidosSeparados(pedidos.filter(p => p.status === 'separado'));
+
   };
 
   useEffect(() => { load(); }, []);
 
-  // Mapas auxiliares
-  const clienteMap = useMemo(() => {
-    const m = {};
-    for (const c of clientes) m[c.id] = c;
-    return m;
-  }, [clientes]);
+  useEffect(() => {
+    const onSettings = () => setColunasExp(buildColunasExp());
+    window.addEventListener('expedicao:settings:saved', onSettings);
+    return () => window.removeEventListener('expedicao:settings:saved', onSettings);
+  }, []);
 
-  const expByPedidoId = useMemo(() => {
-    const m = {};
-    for (const e of expedicoes) if (e.pedido_id) m[e.pedido_id] = e;
-    return m;
-  }, [expedicoes]);
-
-  const ordemByPedidoId = useMemo(() => {
-    const m = {};
-    for (const o of ordens) if (o.pedido_id) m[o.pedido_id] = o;
-    return m;
-  }, [ordens]);
-
-  // Listas únicas para filtros
-  const transportadorasUnicas = useMemo(() => {
-    const s = new Set();
-    for (const e of expedicoes) if (e.transportadora) s.add(e.transportadora);
-    for (const p of pedidos) if (p.destino_transportadora) s.add(p.destino_transportadora);
-    return [...s];
-  }, [expedicoes, pedidos]);
-
-  const unidadesUnicas = useMemo(() => {
-    const s = new Set();
-    for (const p of pedidos) if (p.destino_unidade) s.add(p.destino_unidade);
-    return [...s];
-  }, [pedidos]);
-
-  // Mapear cada pedido ao seu status de "coluna"
-  const hoje = new Date().toISOString().split('T')[0];
-
-  const todosItens = useMemo(() => {
-    const items = [];
-    const expPedidoIds = new Set(expedicoes.map(e => e.pedido_id).filter(Boolean));
-
-    // Pedidos que não foram expedidos ainda
-    for (const p of pedidos) {
-      if (['cancelado'].includes(p.status)) continue;
-      const exp = expByPedidoId[p.id];
-      const cliente = clienteMap[p.cliente_id];
-      const op = ordemByPedidoId[p.id];
-
-      let statusKey;
-      if (exp) {
-        statusKey = exp.status; // emitida | enviada | entregue
-      } else if (isAtrasado(p)) {
-        statusKey = 'atrasado';
-      } else if (p.status === 'separado') {
-        statusKey = 'separado';
-      } else if (p.status === 'separacao') {
-        statusKey = 'separacao';
-      } else {
-        statusKey = 'aguardando_separacao';
-      }
-
-      items.push({ pedido: p, expedicao: exp || null, cliente, ordemProducao: op, statusKey });
-    }
-
-    return items;
-  }, [pedidos, expedicoes, clienteMap, expByPedidoId, ordemByPedidoId]);
-
-  // Aplicar filtros
-  const itensFiltrados = useMemo(() => {
-    let list = todosItens;
-
-    if (busca) {
-      const b = busca.toLowerCase();
-      list = list.filter(({ pedido, expedicao, cliente }) =>
-        pedido?.numero?.toLowerCase().includes(b) ||
-        pedido?.cliente_nome?.toLowerCase().includes(b) ||
-        expedicao?.numero_nf?.toLowerCase().includes(b) ||
-        cliente?.telefone?.includes(b)
-      );
-    }
-
-    if (statusFiltro !== 'todos') {
-      list = list.filter(i => i.statusKey === statusFiltro);
-    }
-
-    if (filtros.cliente) {
-      const b = filtros.cliente.toLowerCase();
-      list = list.filter(i => i.pedido?.cliente_nome?.toLowerCase().includes(b));
-    }
-    if (filtros.numero_pedido) {
-      list = list.filter(i => i.pedido?.numero?.toLowerCase().includes(filtros.numero_pedido.toLowerCase()));
-    }
-    if (filtros.numero_op) {
-      list = list.filter(i => i.ordemProducao?.numero?.toLowerCase().includes(filtros.numero_op.toLowerCase()));
-    }
-    if (filtros.cidade) {
-      const b = filtros.cidade.toLowerCase();
-      list = list.filter(i => i.cliente?.endereco?.toLowerCase().includes(b));
-    }
-    if (filtros.estado) {
-      const b = filtros.estado.toLowerCase();
-      list = list.filter(i => i.cliente?.endereco?.toLowerCase().includes(b));
-    }
-    if (filtros.transportadora) {
-      list = list.filter(i =>
-        i.expedicao?.transportadora === filtros.transportadora ||
-        i.pedido?.destino_transportadora === filtros.transportadora
-      );
-    }
-    if (filtros.unidade) {
-      list = list.filter(i => i.pedido?.destino_unidade === filtros.unidade);
-    }
-    if (filtros.white_label === 'sim') {
-      list = list.filter(i => i.pedido?.white_label);
-    }
-    if (filtros.white_label === 'nao') {
-      list = list.filter(i => !i.pedido?.white_label);
-    }
-    if (filtros.data_pedido_de) {
-      list = list.filter(i => (i.pedido?.data_pedido || '') >= filtros.data_pedido_de);
-    }
-    if (filtros.data_pedido_ate) {
-      list = list.filter(i => (i.pedido?.data_pedido || '') <= filtros.data_pedido_ate);
-    }
-    if (filtros.data_expedicao_de) {
-      list = list.filter(i => (i.expedicao?.data_emissao || '') >= filtros.data_expedicao_de);
-    }
-    if (filtros.data_expedicao_ate) {
-      list = list.filter(i => (i.expedicao?.data_emissao || '') <= filtros.data_expedicao_ate);
-    }
-
-    return list;
-  }, [todosItens, busca, statusFiltro, filtros]);
-
-  // Contagens por status
-  const counts = useMemo(() => {
-    const c = {};
-    for (const st of Object.keys(STATUS_PEDIDO)) {
-      c[st] = todosItens.filter(i => i.statusKey === st).length;
-    }
-    c.todos = todosItens.length;
-    return c;
-  }, [todosItens]);
-
-  const emitirNF = async (pedido) => {
-    setEmitindoId(pedido.id);
+  const emitirNFdaOP = async (op) => {
+    setEmitindoOpId(op.id);
     const numero_nf = gerarNumero('NF');
     const hoje = new Date().toISOString().split('T')[0];
-    const exp = await base44.entities.Expedicao.create({
-      numero_nf, pedido_id: pedido.id, pedido_numero: pedido.numero,
-      cliente_nome: pedido.cliente_nome, itens: pedido.itens || [],
-      status: 'emitida', data_emissao: hoje, valor_total: pedido.valor_total || 0,
+    const pedInfo = op.pedido_id ? pedidoMap[op.pedido_id] : null;
+
+    const expedicao = await base44.entities.Expedicao.create({
+      numero_nf,
+      pedido_id: op.pedido_id || '',
+      pedido_numero: pedInfo?.numero || op.pedido_numero || '',
+      cliente_nome: pedInfo?.nome || op.produto_nome,
+      ordem_producao_id: op.id,
+      itens: pedInfo?.itens || op.itens || [{ produto_nome: op.produto_nome, quantidade: op.quantidade }],
+      status: 'emitida',
+      data_emissao: hoje,
+      valor_total: pedInfo?.valor_total || 0,
     });
-    await base44.entities.Pedido.update(pedido.id, { status: 'expedido' });
-    await registrarLog('Expedicao', exp.id, 'EMISSAO', `NF ${numero_nf} emitida para pedido ${pedido.numero}`);
+
+    if (op.pedido_id) {
+      await base44.entities.Pedido.update(op.pedido_id, { status: 'expedido' });
+    }
+
+    await registrarLog('Expedicao', expedicao.id, 'EXPEDICAO_CRIADA', `NF ${numero_nf} emitida manualmente da OP ${op.numero}`);
+
+    const waCfg = getWhatsappExpedicaoConfig();
+    const waKanban = getWhatsappKanbanConfig();
+    if (waCfg.etapas_notificar.includes('nf_emitida')) {
+      let clienteTelefone = null;
+      if (waCfg.notificar_cliente) {
+        const clienteId = pedInfo?.cliente_id || op.cliente_id || null;
+        if (clienteId) {
+          const clientes = await base44.entities.Cliente.filter({ id: clienteId });
+          clienteTelefone = clientes[0]?.telefone || null;
+        }
+      }
+      base44.functions.invoke('enviarWhatsappExpedicao', {
+        expedicao: { numero_nf, cliente_nome: pedInfo?.nome || op.produto_nome, pedido_numero: pedInfo?.numero || op.pedido_numero || '' },
+        novoStatus: 'nf_emitida',
+        clienteTelefone: waCfg.notificar_cliente ? clienteTelefone : null,
+        numeros_internos: waKanban.numeros_internos || [],
+        msg_interno: waCfg.msg_interno,
+        msg_cliente: waCfg.msg_cliente,
+      }).catch(() => {});
+    }
+
     await load();
-    setEmitindoId(null);
+    setEmitindoOpId(null);
+  };
+
+  const criarExpedicao = async ({ pedidoId, transportadora, observacoes }) => {
+    const pedInfo = pedidoMap[pedidoId];
+    if (!pedInfo) return;
+    setLoadingForm(true);
+    const numero_nf = gerarNumero('NF');
+    const hoje = new Date().toISOString().split('T')[0];
+
+    const expedicao = await base44.entities.Expedicao.create({
+      numero_nf, pedido_id: pedidoId,
+      pedido_numero: pedInfo.numero,
+      cliente_nome: pedInfo.nome,
+      itens: pedInfo.itens || [],
+      status: 'emitida', data_emissao: hoje,
+      transportadora, valor_total: pedInfo.valor_total || 0, observacoes,
+    });
+
+    await base44.entities.Pedido.update(pedidoId, { status: 'expedido' });
+    await registrarLog('Expedicao', expedicao.id, 'EMISSAO', `NF ${numero_nf} emitida manualmente`);
+    await load();
+    setLoadingForm(false);
+    setShowForm(false);
   };
 
   const atualizarStatus = async (id, status) => {
@@ -477,56 +380,98 @@ export default function Expedicao() {
     if (status === 'enviada') updates.data_envio = new Date().toISOString().split('T')[0];
     if (status === 'entregue') updates.data_entrega = new Date().toISOString().split('T')[0];
     await base44.entities.Expedicao.update(id, updates);
-    await registrarLog('Expedicao', id, 'STATUS', `Status → ${status}`);
+    await registrarLog('Expedicao', id, 'STATUS', `Status atualizado para ${status}`);
+
+    const waCfg = getWhatsappExpedicaoConfig();
+    const waKanban = getWhatsappKanbanConfig();
+    if (waCfg.etapas_notificar.includes(status)) {
+      const expAtual = expedicoes.find(e => e.id === id);
+      let clienteTelefone = null;
+      if (waCfg.notificar_cliente) {
+        const clienteId = expAtual?.cliente_id || (expAtual?.pedido_id ? pedidoMap[expAtual.pedido_id]?.cliente_id : null);
+        if (clienteId) {
+          const clientes = await base44.entities.Cliente.filter({ id: clienteId });
+          clienteTelefone = clientes[0]?.telefone || null;
+        }
+      }
+      base44.functions.invoke('enviarWhatsappExpedicao', {
+        expedicao: { numero_nf: expAtual?.numero_nf || id, cliente_nome: expAtual?.cliente_nome || '', pedido_numero: expAtual?.pedido_numero || '' },
+        novoStatus: status,
+        clienteTelefone: waCfg.notificar_cliente ? clienteTelefone : null,
+        numeros_internos: waKanban.numeros_internos || [],
+        msg_interno: waCfg.msg_interno,
+        msg_cliente: waCfg.msg_cliente,
+      }).catch(() => {});
+    }
+
     await load();
     setAdvancingId(null);
   };
 
-  const criarExpedicao = async ({ pedidoId, transportadora, observacoes }) => {
-    const p = pedidos.find(x => x.id === pedidoId);
-    if (!p) return;
-    setLoadingForm(true);
-    const numero_nf = gerarNumero('NF');
-    const hoje = new Date().toISOString().split('T')[0];
-    const exp = await base44.entities.Expedicao.create({
-      numero_nf, pedido_id: pedidoId, pedido_numero: p.numero,
-      cliente_nome: p.cliente_nome, itens: p.itens || [],
-      status: 'emitida', data_emissao: hoje, transportadora,
-      valor_total: p.valor_total || 0, observacoes,
-    });
-    await base44.entities.Pedido.update(pedidoId, { status: 'expedido' });
-    await registrarLog('Expedicao', exp.id, 'EMISSAO', `NF ${numero_nf} emitida`);
-    await load();
-    setLoadingForm(false);
-    setShowForm(false);
-  };
-
   const imprimirDANFE = (exp) => {
-    const html = gerarDANFEHTML(exp, { nome: 'RAIO DO SOL', cnpj: '00000000000000', endereco: 'Velas e Cosméticos - Fone: (11) 9999-9999' });
+    const html = gerarDANFEHTML(exp, {
+      nome: 'RAIO DO SOL',
+      cnpj: '00000000000000',
+      endereco: 'Velas e Cosméticos - Fone: (11) 9999-9999'
+    });
     const win = window.open('', '_blank', 'width=960,height=1200');
-    win.document.write(html); win.document.close();
+    win.document.write(html);
+    win.document.close();
   };
 
   const abrirPedido = async (pedidoId) => {
-    const p = pedidos.find(x => x.id === pedidoId);
-    if (p) setPedidoDetalhes(p);
+    const pedidos = await base44.entities.Pedido.filter({ id: pedidoId });
+    if (pedidos[0]) setPedidoDetalhes(pedidos[0]);
   };
 
-  const pedidosSeparados = useMemo(() => pedidos.filter(p => p.status === 'separado'), [pedidos]);
-  const pedidosDisponiveis = useMemo(() =>
-    pedidos.filter(p => p.status === 'separado' && !expByPedidoId[p.id])
-      .map(p => ({ id: p.id, numero: p.numero, nome: p.cliente_nome, itens: p.itens, valor_total: p.valor_total })),
-    [pedidos, expByPedidoId]);
+  const expFiltradas = useMemo(() => {
+    let list = expedicoes.map(e => ({
+      ...e,
+      _pedidoDestino: e.pedido_id && pedidoMap[e.pedido_id]?.destino_tipo
+        ? { destino_tipo: pedidoMap[e.pedido_id].destino_tipo, destino_unidade: pedidoMap[e.pedido_id].destino_unidade, destino_transportadora: pedidoMap[e.pedido_id].destino_transportadora, destino_endereco: pedidoMap[e.pedido_id].destino_endereco }
+        : null,
+    }));
+    if (busca) {
+      const b = busca.toLowerCase();
+      list = list.filter(e =>
+        e.numero_nf?.toLowerCase().includes(b) ||
+        e.cliente_nome?.toLowerCase().includes(b) ||
+        e.pedido_numero?.toLowerCase().includes(b)
+      );
+    }
+    if (filtroDestino !== 'todos') {
+      list = list.filter(e => pedidoMap[e.pedido_id]?.destino_tipo === filtroDestino);
+    }
+    return list;
+  }, [expedicoes, busca, filtroDestino, pedidoMap]);
 
-  const filtrosAtivos = Object.values(filtros).filter(Boolean).length;
+  const opsFiltradas = useMemo(() => {
+    if (!busca) return opsFinalizadas;
+    const b = busca.toLowerCase();
+    return opsFinalizadas.filter(o =>
+      o.produto_nome?.toLowerCase().includes(b) ||
+      o.numero?.toLowerCase().includes(b) ||
+      o.pedido_numero?.toLowerCase().includes(b)
+    );
+  }, [opsFinalizadas, busca]);
+
+  const counts = colunasExp.reduce((acc, col) => {
+    acc[col.key] = col.key === 'a_expedir'
+      ? opsFinalizadas.length
+      : expedicoes.filter(e => e.status === col.key).length;
+    return acc;
+  }, {});
+
+  const pedidosDisponiveis = Object.entries(pedidoMap)
+    .filter(([id]) => !expedicoes.some(e => e.pedido_id === id))
+    .map(([id, info]) => ({ id, ...info }));
 
   return (
-    <div className="flex flex-col h-full gap-4">
+    <div className="flex flex-col h-full space-y-4">
       <AlertaSeparacao />
 
-      {/* ── Header ── */}
-      <div className="bg-card border border-border rounded-2xl px-5 py-4 flex-shrink-0 space-y-4">
-        {/* Título + ações */}
+      {/* Header */}
+      <div className="bg-card border border-border rounded-2xl px-5 py-4 flex-shrink-0">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-purple-100 flex items-center justify-center">
@@ -535,8 +480,7 @@ export default function Expedicao() {
             <div>
               <h2 className="text-lg font-bold text-foreground">Expedição</h2>
               <p className="text-xs text-muted-foreground">
-                {counts.aguardando_separacao} ag. sep. · {counts.separado} separados · {counts.emitida} emitidas · {counts.enviada} em trânsito · {counts.entregue} entregues
-                {counts.atrasado > 0 && <span className="text-red-600 font-bold"> · {counts.atrasado} atrasados ⚠️</span>}
+                {counts.a_expedir} a expedir · {counts.emitida} emitida · {counts.enviada} em trânsito · {counts.entregue} entregue
               </p>
             </div>
           </div>
@@ -544,18 +488,16 @@ export default function Expedicao() {
             <div className="relative">
               <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input value={busca} onChange={e => setBusca(e.target.value)}
-                placeholder="Buscar pedido, cliente, NF..."
+                placeholder="Buscar NF, OP, cliente..."
                 className="border border-border rounded-xl pl-8 pr-8 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary w-52" />
-              {busca && <button onClick={() => setBusca('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"><X size={13} /></button>}
+              {busca && (
+                <button onClick={() => setBusca('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  <X size={13} />
+                </button>
+              )}
             </div>
-            <button onClick={() => setShowFiltros(v => !v)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-medium transition-colors ${showFiltros || filtrosAtivos > 0 ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:bg-muted'}`}>
-              <Filter size={14} />
-              Filtros
-              {filtrosAtivos > 0 && <span className="text-xs bg-white/30 px-1 rounded-full">{filtrosAtivos}</span>}
-            </button>
             <button onClick={load} className="p-2.5 border border-border rounded-xl hover:bg-muted transition-colors">
-              <RefreshCw size={15} className={`text-muted-foreground ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw size={15} className="text-muted-foreground" />
             </button>
             {!readonly && (
               <button onClick={() => setShowForm(true)}
@@ -566,94 +508,140 @@ export default function Expedicao() {
           </div>
         </div>
 
-        {/* Filtros avançados */}
-        {showFiltros && (
-          <PainelFiltros
-            filtros={filtros} setFiltros={setFiltros}
-            clientes={clientes} transportadoras={transportadorasUnicas} unidades={unidadesUnicas}
-            onClose={() => setShowFiltros(false)}
-          />
-        )}
-
-        {/* Filtro por status (chips) */}
-        <div className="flex gap-2 flex-wrap">
-          <button onClick={() => setStatusFiltro('todos')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${statusFiltro === 'todos' ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground hover:bg-border'}`}>
-            Todos <span className="opacity-70">({counts.todos})</span>
-          </button>
-          {Object.entries(STATUS_PEDIDO).map(([key, st]) => {
-            const Icon = st.icon;
-            const c = counts[key] || 0;
-            return (
-              <button key={key} onClick={() => setStatusFiltro(key)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${statusFiltro === key ? 'text-white shadow-sm' : 'bg-muted text-muted-foreground hover:bg-border'}`}
-                style={statusFiltro === key ? { background: st.accent } : {}}>
-                <Icon size={10} />{st.label} <span className="opacity-70">({c})</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Abas */}
-        <div className="flex gap-2 border-b border-border pb-1">
+        {/* Filtro por destino */}
+        <div className="mt-3 flex gap-2 flex-wrap">
           {[
-            { key: 'kanban', label: '📦 Painel de Expedição' },
-            { key: 'rapida', label: `🏷️ Etiquetas em Lote${pedidosSeparados.length > 0 ? ` (${pedidosSeparados.length})` : ''}` },
-          ].map(a => (
-            <button key={a.key} onClick={() => setAba(a.key)}
-              className={`text-xs font-semibold px-4 py-2 rounded-t-lg transition-colors border-b-2 ${aba === a.key ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
-              {a.label}
+            { k: 'todos', l: '📦 Todos' },
+            { k: 'retirada_fabrica', l: '🏭 Retirada Fábrica' },
+            { k: 'retirada_unidade', l: '🏢 Retirada Unidade' },
+            { k: 'transportadora', l: '🚛 Transportadora' },
+            { k: 'entrega_cliente', l: '🏠 Entrega Cliente' },
+          ].map(f => (
+            <button key={f.k} onClick={() => setFiltroDestino(f.k)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${filtroDestino === f.k ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-border'}`}>
+              {f.l}
             </button>
           ))}
         </div>
+
+        {/* Abas */}
+        <div className="mt-4 flex gap-2 border-b border-border pb-1">
+          <button
+            onClick={() => setAba('kanban')}
+            className={`text-xs font-semibold px-4 py-2 rounded-t-lg transition-colors border-b-2 ${aba === 'kanban' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+          >
+            📦 Kanban Expedição
+          </button>
+          <button
+            onClick={() => setAba('rapida')}
+            className={`flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-t-lg transition-colors border-b-2 ${aba === 'rapida' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+          >
+            🏷️ Etiquetas em Lote
+            {pedidosSeparados.length > 0 && (
+              <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-bold">{pedidosSeparados.length}</span>
+            )}
+          </button>
+        </div>
+
+        {/* Progress summary — apenas no kanban */}
+        {aba === 'kanban' && <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: `repeat(${colunasExp.length}, 1fr)` }}>
+          {colunasExp.map(col => (
+            <div key={col.key} className="text-center">
+              <div className="h-1.5 rounded-full mb-1.5 overflow-hidden bg-muted">
+                <div className="h-full rounded-full transition-all duration-500"
+                  style={{ width: counts[col.key] > 0 ? '100%' : '0%', background: col.accent }} />
+              </div>
+              <p className="text-lg font-bold text-foreground">{counts[col.key]}</p>
+              <p className="text-[10px] text-muted-foreground leading-tight hidden sm:block">{col.label}</p>
+            </div>
+          ))}
+        </div>}
       </div>
 
-      {/* ── Aba: Etiquetas ── */}
+      {/* Painel Etiquetas em Lote */}
       {aba === 'rapida' && (
         <div className="flex-1 bg-card border border-border rounded-2xl p-5 overflow-auto">
           <PainelExpedicaoRapida pedidos={pedidosSeparados} />
         </div>
       )}
 
-      {/* ── Aba: Kanban / Painel ── */}
-      {aba === 'kanban' && (
-        <>
-          {itensFiltrados.length === 0 ? (
-            <div className="flex-1 bg-card border border-border rounded-2xl flex items-center justify-center">
-              <div className="text-center py-16 text-muted-foreground">
-                <Truck size={40} className="mx-auto mb-3 opacity-20" />
-                <p className="text-sm font-bold">Nenhum pedido encontrado</p>
-                <p className="text-xs mt-1">Tente ajustar os filtros.</p>
+      {/* Kanban integrado */}
+      {aba === 'kanban' && <div className="flex gap-4 overflow-x-auto pb-4 flex-1 items-start">
+        {colunasExp.map((coluna) => {
+          const Icon = coluna.icon;
+          const isAExpedir = coluna.key === 'a_expedir';
+          const cards = isAExpedir ? opsFiltradas : expFiltradas.filter(e => e.status === coluna.key);
+          const count = counts[coluna.key];
+
+          const renderCard = (card) => isAExpedir ? (
+            <OPFinalizadaCard
+              key={card.id}
+              op={card}
+              clienteNome={card.pedido_id ? pedidoMap[card.pedido_id]?.nome : null}
+              onEmitirNF={readonly ? null : emitirNFdaOP}
+              emitindo={emitindoOpId === card.id}
+              onVerPedido={abrirPedido}
+            />
+          ) : (
+            <ExpedicaoCard
+              key={card.id}
+              exp={card}
+              coluna={coluna}
+              advancing={advancingId === card.id}
+              onAvancar={readonly ? null : atualizarStatus}
+              onImprimirNF={imprimirDANFE}
+              onImprimirEtiqueta={readonly ? null : (exp) => setEtiquetaExpedicao(exp)}
+              onConfirmarRecebimento={readonly ? null : (exp) => setModalConfirmacao(exp)}
+              onVerPedido={abrirPedido}
+            />
+          );
+
+          return (
+            <div
+              key={coluna.key}
+              className="flex-shrink-0 w-80 rounded-2xl flex flex-col overflow-hidden"
+              style={{ minHeight: '60vh', background: coluna.bg, border: `1.5px solid ${coluna.border}` }}
+            >
+              {/* Coluna header */}
+              <div className="px-4 py-3 flex items-center justify-between sticky top-0 z-10"
+                style={{ background: coluna.bg, borderBottom: `1px solid ${coluna.border}` }}>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full" style={{ background: coluna.dot }} />
+                  <Icon size={13} style={{ color: coluna.accent }} />
+                  <span className="text-xs font-bold tracking-wide" style={{ color: coluna.accent }}>
+                    {coluna.label.toUpperCase()}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">{coluna.desc}</span>
+                  <span className="text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full text-white"
+                    style={{ background: coluna.accent, opacity: count === 0 ? 0.4 : 1 }}>
+                    {count}
+                  </span>
+                </div>
+              </div>
+
+              {/* Cards */}
+              <div className="flex-1 p-3 overflow-y-auto space-y-3">
+                {cards.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 opacity-30">
+                    <div className="w-10 h-10 rounded-full border-2 border-dashed flex items-center justify-center mb-2"
+                      style={{ borderColor: coluna.accent }}>
+                      <Icon size={16} style={{ color: coluna.accent }} />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {isAExpedir ? 'Nenhuma OP finalizada' : 'Sem expedições'}
+                    </p>
+                  </div>
+                ) : (
+                  cards.map(renderCard)
+                )}
               </div>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-4 overflow-y-auto flex-1">
-              {itensFiltrados.map(({ pedido, expedicao, cliente, ordemProducao, statusKey }) => (
-                <PedidoCard
-                  key={pedido?.id || expedicao?.id}
-                  pedido={pedido}
-                  expedicao={expedicao}
-                  cliente={cliente}
-                  ordemProducao={ordemProducao}
-                  statusKey={statusKey}
-                  readonly={readonly}
-                  onVerPedido={abrirPedido}
-                  onConferencia={() => setModalConferencia({ pedido, expedicao, cliente, ordemProducao })}
-                  onEmitirNF={statusKey === 'separado' ? () => emitirNF(pedido) : null}
-                  emitindo={emitindoId === pedido?.id}
-                  onAvancar={atualizarStatus}
-                  advancing={advancingId === expedicao?.id}
-                  onConfirmarRecebimento={expedicao ? () => setModalConfirmacao(expedicao) : null}
-                  onImprimirNF={imprimirDANFE}
-                  onEtiqueta={expedicao ? (exp) => setEtiquetaExpedicao(exp) : null}
-                />
-              ))}
-            </div>
-          )}
-        </>
-      )}
+          );
+        })}
+      </div>}
 
-      {/* ── Modais ── */}
       {showForm && (
         <NovaExpedicaoModal
           pedidos={pedidosDisponiveis}
@@ -667,12 +655,6 @@ export default function Expedicao() {
           expedicao={modalConfirmacao}
           onClose={() => setModalConfirmacao(null)}
           onConfirmed={() => { setModalConfirmacao(null); load(); }}
-        />
-      )}
-      {modalConferencia && (
-        <ModalConferencia
-          {...modalConferencia}
-          onClose={() => setModalConferencia(null)}
         />
       )}
       {etiquetaExpedicao && (
