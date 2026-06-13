@@ -108,19 +108,6 @@ export default function ModalEditarSku({ produto, onClose, onSaved }) {
             </div>
           </div>
 
-          {/* White Label */}
-          <label className="flex items-center gap-3 cursor-pointer select-none p-3 rounded-xl border border-border hover:bg-muted/30 transition-colors">
-            <div onClick={() => set('white_label', !form.white_label)}
-              className={`w-10 h-6 rounded-full transition-colors flex items-center px-0.5 flex-shrink-0 ${form.white_label ? 'bg-purple-500' : 'bg-border'}`}>
-              <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${form.white_label ? 'translate-x-4' : 'translate-x-0'}`} />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">Produto White Label</p>
-              <p className="text-xs text-muted-foreground">Apenas para identificação e relatórios</p>
-            </div>
-            {form.white_label && <span className="ml-auto text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-bold">WL</span>}
-          </label>
-
           {/* Preview barra de estoque */}
           <div className="bg-muted/30 rounded-xl p-3 space-y-1">
             <div className="flex items-center justify-between text-xs">
