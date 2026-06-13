@@ -192,7 +192,7 @@ function ExpedicaoCard({ exp, coluna, onAvancar, onImprimirNF, onImprimirEtiquet
         {exp.status !== 'entregue' && onConfirmarRecebimento && (
           <button onClick={() => onConfirmarRecebimento(exp)}
             className="flex items-center gap-1.5 text-xs border border-border px-2.5 py-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
-            <ExternalLink size={11} /> Link
+            <CheckCircle size={11} /> Confirmar Recebimento
           </button>
         )}
 
