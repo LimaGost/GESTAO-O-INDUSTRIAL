@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { gerarDANFEHTML } from '@/lib/danfeGenerator';
-import { Truck, FileText, CheckCircle, Plus, Search, X, Send, Printer, ExternalLink, RefreshCw, Package, ArrowRight, Eye } from 'lucide-react';
+import { Truck, FileText, CheckCircle, Plus, Search, X, Send, Printer, ExternalLink, RefreshCw, Package, ArrowRight, Eye, Tag } from 'lucide-react';
 import { gerarNumero } from '@/lib/numeracao';
 import { registrarLog } from '@/lib/audit';
 import ModalConfirmacaoRecebimento from '@/components/expedicao/ModalConfirmacaoRecebimento';
@@ -191,6 +191,13 @@ function ExpedicaoCard({ exp, coluna, onAvancar, onImprimirNF, onImprimirEtiquet
           className="flex items-center gap-1.5 text-xs border border-border px-2.5 py-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
           <Printer size={11} /> NF
         </button>
+
+        {onImprimirEtiqueta && (
+          <button onClick={() => onImprimirEtiqueta(exp)}
+            className="flex items-center gap-1.5 text-xs border border-border px-2.5 py-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
+            <Tag size={11} /> Etiqueta Entrega
+          </button>
+        )}
 
         {exp.pedido_id && onVerPedido && (
           <button onClick={() => onVerPedido(exp.pedido_id)}
