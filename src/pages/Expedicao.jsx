@@ -277,7 +277,17 @@ export default function Expedicao() {
     setOpsFinalizadas(finalizadas);
 
     const pm = {};
-    for (const p of pedidos) pm[p.id] = { nome: p.cliente_nome, cliente_id: p.cliente_id, itens: p.itens, valor_total: p.valor_total, numero: p.numero };
+    for (const p of pedidos) pm[p.id] = {
+      nome: p.cliente_nome,
+      cliente_id: p.cliente_id,
+      itens: p.itens,
+      valor_total: p.valor_total,
+      numero: p.numero,
+      destino_tipo: p.destino_tipo,
+      destino_unidade: p.destino_unidade,
+      destino_transportadora: p.destino_transportadora,
+      destino_endereco: p.destino_endereco,
+    };
     setPedidoMap(pm);
 
     setPedidosSeparados(pedidos.filter(p => p.status === 'separado'));
