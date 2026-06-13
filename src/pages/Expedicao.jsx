@@ -186,44 +186,50 @@ function ExpedicaoCard({ exp, coluna, onAvancar, onImprimirNF, onImprimirEtiquet
       </div>
 
       {/* Ações */}
-      <div className="border-t border-border px-4 py-2.5 flex flex-wrap gap-2">
-        <button onClick={() => onImprimirNF(exp)}
-          className="flex items-center gap-1.5 text-xs border border-border px-2.5 py-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
-          <Printer size={11} /> NF
-        </button>
-
-        {onImprimirEtiqueta && (
-          <button onClick={() => onImprimirEtiqueta(exp)}
+      <div className="border-t border-border px-4 py-3 space-y-2">
+        {/* Linha 1: ações secundárias */}
+        <div className="flex gap-2">
+          <button onClick={() => onImprimirNF(exp)}
             className="flex items-center gap-1.5 text-xs border border-border px-2.5 py-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
-            <Tag size={11} /> Etiqueta Entrega
+            <Printer size={11} /> NF
           </button>
-        )}
 
-        {exp.pedido_id && onVerPedido && (
-          <button onClick={() => onVerPedido(exp.pedido_id)}
-            className="flex items-center gap-1.5 text-xs border border-primary/30 bg-primary/5 text-primary px-2.5 py-1.5 rounded-lg hover:bg-primary/10 transition-colors font-medium">
-            <Eye size={11} /> Ver Pedido
-          </button>
-        )}
+          {onImprimirEtiqueta && (
+            <button onClick={() => onImprimirEtiqueta(exp)}
+              className="flex items-center gap-1.5 text-xs border border-border px-2.5 py-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
+              <Tag size={11} /> Etiqueta Entrega
+            </button>
+          )}
 
-        {exp.status !== 'entregue' && onConfirmarRecebimento && (
-          <button onClick={() => onConfirmarRecebimento(exp)}
-            className="flex items-center gap-1.5 text-xs border border-green-200 bg-green-50 text-green-700 px-2.5 py-1.5 rounded-lg hover:bg-green-100 transition-colors font-medium">
-            <CheckCircle size={11} /> Confirmar Recebimento
-          </button>
-        )}
+          {exp.pedido_id && onVerPedido && (
+            <button onClick={() => onVerPedido(exp.pedido_id)}
+              className="flex items-center gap-1.5 text-xs border border-primary/30 bg-primary/5 text-primary px-2.5 py-1.5 rounded-lg hover:bg-primary/10 transition-colors font-medium">
+              <Eye size={11} /> Ver Pedido
+            </button>
+          )}
+        </div>
 
-        {coluna?.proximo && onAvancar && (
-          <button
-            onClick={() => onAvancar(exp.id, coluna.proximo)}
-            disabled={advancing}
-            className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg text-white transition-all disabled:opacity-50"
-            style={{ background: '#22C55E' }}
-          >
-            {advancing ? <RefreshCw size={11} className="animate-spin" /> : <Send size={11} />}
-            {coluna.proximoLabel}
-          </button>
-        )}
+        {/* Linha 2: ações primárias (full width) */}
+        <div className="flex flex-col gap-2">
+          {exp.status !== 'entregue' && onConfirmarRecebimento && (
+            <button onClick={() => onConfirmarRecebimento(exp)}
+              className="w-full flex items-center justify-center gap-1.5 text-xs border border-green-200 bg-green-50 text-green-700 px-3 py-2 rounded-lg hover:bg-green-100 transition-colors font-semibold">
+              <CheckCircle size={11} /> Confirmar Recebimento
+            </button>
+          )}
+
+          {coluna?.proximo && onAvancar && (
+            <button
+              onClick={() => onAvancar(exp.id, coluna.proximo)}
+              disabled={advancing}
+              className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg text-white transition-all disabled:opacity-50"
+              style={{ background: '#22C55E' }}
+            >
+              {advancing ? <RefreshCw size={11} className="animate-spin" /> : <Send size={11} />}
+              {coluna.proximoLabel}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
