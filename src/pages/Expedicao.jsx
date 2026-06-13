@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { gerarDANFEHTML } from '@/lib/danfeGenerator';
+import { gerarDocumentoTransporteHTML } from '@/lib/documentoTransporte';
 import { Truck, FileText, CheckCircle, Plus, Search, X, Send, Printer, ExternalLink, RefreshCw, Package, ArrowRight, Eye, Tag, MapPin, Factory, Building2, Home } from 'lucide-react';
 import { getDestinoLabel, DestinoBadge } from '@/components/pedidos/DestinoPedido';
 import { gerarNumero } from '@/lib/numeracao';
@@ -139,16 +140,19 @@ function OPFinalizadaCard({ op, clienteNome, onEmitirNF, emitindo, onVerPedido }
 }
 
 // Card para expedições existentes
-function ExpedicaoCard({ exp, coluna, onAvancar, onImprimirNF, onImprimirEtiqueta, onConfirmarRecebimento, advancing, onVerPedido }) {
+function ExpedicaoCard({ exp, coluna, onAvancar, onImprimirNF, onImprimirEtiqueta, onConfirmarRecebimento, advancing, onVerPedido, onImprimirDocTransporte }) {
   const totalItens = (exp.itens || []).reduce((s, i) => s + (i.quantidade || 0), 0);
+  const isWL = exp._pedidoDestino?.white_label || exp.white_label;
 
   return (
     <div className="bg-white rounded-2xl border border-border shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-      {/* Topo colorido com acento da coluna */}
-      <div className="px-4 pt-4 pb-3 space-y-1">
+      <div className="px-4 pt-4 pb-3 space-y-1.5">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">NF {exp.numero_nf}</p>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">NF {exp.numero_nf}</p>
+              {isWL && <span className="text-[9px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-bold">WL</span>}
+            </div>
             <p className="text-sm font-bold text-foreground leading-tight truncate">{exp.cliente_nome}</p>
             {exp.pedido_numero && (
               <p className="text-xs text-muted-foreground mt-0.5">Pedido <span className="font-semibold text-foreground">#{exp.pedido_numero}</span></p>
@@ -163,11 +167,13 @@ function ExpedicaoCard({ exp, coluna, onAvancar, onImprimirNF, onImprimirEtiquet
 
       {/* Detalhes */}
       <div className="px-4 pb-3 space-y-1.5">
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
           <span>📅 {fmtDate(exp.data_emissao)}</span>
+          {exp._pedidoDestino?.data_entrega_prevista && <span>🗓 Prev. {fmtDate(exp._pedidoDestino.data_entrega_prevista)}</span>}
           {exp.transportadora && <span>🚛 {exp.transportadora}</span>}
           {exp.data_envio && <span>📤 {fmtDate(exp.data_envio)}</span>}
           {exp.data_entrega && <span>✅ {fmtDate(exp.data_entrega)}</span>}
+          {exp._opNumero && <span>🏭 OP {exp._opNumero}</span>}
         </div>
         {exp._pedidoDestino && <DestinoBadge pedido={exp._pedidoDestino} />}
 
@@ -190,23 +196,28 @@ function ExpedicaoCard({ exp, coluna, onAvancar, onImprimirNF, onImprimirEtiquet
       {/* Ações */}
       <div className="border-t border-border px-4 py-3 space-y-2">
         {/* Linha 1: ações secundárias */}
-        <div className="flex gap-2">
+        <div className="flex gap-1.5 flex-wrap">
           <button onClick={() => onImprimirNF(exp)}
-            className="flex items-center gap-1.5 text-xs border border-border px-2.5 py-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
+            className="flex items-center gap-1 text-xs border border-border px-2 py-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
             <Printer size={11} /> NF
+          </button>
+
+          <button onClick={() => onImprimirDocTransporte(exp)}
+            className="flex items-center gap-1 text-xs border border-blue-200 bg-blue-50 text-blue-700 px-2 py-1.5 rounded-lg hover:bg-blue-100 transition-colors font-medium">
+            <FileText size={11} /> Doc. Transporte
           </button>
 
           {onImprimirEtiqueta && (
             <button onClick={() => onImprimirEtiqueta(exp)}
-              className="flex items-center gap-1.5 text-xs border border-border px-2.5 py-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
-              <Tag size={11} /> Etiqueta Entrega
+              className="flex items-center gap-1 text-xs border border-border px-2 py-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
+              <Tag size={11} /> Etiqueta
             </button>
           )}
 
           {exp.pedido_id && onVerPedido && (
             <button onClick={() => onVerPedido(exp.pedido_id)}
-              className="flex items-center gap-1.5 text-xs border border-primary/30 bg-primary/5 text-primary px-2.5 py-1.5 rounded-lg hover:bg-primary/10 transition-colors font-medium">
-              <Eye size={11} /> Ver Pedido
+              className="flex items-center gap-1 text-xs border border-primary/30 bg-primary/5 text-primary px-2 py-1.5 rounded-lg hover:bg-primary/10 transition-colors font-medium">
+              <Eye size={11} /> Pedido
             </button>
           )}
         </div>
@@ -287,6 +298,9 @@ export default function Expedicao() {
       destino_unidade: p.destino_unidade,
       destino_transportadora: p.destino_transportadora,
       destino_endereco: p.destino_endereco,
+      white_label: p.white_label,
+      data_entrega_prevista: p.data_entrega_prevista,
+      op_numero: ordens.find(o => o.pedido_id === p.id)?.numero || null,
     };
     setPedidoMap(pm);
 
@@ -424,13 +438,49 @@ export default function Expedicao() {
     if (pedidos[0]) setPedidoDetalhes(pedidos[0]);
   };
 
+  const imprimirDocumentoTransporte = async (exp) => {
+    // Busca pedido e empresa completos para enriquecer o documento
+    let pedido = null;
+    let op = null;
+    let cliente = null;
+    if (exp.pedido_id) {
+      const ps = await base44.entities.Pedido.filter({ id: exp.pedido_id });
+      pedido = ps[0] || null;
+    }
+    if (exp.ordem_producao_id) {
+      const ops = await base44.entities.OrdemProducao.filter({ id: exp.ordem_producao_id });
+      op = ops[0] || null;
+    }
+    if (pedido?.cliente_id) {
+      const cs = await base44.entities.Cliente.filter({ id: pedido.cliente_id });
+      cliente = cs[0] || null;
+    }
+    const empresaConfig = (() => { try { return JSON.parse(localStorage.getItem('empresa_config') || '{}'); } catch { return {}; } })();
+    const emitente = {
+      nome: empresaConfig.nome || 'RAIO DO SOL',
+      nome_fantasia: empresaConfig.nome_fantasia || '',
+      cnpj: empresaConfig.cnpj || '00.000.000/0000-00',
+      endereco: empresaConfig.endereco || '',
+      telefone: empresaConfig.telefone || '',
+      logo_url: empresaConfig.logo_url || '',
+    };
+    const html = gerarDocumentoTransporteHTML(exp, emitente, pedido, op, cliente);
+    const win = window.open('', '_blank', 'width=960,height=1200');
+    win.document.write(html);
+    win.document.close();
+  };
+
   const expFiltradas = useMemo(() => {
-    let list = expedicoes.map(e => ({
-      ...e,
-      _pedidoDestino: e.pedido_id && pedidoMap[e.pedido_id]?.destino_tipo
-        ? { destino_tipo: pedidoMap[e.pedido_id].destino_tipo, destino_unidade: pedidoMap[e.pedido_id].destino_unidade, destino_transportadora: pedidoMap[e.pedido_id].destino_transportadora, destino_endereco: pedidoMap[e.pedido_id].destino_endereco }
-        : null,
-    }));
+    let list = expedicoes.map(e => {
+      const pm = e.pedido_id ? pedidoMap[e.pedido_id] : null;
+      return {
+        ...e,
+        _pedidoDestino: pm?.destino_tipo
+          ? { destino_tipo: pm.destino_tipo, destino_unidade: pm.destino_unidade, destino_transportadora: pm.destino_transportadora, destino_endereco: pm.destino_endereco, white_label: pm.white_label, data_entrega_prevista: pm.data_entrega_prevista }
+          : null,
+        _opNumero: pm?.op_numero || null,
+      };
+    });
     if (busca) {
       const b = busca.toLowerCase();
       list = list.filter(e =>
@@ -590,6 +640,7 @@ export default function Expedicao() {
               advancing={advancingId === card.id}
               onAvancar={readonly ? null : atualizarStatus}
               onImprimirNF={imprimirDANFE}
+              onImprimirDocTransporte={imprimirDocumentoTransporte}
               onImprimirEtiqueta={readonly ? null : (exp) => setEtiquetaExpedicao(exp)}
               onConfirmarRecebimento={readonly ? null : (exp) => setModalConfirmacao(exp)}
               onVerPedido={abrirPedido}
