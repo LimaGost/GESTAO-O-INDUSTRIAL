@@ -12,6 +12,7 @@ export default function Reposicoes() {
   const [ordens, setOrdens] = useState([]);
   const [loading, setLoading] = useState(true);
   const [criandoOP, setCriandoOP] = useState({});
+  const [qtdCustom, setQtdCustom] = useState({});
   const [busca, setBusca] = useState('');
 
   const load = async () => {
@@ -33,11 +34,14 @@ export default function Reposicoes() {
   );
   const zerados = alertas.filter(p => (p.estoque_atual || 0) === 0).length;
 
+  const getQtdSugerida = (produto) =>
+    Math.max((produto.estoque_minimo || 10) * 2 - (produto.estoque_atual || 0), produto.estoque_minimo || 10);
+
   const criarOPReposicao = async (produto) => {
     const jaTemOP = ordens.some(o => o.produto_id === produto.id && o.origem === 'estoque_minimo');
     if (jaTemOP) { alert(`⚠️ Já existe uma OP de reposição ativa para "${produto.nome}".`); return; }
     setCriandoOP(p => ({ ...p, [produto.id]: true }));
-    const qtd = Math.max((produto.estoque_minimo || 10) * 2 - (produto.estoque_atual || 0), produto.estoque_minimo || 10);
+    const qtd = Number(qtdCustom[produto.id]) || getQtdSugerida(produto);
     const op = await base44.entities.OrdemProducao.create({
       numero: gerarNumero('OP'), produto_id: produto.id, produto_nome: produto.nome,
       quantidade: qtd, status: 'a_produzir', origem: 'estoque_minimo', lote: gerarLote(produto.id),
@@ -101,7 +105,8 @@ export default function Reposicoes() {
             const pct = p.estoque_minimo > 0 ? Math.min(100, Math.round(((p.estoque_atual || 0) / p.estoque_minimo) * 100)) : 0;
             const jaTemOP = ordens.some(o => o.produto_id === p.id && o.origem === 'estoque_minimo');
             const criando = criandoOP[p.id];
-            const qtd = Math.max((p.estoque_minimo || 10) * 2 - (p.estoque_atual || 0), p.estoque_minimo || 10);
+            const qtdSugerida = getQtdSugerida(p);
+            const qtd = Number(qtdCustom[p.id]) || qtdSugerida;
             const zerado = (p.estoque_atual || 0) === 0;
             return (
               <div key={p.id} className="rounded-xl border p-3.5 flex flex-col gap-2 bg-card"
@@ -127,11 +132,23 @@ export default function Reposicoes() {
                     <CheckCircle size={12} /> OP já criada
                   </div>
                 ) : !readonly ? (
-                  <button onClick={() => criarOPReposicao(p)} disabled={criando}
-                    className="flex items-center justify-center gap-1.5 w-full py-2 rounded-lg text-xs font-bold bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50">
-                    {criando ? <RefreshCw size={12} className="animate-spin" /> : <Zap size={12} />}
-                    {criando ? 'Criando...' : `Criar OP (+${qtd} un)`}
-                  </button>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-muted-foreground flex-shrink-0">Qtd. a produzir:</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={qtdCustom[p.id] ?? qtdSugerida}
+                        onChange={e => setQtdCustom(prev => ({ ...prev, [p.id]: e.target.value }))}
+                        className="flex-1 min-w-0 border border-border rounded-lg px-2 py-1 text-xs text-center font-bold bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
+                    </div>
+                    <button onClick={() => criarOPReposicao(p)} disabled={criando || !qtd || qtd < 1}
+                      className="flex items-center justify-center gap-1.5 w-full py-2 rounded-lg text-xs font-bold bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50">
+                      {criando ? <RefreshCw size={12} className="animate-spin" /> : <Zap size={12} />}
+                      {criando ? 'Criando...' : `Criar OP (+${qtd} un)`}
+                    </button>
+                  </div>
                 ) : null}
               </div>
             );
