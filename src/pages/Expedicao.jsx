@@ -182,10 +182,6 @@ function ExpedicaoCard({ exp, coluna, onAvancar, onImprimirNF, onImprimirEtiquet
           className="flex items-center gap-1.5 text-xs border border-border px-2.5 py-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
           <Printer size={11} /> NF
          </button>
-         <button onClick={() => onImprimirEtiqueta?.(exp)}
-          className="flex items-center gap-1.5 text-xs border border-border px-2.5 py-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
-          <Printer size={11} /> Etiqueta
-         </button>
          {exp.pedido_id && onVerPedido && (
            <button onClick={() => onVerPedido(exp.pedido_id)}
             className="flex items-center gap-1.5 text-xs border border-primary/30 bg-primary/5 text-primary px-2.5 py-1.5 rounded-lg hover:bg-primary/10 transition-colors font-medium">
