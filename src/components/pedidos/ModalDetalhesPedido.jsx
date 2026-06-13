@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import {
   X, CheckCircle, Clock, Package, Truck, Ban, FileText, Factory,
-  Flag, AlertTriangle, Pencil, Save, ExternalLink, RefreshCw, Link2, Layers
+  Flag, AlertTriangle, Pencil, Save, ExternalLink, RefreshCw, Link2, Layers, Edit2, Tag
 } from 'lucide-react';
 
 const VALOR_OCULTO = '••••••';
@@ -61,7 +61,16 @@ export default function ModalDetalhesPedido({
   const [loadingExtra, setLoadingExtra] = useState(true);
   const [precosEditados, setPrecosEditados] = useState({});
   const [salvando, setSalvando] = useState(false);
-  const [aba, setAba] = useState('resumo'); // 'resumo' | 'rastreamento' | 'itens'
+  const [aba, setAba] = useState('resumo'); // 'resumo' | 'rastreamento' | 'itens' | 'editar'
+  const [formEdicao, setFormEdicao] = useState({
+    cliente_nome: pedido.cliente_nome || '',
+    data_pedido: pedido.data_pedido || '',
+    data_entrega_prevista: pedido.data_entrega_prevista || '',
+    observacoes: pedido.observacoes || '',
+    white_label: pedido.white_label || false,
+    white_label_marca: pedido.white_label_marca || '',
+  });
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false);
 
   useEffect(() => {
     carregarExtra();
@@ -90,6 +99,14 @@ export default function ModalDetalhesPedido({
     setPrecosEditados({});
     setSalvando(false);
     carregarExtra();
+  };
+
+  const handleSalvarEdicao = async () => {
+    setSalvandoEdicao(true);
+    await base44.entities.Pedido.update(pedido.id, formEdicao);
+    setSalvandoEdicao(false);
+    onRefresh();
+    setAba('resumo');
   };
 
   const temProducao = ordens.length > 0;
@@ -152,6 +169,7 @@ export default function ModalDetalhesPedido({
             { id: 'resumo', label: 'Resumo' },
             { id: 'rastreamento', label: '🔍 Rastreamento' },
             { id: 'itens', label: `Itens (${itens.length})` },
+            { id: 'editar', label: '✏️ Editar' },
           ].map(a => (
             <button key={a.id} onClick={() => setAba(a.id)}
               className={`flex-1 py-2.5 text-xs font-semibold transition-colors border-b-2 ${
@@ -381,6 +399,82 @@ export default function ModalDetalhesPedido({
                   </div>
                 </>
               )}
+            </div>
+          )}
+
+          {/* ABA: Editar */}
+          {aba === 'editar' && (
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Nome do Cliente</label>
+                <input
+                  value={formEdicao.cliente_nome}
+                  onChange={e => setFormEdicao(f => ({ ...f, cliente_nome: e.target.value }))}
+                  className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Data do Pedido</label>
+                  <input
+                    type="date"
+                    value={formEdicao.data_pedido}
+                    onChange={e => setFormEdicao(f => ({ ...f, data_pedido: e.target.value }))}
+                    className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Entrega Prevista</label>
+                  <input
+                    type="date"
+                    value={formEdicao.data_entrega_prevista}
+                    onChange={e => setFormEdicao(f => ({ ...f, data_entrega_prevista: e.target.value }))}
+                    className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Observações</label>
+                <textarea
+                  value={formEdicao.observacoes}
+                  onChange={e => setFormEdicao(f => ({ ...f, observacoes: e.target.value }))}
+                  rows={3}
+                  className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                />
+              </div>
+              {/* White Label */}
+              <label className="flex items-center gap-3 cursor-pointer select-none p-3 rounded-xl border border-border hover:bg-muted/30 transition-colors">
+                <div
+                  onClick={() => setFormEdicao(f => ({ ...f, white_label: !f.white_label, white_label_marca: !f.white_label ? f.white_label_marca : '' }))}
+                  className={`w-10 h-6 rounded-full transition-colors flex items-center px-0.5 flex-shrink-0 ${formEdicao.white_label ? 'bg-purple-500' : 'bg-border'}`}
+                >
+                  <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${formEdicao.white_label ? 'translate-x-4' : 'translate-x-0'}`} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                    <Tag size={12} className="text-purple-600" /> Pedido White Label
+                  </p>
+                </div>
+              </label>
+              {formEdicao.white_label && (
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Marca / Cliente White Label</label>
+                  <input
+                    value={formEdicao.white_label_marca}
+                    onChange={e => setFormEdicao(f => ({ ...f, white_label_marca: e.target.value }))}
+                    placeholder="Ex: Marca XYZ"
+                    className="w-full border border-purple-300 rounded-xl px-3 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  />
+                </div>
+              )}
+              <button
+                onClick={handleSalvarEdicao}
+                disabled={salvandoEdicao || !formEdicao.cliente_nome}
+                className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity"
+              >
+                <Save size={14} />
+                {salvandoEdicao ? 'Salvando...' : 'Salvar Alterações'}
+              </button>
             </div>
           )}
 
