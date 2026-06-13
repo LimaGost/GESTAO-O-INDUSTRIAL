@@ -8,9 +8,10 @@ export const DESTINO_OPCOES = [
 ];
 
 export const UNIDADES_PADRAO = [
-  'Unidade Raio do Sol — Centro',
-  'Unidade Raio do Sol — Sul',
-  'Unidade Raio do Sol — Norte',
+  'Raio do Sol Asa Sul',
+  'Raio do Sol Asa Norte',
+  'Raio do Sol Nucleo Bandeirante',
+  'Raio do Sol Sobradinho',
 ];
 
 export function getDestinoLabel(pedido) {
