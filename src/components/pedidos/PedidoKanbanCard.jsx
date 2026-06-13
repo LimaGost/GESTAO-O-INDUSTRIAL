@@ -1,4 +1,5 @@
 import { Clock, Package, CheckCircle, Truck, Ban, FileText, AlertTriangle, Zap, Eye, ArrowRight, Tag } from 'lucide-react';
+import { DestinoBadge } from './DestinoPedido';
 
 const STATUS_CONFIG = {
   rascunho:           { label: 'Rascunho',       color: '#64748B', bg: '#F8FAFC', icon: FileText },
@@ -87,6 +88,11 @@ export default function PedidoKanbanCard({
             )}
           </div>
         </div>
+
+        {/* Destino */}
+        {pedido.destino_tipo && (
+          <DestinoBadge pedido={pedido} />
+        )}
 
         {/* Alertas */}
         {statusEfetivo === 'aguardando_estoque' && (

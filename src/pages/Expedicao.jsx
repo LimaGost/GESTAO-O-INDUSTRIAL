@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { gerarDANFEHTML } from '@/lib/danfeGenerator';
-import { Truck, FileText, CheckCircle, Plus, Search, X, Send, Printer, ExternalLink, RefreshCw, Package, ArrowRight, Eye, Tag } from 'lucide-react';
+import { Truck, FileText, CheckCircle, Plus, Search, X, Send, Printer, ExternalLink, RefreshCw, Package, ArrowRight, Eye, Tag, MapPin, Factory, Building2, Home } from 'lucide-react';
+import { getDestinoLabel, DestinoBadge } from '@/components/pedidos/DestinoPedido';
 import { gerarNumero } from '@/lib/numeracao';
 import { registrarLog } from '@/lib/audit';
 import ModalConfirmacaoRecebimento from '@/components/expedicao/ModalConfirmacaoRecebimento';
@@ -168,6 +169,7 @@ function ExpedicaoCard({ exp, coluna, onAvancar, onImprimirNF, onImprimirEtiquet
           {exp.data_envio && <span>📤 {fmtDate(exp.data_envio)}</span>}
           {exp.data_entrega && <span>✅ {fmtDate(exp.data_entrega)}</span>}
         </div>
+        {exp._pedidoDestino && <DestinoBadge pedido={exp._pedidoDestino} />}
 
         {exp.confirmado_pelo_cliente && (
           <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold text-[10px]">
@@ -253,6 +255,7 @@ export default function Expedicao() {
   const [pedidosSeparados, setPedidosSeparados] = useState([]);
   const [aba, setAba] = useState('kanban'); // 'kanban' | 'rapida'
   const [pedidoDetalhes, setPedidoDetalhes] = useState(null);
+  const [filtroDestino, setFiltroDestino] = useState('todos');
 
   const load = async () => {
     const exps = await base44.entities.Expedicao.list('-created_date');
@@ -412,14 +415,25 @@ export default function Expedicao() {
   };
 
   const expFiltradas = useMemo(() => {
-    if (!busca) return expedicoes;
-    const b = busca.toLowerCase();
-    return expedicoes.filter(e =>
-      e.numero_nf?.toLowerCase().includes(b) ||
-      e.cliente_nome?.toLowerCase().includes(b) ||
-      e.pedido_numero?.toLowerCase().includes(b)
-    );
-  }, [expedicoes, busca]);
+    let list = expedicoes.map(e => ({
+      ...e,
+      _pedidoDestino: e.pedido_id && pedidoMap[e.pedido_id]?.destino_tipo
+        ? { destino_tipo: pedidoMap[e.pedido_id].destino_tipo, destino_unidade: pedidoMap[e.pedido_id].destino_unidade, destino_transportadora: pedidoMap[e.pedido_id].destino_transportadora, destino_endereco: pedidoMap[e.pedido_id].destino_endereco }
+        : null,
+    }));
+    if (busca) {
+      const b = busca.toLowerCase();
+      list = list.filter(e =>
+        e.numero_nf?.toLowerCase().includes(b) ||
+        e.cliente_nome?.toLowerCase().includes(b) ||
+        e.pedido_numero?.toLowerCase().includes(b)
+      );
+    }
+    if (filtroDestino !== 'todos') {
+      list = list.filter(e => pedidoMap[e.pedido_id]?.destino_tipo === filtroDestino);
+    }
+    return list;
+  }, [expedicoes, busca, filtroDestino, pedidoMap]);
 
   const opsFiltradas = useMemo(() => {
     if (!busca) return opsFinalizadas;
@@ -482,6 +496,22 @@ export default function Expedicao() {
               </button>
             )}
           </div>
+        </div>
+
+        {/* Filtro por destino */}
+        <div className="mt-3 flex gap-2 flex-wrap">
+          {[
+            { k: 'todos', l: '📦 Todos' },
+            { k: 'retirada_fabrica', l: '🏭 Retirada Fábrica' },
+            { k: 'retirada_unidade', l: '🏢 Retirada Unidade' },
+            { k: 'transportadora', l: '🚛 Transportadora' },
+            { k: 'entrega_cliente', l: '🏠 Entrega Cliente' },
+          ].map(f => (
+            <button key={f.k} onClick={() => setFiltroDestino(f.k)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${filtroDestino === f.k ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-border'}`}>
+              {f.l}
+            </button>
+          ))}
         </div>
 
         {/* Abas */}

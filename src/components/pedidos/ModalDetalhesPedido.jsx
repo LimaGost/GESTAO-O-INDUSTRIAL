@@ -5,6 +5,7 @@ import {
   Flag, AlertTriangle, Pencil, Save, ExternalLink, RefreshCw, Link2, Layers, Edit2, Tag, ShoppingBag
 } from 'lucide-react';
 import SeletorProdutos from './SeletorProdutos';
+import { DestinoForm, DestinoBadge, getDestinoLabel } from './DestinoPedido';
 
 const VALOR_OCULTO = '••••••';
 
@@ -70,6 +71,10 @@ export default function ModalDetalhesPedido({
     observacoes: pedido.observacoes || '',
     white_label: pedido.white_label || false,
     white_label_marca: pedido.white_label_marca || '',
+    destino_tipo: pedido.destino_tipo || '',
+    destino_unidade: pedido.destino_unidade || '',
+    destino_transportadora: pedido.destino_transportadora || '',
+    destino_endereco: pedido.destino_endereco || '',
   });
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
   const [itensEditados, setItensEditados] = useState(pedido.itens || []);
@@ -284,6 +289,16 @@ export default function ModalDetalhesPedido({
                 </div>
               </div>
 
+              {pedido.destino_tipo && (
+                <div className="bg-muted/30 rounded-xl p-3 col-span-2">
+                  <p className="text-xs text-muted-foreground mb-1.5">Destino do Pedido</p>
+                  <DestinoBadge pedido={pedido} className="text-xs px-2.5 py-1" />
+                  {pedido.destino_tipo === 'entrega_cliente' && pedido.destino_endereco && (
+                    <p className="text-xs text-muted-foreground mt-1.5">📍 {pedido.destino_endereco}</p>
+                  )}
+                </div>
+              )}
+
               {pedido.observacoes && (
                 <div className="bg-muted/30 rounded-xl p-3">
                   <p className="text-xs text-muted-foreground mb-1">Observações</p>
@@ -433,6 +448,23 @@ export default function ModalDetalhesPedido({
                     </div>
                   )}
 
+                  {/* Destino */}
+                  {pedido.destino_tipo && (
+                    <div className="bg-muted/30 rounded-xl p-3">
+                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">Destino do Pedido</p>
+                      <DestinoBadge pedido={pedido} className="text-xs px-2.5 py-1" />
+                      {pedido.destino_tipo === 'entrega_cliente' && pedido.destino_endereco && (
+                        <p className="text-xs text-muted-foreground mt-1.5">📍 {pedido.destino_endereco}</p>
+                      )}
+                      {pedido.destino_tipo === 'retirada_unidade' && pedido.destino_unidade && (
+                        <p className="text-xs text-muted-foreground mt-1.5">🏢 {pedido.destino_unidade}</p>
+                      )}
+                      {pedido.destino_tipo === 'transportadora' && pedido.destino_transportadora && (
+                        <p className="text-xs text-muted-foreground mt-1.5">🚛 {pedido.destino_transportadora}</p>
+                      )}
+                    </div>
+                  )}
+
                   {/* Expedição */}
                   <div>
                     <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">Expedição</p>
@@ -513,6 +545,12 @@ export default function ModalDetalhesPedido({
                   className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                 />
               </div>
+              {/* Destino */}
+              <DestinoForm
+                value={formEdicao}
+                onChange={dest => setFormEdicao(f => ({ ...f, ...dest }))}
+              />
+
               {/* White Label */}
               <label className="flex items-center gap-3 cursor-pointer select-none p-3 rounded-xl border border-border hover:bg-muted/30 transition-colors">
                 <div

@@ -64,6 +64,28 @@
     "white_label_marca": {
       "type": "string",
       "description": "Nome da marca/cliente para quem o produto White Label \u00e9 fabricado"
+    },
+    "destino_tipo": {
+      "type": "string",
+      "enum": [
+        "retirada_fabrica",
+        "retirada_unidade",
+        "transportadora",
+        "entrega_cliente"
+      ],
+      "description": "Tipo de destino/entrega do pedido"
+    },
+    "destino_unidade": {
+      "type": "string",
+      "description": "Nome da unidade de retirada (quando destino_tipo = retirada_unidade)"
+    },
+    "destino_transportadora": {
+      "type": "string",
+      "description": "Nome da transportadora (quando destino_tipo = transportadora)"
+    },
+    "destino_endereco": {
+      "type": "string",
+      "description": "Endere\u00e7o de entrega (quando destino_tipo = entrega_cliente)"
     }
   },
   "required": [

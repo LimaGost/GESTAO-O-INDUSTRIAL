@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { X, CheckCircle, ChevronRight, ChevronLeft, User, Package, FileText, Search, Tag } from 'lucide-react';
 import SeletorProdutos from './SeletorProdutos';
+import { DestinoForm, getDestinoLabel } from './DestinoPedido';
 
 const STEPS = [
   { id: 1, label: 'Cliente', icon: User },
@@ -20,6 +21,10 @@ export default function ModalNovoPedido({ clientes, produtos, loading, onConfirm
     itens: [],
     white_label: false,
     white_label_marca: '',
+    destino_tipo: '',
+    destino_unidade: '',
+    destino_transportadora: '',
+    destino_endereco: '',
   });
 
   const totalPedido = form.itens.reduce((s, i) => s + (i.total || 0), 0);
@@ -156,6 +161,12 @@ export default function ModalNovoPedido({ clientes, produtos, loading, onConfirm
           {/* Step 3: Detalhes */}
           {step === 3 && (
             <div className="space-y-4">
+              {/* Destino do Pedido */}
+              <DestinoForm
+                value={form}
+                onChange={dest => setForm(f => ({ ...f, ...dest }))}
+              />
+
               {/* White Label */}
               <label className="flex items-center gap-3 cursor-pointer select-none p-3 rounded-xl border border-border hover:bg-muted/30 transition-colors">
                 <div onClick={() => setForm(f => ({ ...f, white_label: !f.white_label, white_label_marca: !f.white_label ? f.white_label_marca : '' }))}
