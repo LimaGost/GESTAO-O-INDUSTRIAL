@@ -2,29 +2,35 @@ import { useEffect, useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
-  AreaChart, Area, CartesianGrid, Legend,
-  PieChart, Pie, LineChart, Line
+  AreaChart, Area, CartesianGrid, Legend, PieChart, Pie, LineChart, Line
 } from 'recharts';
 import {
   BarChart2, Factory, ShoppingCart, Calendar, Zap,
   TrendingUp, Users, Package, DollarSign, Clock,
-  ArrowUpRight, ArrowDownRight, Award, AlertTriangle, EyeOff, Eye
+  ArrowUpRight, ArrowDownRight, Award, AlertTriangle, EyeOff, Eye,
+  Truck, Tag
 } from 'lucide-react';
 import ExportButtons from '@/components/relatorios/ExportButtons';
 import ExportableChart from '@/components/dashboard/ExportableChart';
 import PeriodFilter from '@/components/dashboard/PeriodFilter';
 import TabelaEstoquePlanilha from '@/components/relatorios/TabelaEstoquePlanilha';
+import RelatorioFiltros from '@/components/relatorios/RelatorioFiltros';
+import TabEstoque from '@/components/relatorios/TabEstoque';
+import TabExpedicaoRel from '@/components/relatorios/TabExpedicaoRel';
+import TabWhiteLabelRel from '@/components/relatorios/TabWhiteLabelRel';
 import { diffHoras, fmtHoras } from '@/lib/brasilia';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 
 const COLORS = ['#F59E0B', '#3B82F6', '#22C55E', '#F97316', '#A855F7', '#EC4899', '#14B8A6', '#EF4444'];
 
 const TABS = [
-  { key: 'visao_geral', label: 'Visão Geral', icon: BarChart2 },
-  { key: 'clientes', label: 'Clientes', icon: Users },
-  { key: 'produtos', label: 'Produtos', icon: Package },
-  { key: 'producao', label: 'Produção', icon: Factory },
-  { key: 'produtividade', label: 'Produtividade', icon: Zap },
+  { key: 'visao_geral',  label: 'Visão Geral',   icon: BarChart2 },
+  { key: 'comercial',    label: 'Comercial',      icon: TrendingUp },
+  { key: 'producao',     label: 'Produção',       icon: Factory },
+  { key: 'estoque',      label: 'Estoque',        icon: Package },
+  { key: 'expedicao',    label: 'Expedição',      icon: Truck },
+  { key: 'white_label',  label: 'White Label',    icon: Tag },
+  { key: 'produtividade',label: 'Produtividade',  icon: Zap },
 ];
 
 const fmt = (v) => v?.toLocaleString('pt-BR') ?? '—';
@@ -37,19 +43,17 @@ const fmtRShort = (v) => {
 };
 const VALOR_OCULTO = '••••••';
 
-function startOfWeek(d) {
-  const dt = new Date(d); dt.setDate(dt.getDate() - dt.getDay()); dt.setHours(0, 0, 0, 0); return dt;
-}
-function weekLabel(d) {
-  const s = startOfWeek(d); const e = new Date(s); e.setDate(s.getDate() + 6);
-  return `${s.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} – ${e.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`;
-}
 function isInRange(dateStr, from, to) {
   if (!dateStr) return true;
   const d = new Date(dateStr);
   if (from && d < new Date(from)) return false;
   if (to) { const t = new Date(to); t.setHours(23, 59, 59); if (d > t) return false; }
   return true;
+}
+function weekLabel(d) {
+  const s = new Date(d); s.setDate(s.getDate() - s.getDay()); s.setHours(0, 0, 0, 0);
+  const e = new Date(s); e.setDate(s.getDate() + 6);
+  return `${s.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}–${e.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`;
 }
 
 function KpiCard({ label, value, sub, icon: Icon, color = 'bg-primary', trend, trendLabel }) {
@@ -85,9 +89,26 @@ function EmptyState({ msg = 'Sem dados para o período selecionado.' }) {
     </div>
   );
 }
-
 function SectionTitle({ children }) {
   return <h3 className="font-bold text-foreground text-base mb-3">{children}</h3>;
+}
+
+// Aplica filtros avançados aos pedidos
+function applyFilters(pedidos, filters) {
+  return pedidos.filter(p => {
+    if (filters.cliente && p.cliente_id !== filters.cliente) return false;
+    if (filters.produto && !(p.itens || []).some(i => i.produto_id === filters.produto || i.produto_nome === filters.produto)) return false;
+    if (filters.status && p.status !== filters.status) return false;
+    if (filters.wl !== undefined && !!p.white_label !== filters.wl) return false;
+    if (filters.unidade && p.destino_unidade !== filters.unidade) return false;
+    return true;
+  });
+}
+function applyFiltersExp(exps, filters) {
+  return exps.filter(e => {
+    if (filters.transportadora && e.transportadora !== filters.transportadora) return false;
+    return true;
+  });
 }
 
 /* ──────────────────────────────────────────────────────────────────────────── */
@@ -99,14 +120,14 @@ export default function Relatorios() {
   const [pedidos, setPedidos] = useState([]);
   const [produtos, setProdutos] = useState([]);
   const [clientes, setClientes] = useState([]);
+  const [expedicoes, setExpedicoes] = useState([]);
   const [period, setPeriod] = useState({ preset: 'month', from: '', to: '' });
+  const [filters, setFilters] = useState({ cliente: '', produto: '', status: '', wl: undefined, transportadora: '', unidade: '' });
   const [ocultarManual, setOcultarManual] = useState(() => {
     try { return localStorage.getItem('relatorios_ocultar_valores') === 'true'; } catch { return false; }
   });
 
-  // Ocultar se permissão é 'view' no módulo financeiro OU se o usuário ativou manualmente
   const ocultarValores = ocultarFinanceiro('Relatorios') || ocultarManual;
-
   const toggleOcultar = () => {
     setOcultarManual(v => {
       const next = !v;
@@ -117,13 +138,14 @@ export default function Relatorios() {
 
   useEffect(() => {
     async function load() {
-      const [ords, peds, prods, cls] = await Promise.all([
+      const [ords, peds, prods, cls, exps] = await Promise.all([
         base44.entities.OrdemProducao.list('-created_date'),
         base44.entities.Pedido.list('-created_date'),
         base44.entities.Produto.list(),
         base44.entities.Cliente.list(),
+        base44.entities.Expedicao.list('-created_date'),
       ]);
-      setOrdens(ords); setPedidos(peds); setProdutos(prods); setClientes(cls);
+      setOrdens(ords); setPedidos(peds); setProdutos(prods); setClientes(cls); setExpedicoes(exps);
       setLoading(false);
     }
     load();
@@ -131,17 +153,23 @@ export default function Relatorios() {
 
   const { from, to } = period;
 
-  const filteredPedidos = useMemo(() =>
-    pedidos.filter(p => isInRange(p.data_pedido || p.created_date, from, to)),
-    [pedidos, from, to]
-  );
+  const filteredPedidos = useMemo(() => {
+    const byPeriod = pedidos.filter(p => isInRange(p.data_pedido || p.created_date, from, to));
+    return applyFilters(byPeriod, filters);
+  }, [pedidos, from, to, filters]);
+
   const filteredOrdens = useMemo(() =>
     ordens.filter(o => isInRange(o.data_inicio || o.created_date, from, to)),
     [ordens, from, to]
   );
 
+  const filteredExps = useMemo(() => {
+    const byPeriod = expedicoes.filter(e => isInRange(e.data_emissao || e.created_date, from, to));
+    return applyFiltersExp(byPeriod, filters);
+  }, [expedicoes, from, to, filters]);
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Header */}
       <div className="bg-card border border-border rounded-2xl px-5 py-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
@@ -150,14 +178,11 @@ export default function Relatorios() {
               <BarChart2 size={19} className="text-rainbow-indigo" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-foreground">Relatórios</h2>
-              <p className="text-xs text-muted-foreground">Análise completa de vendas, produção e clientes</p>
+              <h2 className="text-lg font-bold text-foreground">Relatórios Gerenciais</h2>
+              <p className="text-xs text-muted-foreground">Análise completa de vendas, produção, estoque e logística</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <p className="text-xs text-muted-foreground hidden md:block">
-              {new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
-            </p>
             {ocultarFinanceiro('Relatorios') ? (
               <span className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold border bg-amber-100 border-amber-300 text-amber-700">
                 <EyeOff size={13} /> Valores restritos
@@ -176,6 +201,12 @@ export default function Relatorios() {
       {/* Filtro de período */}
       <PeriodFilter value={period} onChange={setPeriod} />
 
+      {/* Filtros avançados */}
+      <RelatorioFiltros
+        pedidos={pedidos} clientes={clientes} produtos={produtos} expedicoes={expedicoes}
+        filters={filters} onChange={setFilters}
+      />
+
       {/* Tabs */}
       <div className="flex flex-wrap gap-2">
         {TABS.map(({ key, label, icon: Icon }) => (
@@ -190,14 +221,16 @@ export default function Relatorios() {
 
       {loading ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[1,2,3,4,5,6].map(i => <div key={i} className="h-32 animate-pulse bg-muted rounded-2xl" />)}
+          {[1,2,3,4,5,6,8].map(i => <div key={i} className="h-32 animate-pulse bg-muted rounded-2xl" />)}
         </div>
       ) : (
         <>
-          {tab === 'visao_geral' && <TabVisaoGeral pedidos={filteredPedidos} ordens={filteredOrdens} produtos={produtos} clientes={clientes} ocultar={ocultarValores} />}
-          {tab === 'clientes' && <TabClientes pedidos={filteredPedidos} clientes={clientes} produtos={produtos} ocultar={ocultarValores} />}
-          {tab === 'produtos' && <TabProdutos pedidos={filteredPedidos} ordens={filteredOrdens} produtos={produtos} ocultar={ocultarValores} />}
-          {tab === 'producao' && <TabProducao ordens={filteredOrdens} />}
+          {tab === 'visao_geral'   && <TabVisaoGeral pedidos={filteredPedidos} ordens={filteredOrdens} produtos={produtos} clientes={clientes} ocultar={ocultarValores} allPedidos={pedidos} />}
+          {tab === 'comercial'     && <TabComercial pedidos={filteredPedidos} clientes={clientes} produtos={produtos} ocultar={ocultarValores} allPedidos={pedidos} />}
+          {tab === 'producao'      && <TabProducao ordens={filteredOrdens} allOrdens={ordens} />}
+          {tab === 'estoque'       && <TabEstoque produtos={produtos} />}
+          {tab === 'expedicao'     && <TabExpedicaoRel expedicoes={filteredExps} pedidos={pedidos} />}
+          {tab === 'white_label'   && <TabWhiteLabelRel pedidos={filteredPedidos} ordens={filteredOrdens} ocultar={ocultarValores} />}
           {tab === 'produtividade' && <TabProdutividade ordens={filteredOrdens} produtos={produtos} />}
         </>
       )}
@@ -206,92 +239,120 @@ export default function Relatorios() {
 }
 
 /* ── VISÃO GERAL ──────────────────────────────────────────────────────────── */
-function TabVisaoGeral({ pedidos, ordens, produtos, clientes, ocultar }) {
+function TabVisaoGeral({ pedidos, ordens, produtos, clientes, ocultar, allPedidos }) {
+  const hoje = new Date().toISOString().split('T')[0];
+  const mesInicio = hoje.slice(0, 7) + '-01';
+
   const ativos = pedidos.filter(p => p.status !== 'cancelado');
   const faturamento = ativos.reduce((s, p) => s + (p.valor_total || 0), 0);
   const expedidos = pedidos.filter(p => p.status === 'expedido' || p.status === 'entregue');
-  const faturamentoExpedido = expedidos.reduce((s, p) => s + (p.valor_total || 0), 0);
+  const entregues = pedidos.filter(p => p.status === 'entregue');
+  const emProducao = ordens.filter(o => ['a_produzir', 'em_producao', 'produzido', 'em_embalagem'].includes(o.status));
+  const opsAtrasadas = ordens.filter(o =>
+    ['a_produzir', 'em_producao'].includes(o.status) &&
+    o.created_date && new Date(o.created_date) < new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+  );
+  const atrasados = allPedidos.filter(p =>
+    !['cancelado', 'entregue', 'expedido'].includes(p.status) &&
+    p.data_entrega_prevista && p.data_entrega_prevista < hoje
+  );
   const ticketMedio = ativos.length > 0 ? faturamento / ativos.length : 0;
-  const ops = ordens.filter(o => o.status === 'finalizado');
-  const totalProduzido = ops.reduce((s, o) => s + (o.itens?.length > 0 ? o.itens.reduce((a,i) => a+(i.quantidade||0),0) : (o.quantidade||0)), 0);
-  const produtosAlerta = produtos.filter(p => (p.estoque_atual||0) <= (p.estoque_minimo||0));
+  const produtosAlerta = produtos.filter(p => (p.estoque_atual || 0) <= (p.estoque_minimo || 0) && p.ativo !== false);
 
-  // Evolução semanal de faturamento
-  const semanas = {};
-  for (const ped of ativos) {
-    if (!ped.data_pedido) continue;
-    const wk = weekLabel(ped.data_pedido);
-    if (!semanas[wk]) semanas[wk] = { semana: wk, faturamento: 0, pedidos: 0 };
-    semanas[wk].faturamento += ped.valor_total || 0;
-    semanas[wk].pedidos += 1;
+  // Faturamento do dia
+  const fatDia = allPedidos.filter(p => p.status !== 'cancelado' && (p.data_pedido || '').startsWith(hoje))
+    .reduce((s, p) => s + (p.valor_total || 0), 0);
+  const fatMes = allPedidos.filter(p => p.status !== 'cancelado' && (p.data_pedido || '').startsWith(hoje.slice(0, 7)))
+    .reduce((s, p) => s + (p.valor_total || 0), 0);
+
+  // Evolução mensal (últimos 6 meses)
+  const mesesMap = {};
+  const agora = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const dt = new Date(agora.getFullYear(), agora.getMonth() - i, 1);
+    const k = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
+    mesesMap[k] = { mes: dt.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }), faturamento: 0, pedidos: 0 };
   }
-  const semanasList = Object.values(semanas).slice(-10);
+  for (const p of allPedidos.filter(x => x.status !== 'cancelado')) {
+    const d = p.data_pedido || p.created_date;
+    if (!d) continue;
+    const dt = new Date(d);
+    const k = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
+    if (mesesMap[k]) { mesesMap[k].faturamento += p.valor_total || 0; mesesMap[k].pedidos += 1; }
+  }
+  const evolucaoMensal = Object.values(mesesMap);
 
-  // Status dos pedidos
   const statusPedidos = [
-    { name: 'Rascunho', value: pedidos.filter(p=>p.status==='rascunho').length, color: '#94A3B8' },
-    { name: 'Ag. Estoque', value: pedidos.filter(p=>p.status==='aguardando_estoque').length, color: '#F97316' },
-    { name: 'Separação', value: pedidos.filter(p=>p.status==='separacao').length, color: '#3B82F6' },
-    { name: 'Separado', value: pedidos.filter(p=>p.status==='separado').length, color: '#22C55E' },
-    { name: 'Expedido', value: pedidos.filter(p=>p.status==='expedido').length, color: '#A855F7' },
-    { name: 'Entregue', value: pedidos.filter(p=>p.status==='entregue').length, color: '#14B8A6' },
-    { name: 'Cancelado', value: pedidos.filter(p=>p.status==='cancelado').length, color: '#EF4444' },
+    { name: 'Rascunho', value: pedidos.filter(p => p.status === 'rascunho').length, color: '#94A3B8' },
+    { name: 'Ag. Estoque', value: pedidos.filter(p => p.status === 'aguardando_estoque').length, color: '#F97316' },
+    { name: 'Separação', value: pedidos.filter(p => p.status === 'separacao').length, color: '#3B82F6' },
+    { name: 'Separado', value: pedidos.filter(p => p.status === 'separado').length, color: '#22C55E' },
+    { name: 'Expedido', value: pedidos.filter(p => p.status === 'expedido').length, color: '#A855F7' },
+    { name: 'Entregue', value: pedidos.filter(p => p.status === 'entregue').length, color: '#14B8A6' },
+    { name: 'Cancelado', value: pedidos.filter(p => p.status === 'cancelado').length, color: '#EF4444' },
   ].filter(s => s.value > 0);
 
   return (
-    <div className="space-y-5">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard label="Faturamento" value={ocultar ? VALOR_OCULTO : fmtRShort(faturamento)} sub={`${ativos.length} pedidos`} icon={DollarSign} color="bg-green-500" />
-        <KpiCard label="Faturamento Expedido" value={ocultar ? VALOR_OCULTO : fmtRShort(faturamentoExpedido)} sub={`${expedidos.length} expedidos`} icon={TrendingUp} color="bg-sky-500" />
-        <KpiCard label="Ticket Médio" value={ocultar ? VALOR_OCULTO : fmtRShort(ticketMedio)} sub="por pedido" icon={ShoppingCart} color="bg-purple-500" />
-        <KpiCard label="Unidades Produzidas" value={fmt(totalProduzido)} sub={`${ops.length} OPs finalizadas`} icon={Factory} color="bg-amber-500" />
+    <div className="space-y-4">
+      {/* KPIs principais */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <KpiCard label="Fat. do Dia" value={ocultar ? VALOR_OCULTO : fmtRShort(fatDia)} icon={DollarSign} color="bg-emerald-500" />
+        <KpiCard label="Fat. do Mês" value={ocultar ? VALOR_OCULTO : fmtRShort(fatMes)} icon={DollarSign} color="bg-green-500" />
+        <KpiCard label="Pedidos em Aberto" value={ativos.filter(p => !['expedido','entregue'].includes(p.status)).length} icon={ShoppingCart} color="bg-sky-500" />
+        <KpiCard label="Em Produção" value={emProducao.length} icon={Factory} color="bg-blue-500" />
+        <KpiCard label="Expedidos" value={expedidos.length} icon={TrendingUp} color="bg-purple-500" />
+        <KpiCard label="Entregues" value={entregues.length} icon={Award} color="bg-teal-500" />
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <KpiCard label="Pedidos Atrasados" value={atrasados.length} icon={AlertTriangle} color={atrasados.length > 0 ? 'bg-red-500' : 'bg-green-500'} />
+        <KpiCard label="Ticket Médio" value={ocultar ? VALOR_OCULTO : fmtRShort(ticketMedio)} icon={TrendingUp} color="bg-amber-500" />
+        <KpiCard label="Clientes Ativos" value={clientes.filter(c => c.ativo !== false).length} icon={Users} color="bg-indigo-500" />
+        <KpiCard label="OPs em Andamento" value={emProducao.length} icon={Factory} color="bg-orange-500" />
+        <KpiCard label="OPs Atrasadas" value={opsAtrasadas.length} icon={Clock} color={opsAtrasadas.length > 0 ? 'bg-red-500' : 'bg-green-500'} />
+        <KpiCard label="Alerta de Estoque" value={produtosAlerta.length} icon={Package} color={produtosAlerta.length > 0 ? 'bg-red-500' : 'bg-green-500'} />
       </div>
 
-      {produtosAlerta.length > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-center gap-3">
-          <AlertTriangle size={18} className="text-red-500 flex-shrink-0" />
-          <p className="text-sm text-red-700 font-medium">
-            {produtosAlerta.length} produto(s) abaixo do estoque mínimo: {produtosAlerta.slice(0,3).map(p=>p.nome).join(', ')}{produtosAlerta.length > 3 ? '...' : ''}
-          </p>
+      {(atrasados.length > 0 || opsAtrasadas.length > 0) && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3">
+          <AlertTriangle size={18} className="text-red-500 flex-shrink-0 mt-0.5" />
+          <div>
+            {atrasados.length > 0 && <p className="text-sm text-red-700 font-medium">{atrasados.length} pedido(s) atrasado(s): {atrasados.slice(0,3).map(p => `#${p.numero}`).join(', ')}</p>}
+            {opsAtrasadas.length > 0 && <p className="text-sm text-red-700 font-medium mt-0.5">{opsAtrasadas.length} OP(s) paradas há mais de 7 dias</p>}
+          </div>
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ExportableChart title="Evolução de Faturamento (Semanal)">
+        <ExportableChart title="Faturamento Mensal — Últimos 6 Meses">
           {ocultar ? (
             <div className="flex flex-col items-center justify-center h-[220px] text-muted-foreground gap-2">
-              <EyeOff size={28} className="opacity-30" />
-              <p className="text-sm">Valores ocultos</p>
+              <EyeOff size={28} className="opacity-30" /><p className="text-sm">Valores ocultos</p>
             </div>
-          ) : semanasList.length === 0 ? <EmptyState /> : (
+          ) : (
             <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={semanasList}>
-                <defs>
-                  <linearGradient id="gradFat" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#F59E0B" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0e8dc" />
-                <XAxis dataKey="semana" tick={{ fontSize: 9 }} />
-                <YAxis tick={{ fontSize: 10 }} tickFormatter={v => fmtRShort(v)} />
-                <Tooltip formatter={v => fmtR(v)} labelStyle={{ fontSize: 11 }} />
-                <Area type="monotone" dataKey="faturamento" name="Faturamento" stroke="#F59E0B" strokeWidth={2} fill="url(#gradFat)" />
-              </AreaChart>
+              <BarChart data={evolucaoMensal} barSize={28}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                <XAxis dataKey="mes" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} width={35} />
+                <Tooltip formatter={v => fmtR(v)} />
+                <Bar dataKey="faturamento" name="Faturamento" fill="#22C55E" radius={[6, 6, 0, 0]} />
+              </BarChart>
             </ResponsiveContainer>
           )}
         </ExportableChart>
 
-        <ExportableChart title="Distribuição de Pedidos por Status">
+        <ExportableChart title="Pedidos por Status (Período)">
           {statusPedidos.length === 0 ? <EmptyState /> : (
             <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie data={statusPedidos} cx="50%" cy="50%" outerRadius={80} innerRadius={40} dataKey="value"
-                  label={({ name, value }) => `${name}: ${value}`} labelLine={false}>
-                  {statusPedidos.map((s, i) => <Cell key={i} fill={s.color} />)}
-                </Pie>
+              <BarChart data={statusPedidos} barSize={30}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                <XAxis dataKey="name" tick={{ fontSize: 9 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} width={25} />
                 <Tooltip />
-              </PieChart>
+                <Bar dataKey="value" name="Pedidos" radius={[5, 5, 0, 0]}>
+                  {statusPedidos.map((s, i) => <Cell key={i} fill={s.color} />)}
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           )}
         </ExportableChart>
@@ -299,28 +360,27 @@ function TabVisaoGeral({ pedidos, ordens, produtos, clientes, ocultar }) {
 
       <div className="bg-card border border-border rounded-2xl p-5">
         <div className="flex items-center justify-between mb-4">
-          <SectionTitle>Resumo do Período</SectionTitle>
+          <SectionTitle>Resumo Executivo do Período</SectionTitle>
           <ExportButtons filename="visao-geral" title="Visão Geral — Raio do Sol"
-            columns={[
-              { header: 'Métrica', key: 'metrica', width: 60 },
-              { header: 'Valor', key: 'valor', width: 60 },
-            ]}
+            columns={[{ header: 'Métrica', key: 'metrica', width: 60 }, { header: 'Valor', key: 'valor', width: 60 }]}
             rows={[
-              { metrica: 'Faturamento Total', valor: ocultar ? '—' : fmtR(faturamento) },
-              { metrica: 'Faturamento Expedido', valor: ocultar ? '—' : fmtR(faturamentoExpedido) },
+              { metrica: 'Faturamento do Dia', valor: ocultar ? '—' : fmtR(fatDia) },
+              { metrica: 'Faturamento do Mês', valor: ocultar ? '—' : fmtR(fatMes) },
+              { metrica: 'Faturamento Total Período', valor: ocultar ? '—' : fmtR(faturamento) },
               { metrica: 'Ticket Médio', valor: ocultar ? '—' : fmtR(ticketMedio) },
-              { metrica: 'Total de Pedidos', valor: ativos.length },
-              { metrica: 'OPs Finalizadas', valor: ops.length },
-              { metrica: 'Unidades Produzidas', valor: totalProduzido },
+              { metrica: 'Pedidos em Aberto', valor: ativos.filter(p => !['expedido','entregue'].includes(p.status)).length },
+              { metrica: 'Pedidos Atrasados', valor: atrasados.length },
+              { metrica: 'OPs em Andamento', valor: emProducao.length },
+              { metrica: 'OPs Atrasadas', valor: opsAtrasadas.length },
               { metrica: 'Produtos em Alerta', valor: produtosAlerta.length },
             ]}
           />
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
           {[
-            { label: 'Clientes Ativos', value: clientes.filter(c=>c.ativo!==false).length, color: 'text-sky-600' },
+            { label: 'Faturamento do Mês', value: ocultar ? VALOR_OCULTO : fmtRShort(fatMes), color: 'text-green-600' },
             { label: 'Pedidos no Período', value: ativos.length, color: 'text-foreground' },
-            { label: 'Produtos Cadastrados', value: produtos.length, color: 'text-foreground' },
+            { label: 'Clientes Ativos', value: clientes.filter(c => c.ativo !== false).length, color: 'text-sky-600' },
             { label: 'Alerta de Estoque', value: produtosAlerta.length, color: produtosAlerta.length > 0 ? 'text-red-600' : 'text-green-600' },
           ].map(item => (
             <div key={item.label} className="bg-muted/30 rounded-xl p-3">
@@ -334,8 +394,8 @@ function TabVisaoGeral({ pedidos, ordens, produtos, clientes, ocultar }) {
   );
 }
 
-/* ── CLIENTES ─────────────────────────────────────────────────────────────── */
-function TabClientes({ pedidos, clientes, produtos, ocultar }) {
+/* ── COMERCIAL ────────────────────────────────────────────────────────────── */
+function TabComercial({ pedidos, clientes, produtos, ocultar, allPedidos }) {
   const [ordenar, setOrdenar] = useState('faturamento');
   const [clienteSelecionado, setClienteSelecionado] = useState('');
 
@@ -352,234 +412,6 @@ function TabClientes({ pedidos, clientes, produtos, ocultar }) {
     return Object.values(map).sort((a, b) => b[ordenar] - a[ordenar]);
   }, [pedidos, ordenar]);
 
-  const detalheCliente = useMemo(() => {
-    if (!clienteSelecionado) return null;
-    const produtoMap = {};
-    for (const prod of produtos) produtoMap[prod.id] = prod;
-    const pedidosCliente = pedidos.filter(p =>
-      p.status !== 'cancelado' && (p.cliente_id === clienteSelecionado || p.cliente_nome === clienteSelecionado)
-    );
-    const porCategoria = {};
-    let totalGeral = 0;
-    let totalUnidades = 0;
-    for (const ped of pedidosCliente) {
-      for (const item of ped.itens || []) {
-        const prod = produtoMap[item.produto_id];
-        const categoria = prod?.categoria || 'Sem categoria';
-        const nome = item.produto_nome || prod?.nome || 'Desconhecido';
-        const qtd = item.quantidade || 0;
-        const valor = item.total || qtd * (item.preco_unitario || prod?.preco_unitario || 0);
-        if (!porCategoria[categoria]) porCategoria[categoria] = { categoria, qtd: 0, valor: 0, produtos: {} };
-        porCategoria[categoria].qtd += qtd;
-        porCategoria[categoria].valor += valor;
-        if (!porCategoria[categoria].produtos[nome]) porCategoria[categoria].produtos[nome] = { nome, qtd: 0, valor: 0 };
-        porCategoria[categoria].produtos[nome].qtd += qtd;
-        porCategoria[categoria].produtos[nome].valor += valor;
-        totalGeral += valor;
-        totalUnidades += qtd;
-      }
-    }
-    const categorias = Object.values(porCategoria).sort((a, b) => b.qtd - a.qtd);
-    const clienteInfo = clienteMetricas.find(c => c.id === clienteSelecionado || c.nome === clienteSelecionado);
-    return { pedidosCliente, categorias, totalGeral, totalUnidades, clienteInfo };
-  }, [clienteSelecionado, pedidos, produtos, clienteMetricas]);
-
-  const topClientes = clienteMetricas.slice(0, 10);
-  const chartData = topClientes.map(c => ({ name: c.nome.split(' ')[0], faturamento: c.faturamento, pedidos: c.pedidos }));
-
-  const totalFat = clienteMetricas.reduce((s, c) => s + c.faturamento, 0);
-  const top3Fat = clienteMetricas.slice(0, 3).reduce((s, c) => s + c.faturamento, 0);
-  const concentracao = totalFat > 0 ? ((top3Fat / totalFat) * 100).toFixed(1) : 0;
-
-  return (
-    <div className="space-y-5">
-
-      {/* Seletor de cliente */}
-      <div className="bg-card border border-border rounded-2xl p-4">
-        <div className="flex items-center gap-3 flex-wrap">
-          <label className="text-sm font-semibold text-foreground whitespace-nowrap">Analisar cliente:</label>
-          <select value={clienteSelecionado} onChange={e => setClienteSelecionado(e.target.value)}
-            className="flex-1 min-w-[200px] border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
-            <option value="">— Ver ranking geral —</option>
-            {clienteMetricas.map(c => <option key={c.id || c.nome} value={c.id || c.nome}>{c.nome}</option>)}
-          </select>
-          {clienteSelecionado && (
-            <button onClick={() => setClienteSelecionado('')}
-              className="text-xs px-3 py-2 border border-border rounded-xl text-muted-foreground hover:bg-muted transition-colors">
-              Limpar
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* DETALHE DO CLIENTE */}
-      {clienteSelecionado && detalheCliente && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <KpiCard label="Pedidos no Período" value={detalheCliente.pedidosCliente.length} icon={ShoppingCart} color="bg-sky-500" />
-            <KpiCard label="Faturamento Total" value={ocultar ? VALOR_OCULTO : fmtRShort(detalheCliente.totalGeral)} icon={DollarSign} color="bg-green-500" />
-            <KpiCard label="Unidades Compradas" value={fmt(detalheCliente.totalUnidades)} icon={Package} color="bg-purple-500" />
-            <KpiCard label="Ticket Médio" value={ocultar ? VALOR_OCULTO : fmtRShort(detalheCliente.pedidosCliente.length > 0 ? detalheCliente.totalGeral / detalheCliente.pedidosCliente.length : 0)} icon={TrendingUp} color="bg-amber-500" />
-          </div>
-
-          {detalheCliente.categorias.length > 0 && (
-            <ExportableChart title={`Categorias — ${detalheCliente.clienteInfo?.nome || ''}`}>
-              <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={detalheCliente.categorias.map(c => ({ name: c.categoria, qtd: c.qtd, valor: c.valor }))} layout="vertical" barSize={16}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0e8dc" />
-                  <XAxis type="number" tick={{ fontSize: 10 }} />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={120} />
-                  <Tooltip />
-                  <Bar dataKey="qtd" name="Unidades" radius={[0,6,6,0]}>
-                    {detalheCliente.categorias.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </ExportableChart>
-          )}
-
-          <div className="bg-card border border-border rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-4">
-              <SectionTitle>Breakdown por Categoria de Produto</SectionTitle>
-              <ExportButtons filename={`cliente-${detalheCliente.clienteInfo?.nome || 'detalhe'}`}
-                title={`Detalhe — ${detalheCliente.clienteInfo?.nome || ''}`}
-                columns={[
-                  { header: 'Categoria', key: 'categoria', width: 45 },
-                  { header: 'Produto', key: 'produto', width: 60 },
-                  { header: 'Unidades', key: 'qtd', width: 25 },
-                  { header: 'Valor', key: 'valorFmt', width: 40 },
-                ]}
-                rows={detalheCliente.categorias.flatMap(cat =>
-                  Object.values(cat.produtos).map(p => ({ categoria: cat.categoria, produto: p.nome, qtd: p.qtd, valorFmt: fmtR(p.valor) }))
-                )}
-              />
-            </div>
-            {detalheCliente.categorias.length === 0 ? <EmptyState msg="Nenhum item encontrado no período." /> : (
-              <div className="space-y-5">
-                {detalheCliente.categorias.map((cat, ci) => (
-                  <div key={cat.categoria}>
-                    <div className="flex items-center justify-between pb-2 mb-2 border-b border-border">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full" style={{ background: COLORS[ci % COLORS.length] }} />
-                        <span className="font-bold text-foreground">{cat.categoria}</span>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm">
-                        <span className="text-muted-foreground">{fmt(cat.qtd)} un</span>
-                        <span className="font-bold text-foreground">{ocultar ? VALOR_OCULTO : fmtR(cat.valor)}</span>
-                      </div>
-                    </div>
-                    <div className="space-y-1 pl-5">
-                      {Object.values(cat.produtos).sort((a,b) => b.qtd - a.qtd).map(p => (
-                        <div key={p.nome} className="flex items-center justify-between text-sm py-1 border-b border-border/30 last:border-0">
-                          <span className="text-foreground">{p.nome}</span>
-                          <div className="flex items-center gap-4 text-xs">
-                            <span className="text-muted-foreground">{fmt(p.qtd)} un</span>
-                            <span className="font-semibold text-foreground w-28 text-right">{ocultar ? VALOR_OCULTO : fmtR(p.valor)}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* RANKING GERAL */}
-      {!clienteSelecionado && (
-        <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <KpiCard label="Clientes com Pedidos" value={clienteMetricas.length} sub="no período" icon={Users} color="bg-sky-500" />
-            <KpiCard label="Faturamento Total" value={ocultar ? VALOR_OCULTO : fmtRShort(totalFat)} sub="pedidos ativos" icon={DollarSign} color="bg-green-500" />
-            <KpiCard label="Ticket Médio/Cliente" value={ocultar ? VALOR_OCULTO : fmtRShort(clienteMetricas.length > 0 ? totalFat / clienteMetricas.length : 0)} icon={TrendingUp} color="bg-purple-500" />
-            <KpiCard label="Concentração Top 3" value={`${concentracao}%`} sub="do faturamento" icon={Award} color="bg-amber-500" />
-          </div>
-
-          <ExportableChart title="Top 10 Clientes por Faturamento">
-            {ocultar ? (
-              <div className="flex flex-col items-center justify-center h-[260px] text-muted-foreground gap-2">
-                <EyeOff size={28} className="opacity-30" />
-                <p className="text-sm">Valores ocultos</p>
-              </div>
-            ) : topClientes.length === 0 ? <EmptyState /> : (
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={chartData} layout="vertical" barSize={14}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0e8dc" />
-                  <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={v => fmtRShort(v)} />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={90} />
-                  <Tooltip formatter={v => fmtR(v)} />
-                  <Bar dataKey="faturamento" name="Faturamento" radius={[0, 6, 6, 0]}>
-                    {chartData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </ExportableChart>
-
-          <div className="bg-card border border-border rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-              <SectionTitle>Ranking de Clientes</SectionTitle>
-              <div className="flex items-center gap-2">
-                <select value={ordenar} onChange={e => setOrdenar(e.target.value)}
-                  className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground focus:outline-none">
-                  <option value="faturamento">Por Faturamento</option>
-                  <option value="pedidos">Por Qtd. Pedidos</option>
-                  <option value="itens">Por Unidades</option>
-                </select>
-                <ExportButtons filename="ranking-clientes" title="Ranking de Clientes — Raio do Sol"
-                  columns={[
-                    { header: 'Pos.', key: 'pos', width: 15 },
-                    { header: 'Cliente', key: 'nome', width: 60 },
-                    { header: 'Pedidos', key: 'pedidos', width: 25 },
-                    { header: 'Faturamento', key: 'fatFmt', width: 45 },
-                    { header: 'Unidades', key: 'itens', width: 30 },
-                  ]}
-                  rows={clienteMetricas.map((c, i) => ({ pos: i+1, nome: c.nome, pedidos: c.pedidos, fatFmt: fmtR(c.faturamento), itens: c.itens }))}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              {clienteMetricas.slice(0, 15).map((c, i) => {
-                const pct = totalFat > 0 ? Math.round((c.faturamento / totalFat) * 100) : 0;
-                const medals = ['🥇', '🥈', '🥉'];
-                return (
-                  <div key={c.id || c.nome} className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0">
-                    <span className="w-8 text-center text-sm font-bold text-muted-foreground flex-shrink-0">
-                      {i < 3 ? medals[i] : `${i+1}º`}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <button onClick={() => setClienteSelecionado(c.id || c.nome)}
-                          className="text-sm font-medium text-foreground truncate hover:text-primary transition-colors text-left">
-                          {c.nome}
-                        </button>
-                        <p className="text-sm font-bold text-foreground ml-2 flex-shrink-0">{ocultar ? VALOR_OCULTO : fmtR(c.faturamento)}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                          <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
-                        </div>
-                        <span className="text-xs text-muted-foreground flex-shrink-0">{c.pedidos} ped. · {pct}%</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-              {clienteMetricas.length === 0 && <EmptyState msg="Nenhum cliente com pedidos no período." />}
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-/* ── PRODUTOS ─────────────────────────────────────────────────────────────── */
-function TabProdutos({ pedidos, ordens, produtos, ocultar }) {
-  const [subTab, setSubTab] = useState('vendas');
-
   const vendidos = useMemo(() => {
     const map = {};
     for (const ped of pedidos.filter(p => p.status !== 'cancelado')) {
@@ -593,98 +425,155 @@ function TabProdutos({ pedidos, ordens, produtos, ocultar }) {
     return Object.values(map).sort((a, b) => b.qtd - a.qtd);
   }, [pedidos]);
 
-  const produzidos = useMemo(() => {
-    const map = {};
-    for (const op of ordens.filter(o => o.status === 'finalizado')) {
-      const itens = op.itens?.length > 0 ? op.itens : (op.produto_nome ? [{ produto_nome: op.produto_nome, quantidade: op.quantidade || 0 }] : []);
-      for (const item of itens) {
-        const k = item.produto_nome || 'Sem nome';
-        if (!map[k]) map[k] = { nome: k, qtd: 0 };
-        map[k].qtd += item.quantidade || 0;
-      }
+  // Evolução diária (últimos 30 dias)
+  const evolucaoDiaria = useMemo(() => {
+    const hoje = new Date();
+    const diasMap = {};
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(hoje); d.setDate(hoje.getDate() - i);
+      const k = d.toISOString().split('T')[0];
+      diasMap[k] = { data: d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }), faturamento: 0, pedidos: 0 };
     }
-    return Object.values(map).sort((a, b) => b.qtd - a.qtd).slice(0, 10);
-  }, [ordens]);
+    for (const p of allPedidos.filter(x => x.status !== 'cancelado')) {
+      const k = (p.data_pedido || p.created_date || '').split('T')[0];
+      if (diasMap[k]) { diasMap[k].faturamento += p.valor_total || 0; diasMap[k].pedidos += 1; }
+    }
+    return Object.values(diasMap);
+  }, [allPedidos]);
 
-  const topVendidos = vendidos.slice(0, 10);
-  const alertaProdutos = produtos.filter(p => (p.estoque_atual || 0) <= (p.estoque_minimo || 0));
+  const totalFat = clienteMetricas.reduce((s, c) => s + c.faturamento, 0);
+  const top3Fat = clienteMetricas.slice(0, 3).reduce((s, c) => s + c.faturamento, 0);
+  const concentracao = totalFat > 0 ? ((top3Fat / totalFat) * 100).toFixed(1) : 0;
+  const topVendidos = vendidos.slice(0, 8);
 
   return (
-    <div className="space-y-5">
-      {/* Sub-abas */}
-      <div className="flex gap-2">
-        {[
-          { key: 'vendas', label: '📊 Análise de Vendas' },
-          { key: 'estoque', label: '📋 Planilha de Estoque' },
-        ].map(s => (
-          <button key={s.key} onClick={() => setSubTab(s.key)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${subTab === s.key ? 'bg-primary text-primary-foreground shadow' : 'bg-card border border-border text-muted-foreground hover:bg-muted'}`}>
-            {s.label}
-          </button>
-        ))}
-      </div>
-
-      {subTab === 'estoque' && <TabelaEstoquePlanilha produtos={produtos} />}
-
-      {subTab === 'vendas' && <>
+    <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard label="Produtos Vendidos" value={vendidos.length} sub="tipos distintos" icon={Package} color="bg-sky-500" />
-        <KpiCard label="Mais Vendido" value={topVendidos[0]?.nome?.split(' ').slice(0,2).join(' ') || '—'} sub={topVendidos[0] ? `${fmt(topVendidos[0].qtd)} un` : ''} icon={Award} color="bg-amber-500" />
-        <KpiCard label="Total Unidades Vendidas" value={fmt(vendidos.reduce((s,p) => s+p.qtd, 0))} icon={TrendingUp} color="bg-green-500" />
-        <KpiCard label="Produtos em Alerta" value={alertaProdutos.length} sub="abaixo do mínimo" icon={AlertTriangle} color={alertaProdutos.length > 0 ? 'bg-red-500' : 'bg-green-500'} />
+        <KpiCard label="Clientes com Pedidos" value={clienteMetricas.length} icon={Users} color="bg-sky-500" />
+        <KpiCard label="Faturamento Total" value={ocultar ? VALOR_OCULTO : fmtRShort(totalFat)} icon={DollarSign} color="bg-green-500" />
+        <KpiCard label="Ticket Médio/Cliente" value={ocultar ? VALOR_OCULTO : fmtRShort(clienteMetricas.length > 0 ? totalFat / clienteMetricas.length : 0)} icon={TrendingUp} color="bg-purple-500" />
+        <KpiCard label="Concentração Top 3" value={`${concentracao}%`} sub="do faturamento" icon={Award} color="bg-amber-500" />
       </div>
+
+      {/* Evolução diária */}
+      <ExportableChart title="Evolução de Pedidos — Últimos 30 dias">
+        <ResponsiveContainer width="100%" height={180}>
+          <AreaChart data={evolucaoDiaria}>
+            <defs>
+              <linearGradient id="gradPed" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+            <XAxis dataKey="data" tick={{ fontSize: 9 }} axisLine={false} tickLine={false} interval={4} />
+            <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} width={25} />
+            <Tooltip />
+            <Area type="monotone" dataKey="pedidos" name="Pedidos" stroke="#3B82F6" strokeWidth={2} fill="url(#gradPed)" dot={false} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </ExportableChart>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ExportableChart title="Top 10 Mais Vendidos (unidades)">
+        {/* Top clientes */}
+        <ExportableChart title="Top Clientes por Faturamento">
+          {ocultar ? (
+            <div className="flex flex-col items-center justify-center h-[220px] text-muted-foreground gap-2">
+              <EyeOff size={28} className="opacity-30" /><p className="text-sm">Valores ocultos</p>
+            </div>
+          ) : clienteMetricas.length === 0 ? <EmptyState /> : (
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={clienteMetricas.slice(0, 8).map(c => ({ name: c.nome.split(' ')[0], faturamento: c.faturamento }))} layout="vertical" barSize={14}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" />
+                <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={80} />
+                <Tooltip formatter={v => fmtR(v)} />
+                <Bar dataKey="faturamento" name="Faturamento" radius={[0, 6, 6, 0]}>
+                  {clienteMetricas.slice(0, 8).map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </ExportableChart>
+
+        {/* Top produtos */}
+        <ExportableChart title="Produtos Mais Vendidos (Unidades)">
           {topVendidos.length === 0 ? <EmptyState /> : (
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={topVendidos.map(p => ({ name: p.nome.length > 18 ? p.nome.slice(0,18)+'…' : p.nome, qtd: p.qtd }))} layout="vertical" barSize={14}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0e8dc" />
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={topVendidos.map(p => ({ name: p.nome.slice(0, 18), qtd: p.qtd }))} layout="vertical" barSize={14}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" />
                 <XAxis type="number" tick={{ fontSize: 10 }} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={130} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={120} />
                 <Tooltip />
-                <Bar dataKey="qtd" name="Unidades" radius={[0,6,6,0]}>
+                <Bar dataKey="qtd" name="Unidades" radius={[0, 6, 6, 0]}>
                   {topVendidos.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
           )}
         </ExportableChart>
-
-        <ExportableChart title="Top 10 Mais Produzidos (OPs finalizadas)">
-          {produzidos.length === 0 ? <EmptyState /> : (
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={produzidos.map(p => ({ name: p.nome.length > 18 ? p.nome.slice(0,18)+'…' : p.nome, qtd: p.qtd }))} layout="vertical" barSize={14}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0e8dc" />
-                <XAxis type="number" tick={{ fontSize: 10 }} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={130} />
-                <Tooltip />
-                <Bar dataKey="qtd" name="Produzido" radius={[0,6,6,0]}>
-                  {produzidos.map((_, i) => <Cell key={i} fill={COLORS[(i+3) % COLORS.length]} />)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </ExportableChart>
       </div>
 
+      {/* Ranking de clientes */}
+      <div className="bg-card border border-border rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+          <SectionTitle>Ranking de Clientes</SectionTitle>
+          <div className="flex items-center gap-2">
+            <select value={ordenar} onChange={e => setOrdenar(e.target.value)}
+              className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground focus:outline-none">
+              <option value="faturamento">Por Faturamento</option>
+              <option value="pedidos">Por Qtd. Pedidos</option>
+              <option value="itens">Por Unidades</option>
+            </select>
+            <ExportButtons filename="ranking-clientes" title="Ranking de Clientes"
+              columns={[{ header: 'Pos.', key: 'pos', width: 15 }, { header: 'Cliente', key: 'nome', width: 60 }, { header: 'Pedidos', key: 'pedidos', width: 25 }, { header: 'Faturamento', key: 'fatFmt', width: 45 }, { header: 'Unidades', key: 'itens', width: 25 }]}
+              rows={clienteMetricas.map((c, i) => ({ pos: i+1, nome: c.nome, pedidos: c.pedidos, fatFmt: fmtR(c.faturamento), itens: c.itens }))}
+            />
+          </div>
+        </div>
+        <div className="space-y-2">
+          {clienteMetricas.slice(0, 15).map((c, i) => {
+            const pct = totalFat > 0 ? Math.round((c.faturamento / totalFat) * 100) : 0;
+            const medals = ['🥇', '🥈', '🥉'];
+            return (
+              <div key={c.id || c.nome} className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0">
+                <span className="w-8 text-center text-sm font-bold text-muted-foreground flex-shrink-0">{i < 3 ? medals[i] : `${i+1}º`}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-sm font-medium text-foreground truncate">{c.nome}</p>
+                    <div className="flex items-center gap-3 ml-2 flex-shrink-0">
+                      <span className="text-xs text-muted-foreground">{c.pedidos} ped.</span>
+                      <p className="text-sm font-bold text-foreground">{ocultar ? VALOR_OCULTO : fmtR(c.faturamento)}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="text-xs text-muted-foreground flex-shrink-0">{pct}%</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {clienteMetricas.length === 0 && <EmptyState msg="Nenhum cliente com pedidos no período." />}
+        </div>
+      </div>
+
+      {/* Ranking de produtos */}
       <div className="bg-card border border-border rounded-2xl p-5">
         <div className="flex items-center justify-between mb-4">
           <SectionTitle>Ranking de Produtos</SectionTitle>
-          <ExportButtons filename="ranking-produtos" title="Ranking de Produtos — Raio do Sol"
-            columns={[
-              { header: 'Pos.', key: 'pos', width: 15 },
-              { header: 'Produto', key: 'nome', width: 70 },
-              { header: 'Unidades Vendidas', key: 'qtd', width: 35 },
-            ]}
-            rows={vendidos.map((p, i) => ({ pos: i+1, nome: p.nome, qtd: p.qtd }))}
+          <ExportButtons filename="ranking-produtos" title="Ranking de Produtos"
+            columns={[{ header: 'Pos.', key: 'pos', width: 15 }, { header: 'Produto', key: 'nome', width: 70 }, { header: 'Unidades', key: 'qtd', width: 25 }, { header: 'Faturamento', key: 'fat', width: 45 }]}
+            rows={vendidos.map((p, i) => ({ pos: i+1, nome: p.nome, qtd: p.qtd, fat: fmtR(p.faturamento) }))}
           />
         </div>
         {vendidos.length === 0 ? <EmptyState msg="Nenhum produto vendido no período." /> : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="border-b border-border">
-                {['#', 'Produto', 'Unidades Vendidas', 'Participação'].map(h => (
+                {['#', 'Produto', 'Unidades', 'Faturamento', 'Participação'].map(h => (
                   <th key={h} className="text-left py-2 pr-4 text-xs text-muted-foreground font-semibold">{h}</th>
                 ))}
               </tr></thead>
@@ -693,10 +582,11 @@ function TabProdutos({ pedidos, ordens, produtos, ocultar }) {
                   const totalQtd = vendidos.reduce((s, x) => s + x.qtd, 0);
                   const pct = totalQtd > 0 ? ((p.qtd / totalQtd) * 100).toFixed(1) : 0;
                   return (
-                    <tr key={p.nome} className="border-b border-border/50">
+                    <tr key={p.nome} className="border-b border-border/50 hover:bg-muted/20">
                       <td className="py-2 pr-4 text-muted-foreground text-xs font-bold">{i+1}º</td>
-                      <td className="py-2 pr-4 text-foreground font-medium">{p.nome}</td>
+                      <td className="py-2 pr-4 font-medium text-foreground">{p.nome}</td>
                       <td className="py-2 pr-4 font-bold text-foreground">{fmt(p.qtd)}</td>
+                      <td className="py-2 pr-4 font-semibold text-primary">{ocultar ? VALOR_OCULTO : fmtR(p.faturamento)}</td>
                       <td className="py-2 pr-4">
                         <div className="flex items-center gap-2">
                           <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
@@ -713,30 +603,43 @@ function TabProdutos({ pedidos, ordens, produtos, ocultar }) {
           </div>
         )}
       </div>
-      </>}
     </div>
   );
 }
 
 /* ── PRODUÇÃO ─────────────────────────────────────────────────────────────── */
-function TabProducao({ ordens }) {
+function TabProducao({ ordens, allOrdens }) {
   const finalizadas = ordens.filter(o => o.status === 'finalizado');
   const totalProduzido = finalizadas.reduce((s, o) =>
     s + (o.itens?.length > 0 ? o.itens.reduce((a, i) => a + (i.quantidade || 0), 0) : (o.quantidade || 0)), 0);
+  const opsAtrasadas = ordens.filter(o =>
+    ['a_produzir', 'em_producao'].includes(o.status) &&
+    o.created_date && new Date(o.created_date) < new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+  );
 
   const statusData = [
-    { name: 'A Produzir', value: ordens.filter(o=>o.status==='a_produzir').length, color: '#94A3B8' },
-    { name: 'Em Produção', value: ordens.filter(o=>o.status==='em_producao').length, color: '#3B82F6' },
-    { name: 'Produzido', value: ordens.filter(o=>o.status==='produzido').length, color: '#22C55E' },
-    { name: 'Embalagem', value: ordens.filter(o=>o.status==='em_embalagem').length, color: '#F59E0B' },
-    { name: 'Finalizado', value: ordens.filter(o=>o.status==='finalizado').length, color: '#A855F7' },
-  ];
+    { name: 'A Produzir',   value: ordens.filter(o => o.status === 'a_produzir').length,   color: '#94A3B8' },
+    { name: 'Em Produção',  value: ordens.filter(o => o.status === 'em_producao').length,  color: '#3B82F6' },
+    { name: 'Produzido',    value: ordens.filter(o => o.status === 'produzido').length,    color: '#22C55E' },
+    { name: 'Embalagem',    value: ordens.filter(o => o.status === 'em_embalagem').length, color: '#F59E0B' },
+    { name: 'Finalizado',   value: ordens.filter(o => o.status === 'finalizado').length,   color: '#A855F7' },
+  ].filter(s => s.value > 0);
 
-  const origemData = [
-    { name: 'Sob Demanda', value: ordens.filter(o=>o.origem==='pedido').length, color: '#3B82F6' },
-    { name: 'Reposição', value: ordens.filter(o=>o.origem==='estoque_minimo').length, color: '#F97316' },
-    { name: 'Manual', value: ordens.filter(o=>o.origem==='manual').length, color: '#94A3B8' },
-  ].filter(o => o.value > 0);
+  // Produção mensal
+  const hoje = new Date();
+  const mesesMap = {};
+  for (let i = 5; i >= 0; i--) {
+    const dt = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+    const k = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
+    mesesMap[k] = { mes: dt.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }), finalizadas: 0 };
+  }
+  for (const op of allOrdens.filter(o => o.status === 'finalizado')) {
+    if (!op.data_finalizacao) continue;
+    const dt = new Date(op.data_finalizacao);
+    const k = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
+    if (mesesMap[k]) mesesMap[k].finalizadas += 1;
+  }
+  const producaoMensal = Object.values(mesesMap);
 
   const porProduto = {};
   for (const o of finalizadas) {
@@ -747,53 +650,55 @@ function TabProducao({ ordens }) {
     }
   }
   const chartPorProduto = Object.entries(porProduto).sort((a, b) => b[1] - a[1]).slice(0, 8)
-    .map(([name, qtd]) => ({ name: name.length > 20 ? name.slice(0,20)+'…' : name, qtd }));
+    .map(([name, qtd]) => ({ name: name.length > 20 ? name.slice(0, 20) + '…' : name, qtd }));
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard label="Total de OPs" value={ordens.length} sub="no período" icon={Factory} color="bg-slate-500" />
-        <KpiCard label="OPs Finalizadas" value={finalizadas.length} sub={`${ordens.length > 0 ? ((finalizadas.length/ordens.length)*100).toFixed(0) : 0}% do total`} icon={Package} color="bg-purple-500" />
-        <KpiCard label="Em Andamento" value={ordens.filter(o=>['em_producao','produzido','em_embalagem'].includes(o.status)).length} icon={Clock} color="bg-sky-500" />
+        <KpiCard label="Total de OPs" value={ordens.length} icon={Factory} color="bg-slate-500" />
+        <KpiCard label="OPs Finalizadas" value={finalizadas.length} sub={`${ordens.length > 0 ? ((finalizadas.length / ordens.length) * 100).toFixed(0) : 0}% do total`} icon={Package} color="bg-purple-500" />
+        <KpiCard label="OPs Atrasadas" value={opsAtrasadas.length} icon={AlertTriangle} color={opsAtrasadas.length > 0 ? 'bg-red-500' : 'bg-green-500'} />
         <KpiCard label="Unidades Produzidas" value={fmt(totalProduzido)} icon={TrendingUp} color="bg-green-500" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <ExportableChart title="OPs por Status">
-          <ResponsiveContainer width="100%" height={220}>
-            <PieChart>
-              <Pie data={statusData} cx="50%" cy="50%" outerRadius={80} innerRadius={35} dataKey="value"
-                label={({ name, value }) => value > 0 ? `${name}: ${value}` : ''} labelLine={false}>
-                {statusData.map((s, i) => <Cell key={i} fill={s.color} />)}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        </ExportableChart>
-
-        <ExportableChart title="Distribuição por Origem">
-          {origemData.length === 0 ? <EmptyState /> : (
+          {statusData.length === 0 ? <EmptyState /> : (
             <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie data={origemData} cx="50%" cy="50%" outerRadius={80} innerRadius={35} dataKey="value"
-                  label={({ name, value }) => `${name}: ${value}`} labelLine={false}>
-                  {origemData.map((s, i) => <Cell key={i} fill={s.color} />)}
-                </Pie>
+              <BarChart data={statusData} barSize={30}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                <XAxis dataKey="name" tick={{ fontSize: 9 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} width={25} />
                 <Tooltip />
-              </PieChart>
+                <Bar dataKey="value" name="OPs" radius={[5, 5, 0, 0]}>
+                  {statusData.map((s, i) => <Cell key={i} fill={s.color} />)}
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           )}
+        </ExportableChart>
+
+        <ExportableChart title="OPs Finalizadas por Mês">
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={producaoMensal} barSize={28}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+              <XAxis dataKey="mes" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} width={25} />
+              <Tooltip />
+              <Bar dataKey="finalizadas" name="Finalizadas" fill="#A855F7" radius={[5, 5, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </ExportableChart>
 
         <ExportableChart title="Produção por Produto (OPs finalizadas)">
           {chartPorProduto.length === 0 ? <EmptyState /> : (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={chartPorProduto} layout="vertical" barSize={14}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0e8dc" />
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" />
                 <XAxis type="number" tick={{ fontSize: 10 }} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={120} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={130} />
                 <Tooltip />
-                <Bar dataKey="qtd" name="Qtd" radius={[0,6,6,0]}>
+                <Bar dataKey="qtd" name="Qtd Produzida" radius={[0, 6, 6, 0]}>
                   {chartPorProduto.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                 </Bar>
               </BarChart>
@@ -805,21 +710,12 @@ function TabProducao({ ordens }) {
       <div className="bg-card border border-border rounded-2xl p-5">
         <div className="flex items-center justify-between mb-4">
           <SectionTitle>Histórico de Ordens de Produção</SectionTitle>
-          <ExportButtons filename="ordens-producao" title="Histórico de OPs — Raio do Sol"
-            columns={[
-              { header: 'Nº OP', key: 'numero', width: 25 },
-              { header: 'Produto', key: 'produto', width: 70 },
-              { header: 'Origem', key: 'origem', width: 30 },
-              { header: 'Qtd', key: 'qtd', width: 20 },
-              { header: 'Status', key: 'status', width: 35 },
-              { header: 'Lote', key: 'lote', width: 30 },
-            ]}
+          <ExportButtons filename="ordens-producao" title="OPs — Raio do Sol"
+            columns={[{ header: 'Nº OP', key: 'numero', width: 25 }, { header: 'Produto', key: 'produto', width: 70 }, { header: 'Qtd', key: 'qtd', width: 20 }, { header: 'Status', key: 'status', width: 35 }, { header: 'Lote', key: 'lote', width: 30 }]}
             rows={ordens.map(o => ({
-              numero: o.numero,
-              produto: o.produto_nome || `Pedido ${o.pedido_numero}`,
-              origem: o.origem === 'pedido' ? 'Demanda' : o.origem === 'estoque_minimo' ? 'Reposição' : 'Manual',
-              qtd: o.itens?.length > 0 ? o.itens.reduce((s,i) => s+(i.quantidade||0), 0) : (o.quantidade||0),
-              status: { a_produzir:'A Produzir',em_producao:'Em Produção',produzido:'Produzido',em_embalagem:'Embalagem',finalizado:'Finalizado' }[o.status] || o.status,
+              numero: o.numero, produto: o.produto_nome || `Pedido ${o.pedido_numero}`,
+              qtd: o.itens?.length > 0 ? o.itens.reduce((s, i) => s + (i.quantidade || 0), 0) : (o.quantidade || 0),
+              status: { a_produzir: 'A Produzir', em_producao: 'Em Produção', produzido: 'Produzido', em_embalagem: 'Embalagem', finalizado: 'Finalizado' }[o.status] || o.status,
               lote: o.lote || '—',
             }))}
           />
@@ -827,23 +723,23 @@ function TabProducao({ ordens }) {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="border-b border-border">
-              {['Nº OP', 'Produto', 'Origem', 'Qtd', 'Status', 'Lote'].map(h => (
+              {['Nº OP', 'Produto', 'Pedido', 'Qtd', 'Status', 'Lote'].map(h => (
                 <th key={h} className="text-left py-2 pr-4 text-xs text-muted-foreground font-semibold">{h}</th>
               ))}
             </tr></thead>
             <tbody>
               {ordens.slice(0, 30).map(o => {
-                const qtd = o.itens?.length > 0 ? o.itens.reduce((s,i) => s+(i.quantidade||0), 0) : (o.quantidade||0);
-                const STATUS_COLORS = { a_produzir:'bg-slate-100 text-slate-600', em_producao:'bg-sky-100 text-sky-700', produzido:'bg-green-100 text-green-700', em_embalagem:'bg-amber-100 text-amber-700', finalizado:'bg-purple-100 text-purple-700' };
+                const qtd = o.itens?.length > 0 ? o.itens.reduce((s, i) => s + (i.quantidade || 0), 0) : (o.quantidade || 0);
+                const SC = { a_produzir: 'bg-slate-100 text-slate-600', em_producao: 'bg-sky-100 text-sky-700', produzido: 'bg-green-100 text-green-700', em_embalagem: 'bg-amber-100 text-amber-700', finalizado: 'bg-purple-100 text-purple-700' };
                 return (
-                  <tr key={o.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
-                    <td className="py-2 pr-4 font-mono text-xs text-foreground">{o.numero}</td>
-                    <td className="py-2 pr-4 text-foreground">{o.produto_nome || `Pedido ${o.pedido_numero}`}</td>
-                    <td className="py-2 pr-4 text-muted-foreground text-xs">{o.origem === 'pedido' ? 'Demanda' : o.origem === 'estoque_minimo' ? 'Reposição' : 'Manual'}</td>
-                    <td className="py-2 pr-4 font-semibold text-foreground">{qtd}</td>
+                  <tr key={o.id} className="border-b border-border/50 hover:bg-muted/20">
+                    <td className="py-2 pr-4 font-mono text-xs">{o.numero}</td>
+                    <td className="py-2 pr-4 font-medium text-foreground">{o.produto_nome || `Pedido ${o.pedido_numero}`}</td>
+                    <td className="py-2 pr-4 text-xs text-muted-foreground">{o.pedido_numero ? `#${o.pedido_numero}` : '—'}</td>
+                    <td className="py-2 pr-4 font-semibold">{qtd}</td>
                     <td className="py-2 pr-4">
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${STATUS_COLORS[o.status] || 'bg-muted text-muted-foreground'}`}>
-                        {{ a_produzir:'A Produzir', em_producao:'Em Produção', produzido:'Produzido', em_embalagem:'Embalagem', finalizado:'Finalizado' }[o.status] || o.status}
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${SC[o.status] || 'bg-muted text-muted-foreground'}`}>
+                        {{ a_produzir: 'A Produzir', em_producao: 'Em Produção', produzido: 'Produzido', em_embalagem: 'Embalagem', finalizado: 'Finalizado' }[o.status] || o.status}
                       </span>
                     </td>
                     <td className="py-2 pr-4 font-mono text-xs text-muted-foreground">{o.lote || '—'}</td>
@@ -862,38 +758,29 @@ function TabProducao({ ordens }) {
 /* ── PRODUTIVIDADE ────────────────────────────────────────────────────────── */
 function TabProdutividade({ ordens, produtos }) {
   const finalizadas = ordens.filter(o => o.status === 'finalizado');
-
   const mediaHorasProd = (() => {
-    const valid = finalizadas.filter(o => o.data_inicio && o.data_fim_producao);
-    if (!valid.length) return null;
-    return valid.reduce((s, o) => s + (diffHoras(o.data_inicio, o.data_fim_producao) || 0), 0) / valid.length;
+    const v = finalizadas.filter(o => o.data_inicio && o.data_fim_producao);
+    if (!v.length) return null;
+    return v.reduce((s, o) => s + (diffHoras(o.data_inicio, o.data_fim_producao) || 0), 0) / v.length;
   })();
-
   const mediaHorasEmb = (() => {
-    const valid = finalizadas.filter(o => o.data_embalagem && o.data_finalizacao);
-    if (!valid.length) return null;
-    return valid.reduce((s, o) => s + (diffHoras(o.data_embalagem, o.data_finalizacao) || 0), 0) / valid.length;
+    const v = finalizadas.filter(o => o.data_embalagem && o.data_finalizacao);
+    if (!v.length) return null;
+    return v.reduce((s, o) => s + (diffHoras(o.data_embalagem, o.data_finalizacao) || 0), 0) / v.length;
   })();
-
   const totalUnidades = finalizadas.reduce((s, o) =>
     s + (o.itens?.length > 0 ? o.itens.reduce((a, i) => a + (i.quantidade || 0), 0) : (o.quantidade || 0)), 0);
-
-  const produtosAlerta = produtos.filter(p => (p.estoque_atual || 0) <= (p.estoque_minimo || 0));
-  const produtosZero = produtos.filter(p => (p.estoque_atual || 0) === 0);
-
-  const horasPorOP = ordens
-    .map(o => {
-      const hProd = diffHoras(o.data_inicio, o.data_fim_producao);
-      const hEmb = diffHoras(o.data_embalagem, o.data_finalizacao);
-      const hTotal = (hProd ?? 0) + (hEmb ?? 0) || null;
-      return { nome: o.produto_nome ? (o.produto_nome.length > 20 ? o.produto_nome.slice(0,20)+'…' : o.produto_nome) : `OP ${o.numero}`, hProd, hEmb, hTotal };
-    })
-    .filter(o => o.hTotal !== null)
-    .sort((a, b) => (b.hTotal ?? 0) - (a.hTotal ?? 0))
-    .slice(0, 10);
+  const produtosAlerta = produtos.filter(p => (p.estoque_atual || 0) <= (p.estoque_minimo || 0) && p.ativo !== false);
+  const produtosZero = produtos.filter(p => (p.estoque_atual || 0) === 0 && p.ativo !== false);
+  const horasPorOP = ordens.map(o => {
+    const hProd = diffHoras(o.data_inicio, o.data_fim_producao);
+    const hEmb = diffHoras(o.data_embalagem, o.data_finalizacao);
+    const hTotal = (hProd ?? 0) + (hEmb ?? 0) || null;
+    return { nome: o.produto_nome ? (o.produto_nome.length > 20 ? o.produto_nome.slice(0, 20) + '…' : o.produto_nome) : `OP ${o.numero}`, hProd, hEmb, hTotal };
+  }).filter(o => o.hTotal !== null).sort((a, b) => (b.hTotal ?? 0) - (a.hTotal ?? 0)).slice(0, 10);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <KpiCard label="OPs Finalizadas" value={finalizadas.length} icon={Factory} color="bg-purple-500" />
         <KpiCard label="Média Produção" value={fmtHoras(mediaHorasProd)} sub="por OP" icon={Clock} color="bg-sky-500" />
@@ -904,14 +791,14 @@ function TabProdutividade({ ordens, produtos }) {
       {horasPorOP.length > 0 && (
         <ExportableChart title="Tempo por OP — Produção + Embalagem (horas)">
           <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={horasPorOP.map(o => ({ name: o.nome, Produção: parseFloat((o.hProd??0).toFixed(2)), Embalagem: parseFloat((o.hEmb??0).toFixed(2)) }))} layout="vertical" barSize={10}>
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0e8dc" />
+            <BarChart data={horasPorOP.map(o => ({ name: o.nome, Produção: parseFloat((o.hProd ?? 0).toFixed(2)), Embalagem: parseFloat((o.hEmb ?? 0).toFixed(2)) }))} layout="vertical" barSize={10}>
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" />
               <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={v => `${v}h`} />
               <YAxis type="category" dataKey="name" tick={{ fontSize: 9 }} width={130} />
               <Tooltip formatter={v => `${v}h`} />
               <Legend />
-              <Bar dataKey="Produção" fill="#3B82F6" radius={[0,4,4,0]} stackId="a" />
-              <Bar dataKey="Embalagem" fill="#F59E0B" radius={[0,4,4,0]} stackId="a" />
+              <Bar dataKey="Produção" fill="#3B82F6" radius={[0, 4, 4, 0]} stackId="a" />
+              <Bar dataKey="Embalagem" fill="#F59E0B" radius={[0, 4, 4, 0]} stackId="a" />
             </BarChart>
           </ResponsiveContainer>
         </ExportableChart>
@@ -920,25 +807,15 @@ function TabProdutividade({ ordens, produtos }) {
       {produtosAlerta.length > 0 && (
         <div className="bg-card border border-border rounded-2xl p-5">
           <div className="flex items-center justify-between mb-4">
-            <SectionTitle>Produtos Abaixo do Estoque Mínimo</SectionTitle>
-            <ExportButtons filename="alerta-estoque" title="Alerta de Estoque — Raio do Sol"
-              columns={[
-                { header: 'Produto', key: 'nome', width: 60 },
-                { header: 'Estoque Atual', key: 'atual', width: 35 },
-                { header: 'Estoque Mínimo', key: 'minimo', width: 35 },
-                { header: 'Situação', key: 'situacao', width: 35 },
-              ]}
-              rows={produtosAlerta.map(p => ({
-                nome: p.nome,
-                atual: p.estoque_atual || 0,
-                minimo: p.estoque_minimo || 0,
-                situacao: (p.estoque_atual || 0) === 0 ? 'Zerado' : 'Abaixo do mínimo',
-              }))}
+            <SectionTitle>Produtos Abaixo do Mínimo</SectionTitle>
+            <ExportButtons filename="alerta-estoque" title="Alerta de Estoque"
+              columns={[{ header: 'Produto', key: 'nome', width: 60 }, { header: 'Atual', key: 'atual', width: 25 }, { header: 'Mínimo', key: 'minimo', width: 25 }, { header: 'Situação', key: 'sit', width: 30 }]}
+              rows={produtosAlerta.map(p => ({ nome: p.nome, atual: p.estoque_atual || 0, minimo: p.estoque_minimo || 0, sit: (p.estoque_atual || 0) === 0 ? 'Zerado' : 'Abaixo do mínimo' }))}
             />
           </div>
           <div className="space-y-2">
             {produtosAlerta.map(p => {
-              const pct = p.estoque_minimo > 0 ? Math.min(100, Math.round(((p.estoque_atual||0) / p.estoque_minimo) * 100)) : 0;
+              const pct = p.estoque_minimo > 0 ? Math.min(100, Math.round(((p.estoque_atual || 0) / p.estoque_minimo) * 100)) : 0;
               const zerado = (p.estoque_atual || 0) === 0;
               return (
                 <div key={p.id} className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0">
@@ -947,7 +824,7 @@ function TabProdutividade({ ordens, produtos }) {
                       <p className="text-sm font-medium text-foreground truncate">{p.nome}</p>
                       <div className="flex items-center gap-2 ml-2 flex-shrink-0">
                         {zerado && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-semibold">Zerado</span>}
-                        <p className="text-xs text-muted-foreground">{p.estoque_atual||0} / {p.estoque_minimo} un</p>
+                        <p className="text-xs text-muted-foreground">{p.estoque_atual || 0} / {p.estoque_minimo} un</p>
                       </div>
                     </div>
                     <div className="h-2 rounded-full bg-muted overflow-hidden">
@@ -964,34 +841,15 @@ function TabProdutividade({ ordens, produtos }) {
       <div className="bg-card border border-border rounded-2xl p-5">
         <div className="flex items-center justify-between mb-4">
           <SectionTitle>Resumo de Produtividade</SectionTitle>
-          <ExportButtons filename="produtividade" title="Produtividade — Raio do Sol"
-            columns={[
-              { header: 'Produto', key: 'nome', width: 60 },
-              { header: 'Estoque Atual', key: 'atual', width: 35 },
-              { header: 'Estoque Mínimo', key: 'minimo', width: 35 },
-              { header: 'Situação', key: 'situacao', width: 35 },
-            ]}
-            rows={produtos.map(p => ({
-              nome: p.nome,
-              atual: p.estoque_atual || 0,
-              minimo: p.estoque_minimo || 0,
-              situacao: (p.estoque_atual||0) === 0 ? 'Zerado' : (p.estoque_atual||0) <= (p.estoque_minimo||0) ? 'Abaixo do mínimo' : 'OK',
-            }))}
+          <ExportButtons filename="produtividade" title="Produtividade"
+            columns={[{ header: 'Produto', key: 'nome', width: 60 }, { header: 'Atual', key: 'atual', width: 25 }, { header: 'Mínimo', key: 'minimo', width: 25 }, { header: 'Situação', key: 'sit', width: 30 }]}
+            rows={produtos.map(p => ({ nome: p.nome, atual: p.estoque_atual || 0, minimo: p.estoque_minimo || 0, sit: (p.estoque_atual || 0) === 0 ? 'Zerado' : (p.estoque_atual || 0) <= (p.estoque_minimo || 0) ? 'Abaixo do mínimo' : 'OK' }))}
           />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-          <div className="bg-muted/30 rounded-xl p-4">
-            <p className="text-xs text-muted-foreground mb-1">Unidades Produzidas</p>
-            <p className="text-3xl font-bold text-foreground">{fmt(totalUnidades)}</p>
-          </div>
-          <div className="bg-muted/30 rounded-xl p-4">
-            <p className="text-xs text-muted-foreground mb-1">Média Produção / OP</p>
-            <p className="text-3xl font-bold text-foreground">{fmtHoras(mediaHorasProd)}</p>
-          </div>
-          <div className="bg-muted/30 rounded-xl p-4">
-            <p className="text-xs text-muted-foreground mb-1">Média Embalagem / OP</p>
-            <p className="text-3xl font-bold text-foreground">{fmtHoras(mediaHorasEmb)}</p>
-          </div>
+          <div className="bg-muted/30 rounded-xl p-4"><p className="text-xs text-muted-foreground mb-1">Unidades Produzidas</p><p className="text-3xl font-bold text-foreground">{fmt(totalUnidades)}</p></div>
+          <div className="bg-muted/30 rounded-xl p-4"><p className="text-xs text-muted-foreground mb-1">Média Produção / OP</p><p className="text-3xl font-bold text-foreground">{fmtHoras(mediaHorasProd)}</p></div>
+          <div className="bg-muted/30 rounded-xl p-4"><p className="text-xs text-muted-foreground mb-1">Média Embalagem / OP</p><p className="text-3xl font-bold text-foreground">{fmtHoras(mediaHorasEmb)}</p></div>
         </div>
       </div>
     </div>
