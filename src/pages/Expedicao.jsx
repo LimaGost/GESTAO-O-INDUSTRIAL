@@ -142,56 +142,66 @@ function ExpedicaoCard({ exp, coluna, onAvancar, onImprimirNF, onImprimirEtiquet
   const totalItens = (exp.itens || []).reduce((s, i) => s + (i.quantidade || 0), 0);
 
   return (
-    <div className="bg-white rounded-2xl border border-border shadow-sm p-4 space-y-3 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="text-xs font-bold text-muted-foreground">NF {exp.numero_nf}</p>
-          <p className="text-sm font-bold text-foreground leading-tight mt-0.5">{exp.cliente_nome}</p>
-        </div>
-        <div className="flex-shrink-0 text-right">
-          <p className="text-sm font-bold text-foreground">{fmtR(exp.valor_total)}</p>
-          <p className="text-xs text-muted-foreground">{totalItens} un</p>
+    <div className="bg-white rounded-2xl border border-border shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+      {/* Topo colorido com acento da coluna */}
+      <div className="px-4 pt-4 pb-3 space-y-1">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">NF {exp.numero_nf}</p>
+            <p className="text-sm font-bold text-foreground leading-tight truncate">{exp.cliente_nome}</p>
+            {exp.pedido_numero && (
+              <p className="text-xs text-muted-foreground mt-0.5">Pedido <span className="font-semibold text-foreground">#{exp.pedido_numero}</span></p>
+            )}
+          </div>
+          <div className="flex-shrink-0 text-right">
+            <p className="text-sm font-bold text-foreground">{fmtR(exp.valor_total)}</p>
+            <p className="text-[10px] text-muted-foreground">{totalItens} un</p>
+          </div>
         </div>
       </div>
 
-      <div className="space-y-1 text-xs text-muted-foreground">
-        {exp.pedido_numero && <p>📦 Pedido <strong className="text-foreground">#{exp.pedido_numero}</strong></p>}
-        <p>📅 Emissão: <strong className="text-foreground">{fmtDate(exp.data_emissao)}</strong></p>
-        {exp.transportadora && <p>🚛 {exp.transportadora}</p>}
-        {exp.data_envio && <p>📤 Enviado: <strong className="text-foreground">{fmtDate(exp.data_envio)}</strong></p>}
-        {exp.data_entrega && <p>✅ Entregue: <strong className="text-foreground">{fmtDate(exp.data_entrega)}</strong></p>}
+      {/* Detalhes */}
+      <div className="px-4 pb-3 space-y-1.5">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <span>📅 {fmtDate(exp.data_emissao)}</span>
+          {exp.transportadora && <span>🚛 {exp.transportadora}</span>}
+          {exp.data_envio && <span>📤 {fmtDate(exp.data_envio)}</span>}
+          {exp.data_entrega && <span>✅ {fmtDate(exp.data_entrega)}</span>}
+        </div>
+
         {exp.confirmado_pelo_cliente && (
           <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold text-[10px]">
             ✓ Confirmado pelo cliente
           </span>
         )}
+
+        {(exp.itens || []).length > 0 && (
+          <div className="bg-muted/30 rounded-lg px-2.5 py-2 mt-1">
+            {exp.itens.slice(0, 2).map((item, i) => (
+              <p key={i} className="text-xs text-foreground truncate">{item.produto_nome} × {item.quantidade}</p>
+            ))}
+            {exp.itens.length > 2 && <p className="text-xs text-muted-foreground">+{exp.itens.length - 2} mais...</p>}
+          </div>
+        )}
       </div>
 
-      {(exp.itens || []).length > 0 && (
-        <div className="bg-muted/30 rounded-xl px-3 py-2">
-          <p className="text-xs text-muted-foreground mb-1 font-semibold">{(exp.itens || []).length} produto(s)</p>
-          {exp.itens.slice(0, 2).map((item, i) => (
-            <p key={i} className="text-xs text-foreground truncate">{item.produto_nome} × {item.quantidade}</p>
-          ))}
-          {exp.itens.length > 2 && <p className="text-xs text-muted-foreground">+{exp.itens.length - 2} mais...</p>}
-        </div>
-      )}
-
-      <div className="flex gap-2 pt-1 flex-wrap">
-         <button onClick={() => onImprimirNF(exp)}
+      {/* Ações */}
+      <div className="border-t border-border px-4 py-2.5 flex flex-wrap gap-2">
+        <button onClick={() => onImprimirNF(exp)}
           className="flex items-center gap-1.5 text-xs border border-border px-2.5 py-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
           <Printer size={11} /> NF
-         </button>
-         {exp.pedido_id && onVerPedido && (
-           <button onClick={() => onVerPedido(exp.pedido_id)}
+        </button>
+
+        {exp.pedido_id && onVerPedido && (
+          <button onClick={() => onVerPedido(exp.pedido_id)}
             className="flex items-center gap-1.5 text-xs border border-primary/30 bg-primary/5 text-primary px-2.5 py-1.5 rounded-lg hover:bg-primary/10 transition-colors font-medium">
             <Eye size={11} /> Ver Pedido
-           </button>
-         )}
+          </button>
+        )}
 
         {exp.status !== 'entregue' && onConfirmarRecebimento && (
           <button onClick={() => onConfirmarRecebimento(exp)}
-            className="flex items-center gap-1.5 text-xs border border-border px-2.5 py-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
+            className="flex items-center gap-1.5 text-xs border border-green-200 bg-green-50 text-green-700 px-2.5 py-1.5 rounded-lg hover:bg-green-100 transition-colors font-medium">
             <CheckCircle size={11} /> Confirmar Recebimento
           </button>
         )}
