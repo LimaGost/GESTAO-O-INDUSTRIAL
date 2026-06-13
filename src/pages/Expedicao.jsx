@@ -8,7 +8,7 @@ import ModalConfirmacaoRecebimento from '@/components/expedicao/ModalConfirmacao
 import NovaExpedicaoModal from '@/components/expedicao/NovaExpedicaoModal';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 import AlertaSeparacao from '@/components/expedicao/AlertaSeparacao';
-import ModalDetalhesPedido from '@/components/pedidos/ModalDetalhesPedido';
+import ModalItensPedido from '@/components/expedicao/ModalItensPedido';
 const EXP_COLUNAS_DEFAULT = [
   { key: 'a_expedir', label: 'A Expedir',    cor: 4, desc: 'OPs prontas para NF',     fixo: true },
   { key: 'emitida',   label: 'NF Emitida',   cor: 1, desc: 'Aguardando envio',         fixo: true },
@@ -234,7 +234,6 @@ export default function Expedicao() {
   const [pedidosSeparados, setPedidosSeparados] = useState([]);
   const [aba, setAba] = useState('kanban'); // 'kanban' | 'rapida'
   const [pedidoDetalhes, setPedidoDetalhes] = useState(null);
-  const [todosProdutos, setTodosProdutos] = useState([]);
 
   const load = async () => {
     const exps = await base44.entities.Expedicao.list('-created_date');
@@ -261,11 +260,6 @@ export default function Expedicao() {
 
     setPedidosSeparados(pedidos.filter(p => p.status === 'separado'));
 
-    // Carrega produtos para o modal de detalhes (só uma vez se ainda não carregou)
-    setTodosProdutos(prev => prev.length > 0 ? prev : []);
-    if (todosProdutos.length === 0) {
-      base44.entities.Produto.list().then(setTodosProdutos).catch(() => {});
-    }
   };
 
   useEffect(() => { load(); }, []);
@@ -396,9 +390,6 @@ export default function Expedicao() {
   const abrirPedido = async (pedidoId) => {
     const pedidos = await base44.entities.Pedido.filter({ id: pedidoId });
     if (pedidos[0]) setPedidoDetalhes(pedidos[0]);
-    if (todosProdutos.length === 0) {
-      base44.entities.Produto.list().then(setTodosProdutos).catch(() => {});
-    }
   };
 
   const expFiltradas = useMemo(() => {
@@ -614,14 +605,9 @@ export default function Expedicao() {
         />
       )}
       {pedidoDetalhes && (
-        <ModalDetalhesPedido
+        <ModalItensPedido
           pedido={pedidoDetalhes}
-          ocultarValores={false}
-          podeEditarPrecos={false}
-          produtos={todosProdutos}
           onClose={() => setPedidoDetalhes(null)}
-          onRefresh={load}
-          onSalvarPrecos={() => {}}
         />
       )}
     </div>
