@@ -7,14 +7,24 @@ export default function ModalProcessarPortal({ pedido, produtos, onConfirmar, on
 
   useEffect(() => {
     const itens = (pedido.itens || []).map(item => {
-      // Tenta auto-match por produto_id ou por nome
+      const nomePortal = (item.produto_nome || '').toLowerCase().trim();
+      // 1. Match por ID exato
       const matchById = produtos.find(p => p.id === item.produto_id);
-      const matchByNome = produtos.find(p => p.nome?.toLowerCase() === item.produto_nome?.toLowerCase());
-      const match = matchById || matchByNome;
+      // 2. Match por nome exato
+      const matchByNome = produtos.find(p => p.nome?.toLowerCase().trim() === nomePortal);
+      // 3. Match parcial: nome do catálogo contém o nome do portal ou vice-versa
+      const matchParcial = !matchById && !matchByNome
+        ? produtos.find(p => {
+            const nomeCat = (p.nome || '').toLowerCase().trim();
+            return nomeCat.includes(nomePortal) || nomePortal.includes(nomeCat);
+          })
+        : null;
+      const match = matchById || matchByNome || matchParcial;
       return {
         ...item,
-        produto_id_vinculado: match?.id || item.produto_id || '',
+        produto_id_vinculado: match?.id || '',
         produto_nome_portal: item.produto_nome,
+        produto_nome: match?.nome || item.produto_nome,
       };
     });
     setItensVinculados(itens);
