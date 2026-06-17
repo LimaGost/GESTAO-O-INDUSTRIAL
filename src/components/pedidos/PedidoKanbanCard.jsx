@@ -1,4 +1,4 @@
-import { Clock, Package, CheckCircle, Truck, Ban, FileText, AlertTriangle, Zap, Eye, ArrowRight, Tag, Globe } from 'lucide-react';
+import { Clock, Package, CheckCircle, Truck, Ban, FileText, AlertTriangle, Zap, Eye, ArrowRight, Tag, Globe, Bolt } from 'lucide-react';
 import { DestinoBadge } from './DestinoPedido';
 
 const STATUS_CONFIG = {
@@ -24,7 +24,7 @@ export default function PedidoKanbanCard({
   const itensTruncados = (pedido.itens || []).slice(0, 2);
   const maisItens = (pedido.itens || []).length - 2;
   const isPortal = pedido.origem === 'portal';
-  const isBling = !isPortal && ((pedido.observacoes || '').toLowerCase().includes('bling') || pedido.origem === 'bling' || (pedido.status === 'rascunho' && pedido.numero));
+  const isBling = (pedido.observacoes || '').includes('[bling_id:') || pedido.origem === 'bling';
 
   return (
     <div
@@ -41,6 +41,11 @@ export default function PedidoKanbanCard({
               {isPortal && (
                 <span className="inline-flex items-center gap-1 text-[10px] bg-sky-100 text-sky-700 border border-sky-200 px-1.5 py-0.5 rounded-full font-bold">
                   <Globe size={8} /> PORTAL
+                </span>
+              )}
+              {isBling && (
+                <span className="inline-flex items-center gap-1 text-[10px] bg-orange-100 text-orange-700 border border-orange-200 px-1.5 py-0.5 rounded-full font-bold">
+                  <Zap size={8} /> BLING
                 </span>
               )}
               {pedido.white_label && (
