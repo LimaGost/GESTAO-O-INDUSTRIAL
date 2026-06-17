@@ -7,7 +7,7 @@ export default function ModalProcessarPortal({ pedido, produtos, onConfirmar, on
 
   useEffect(() => {
     const itens = (pedido.itens || []).map(item => {
-      const nomePortal = (item.produto_nome || '').toLowerCase().trim();
+      const nomePortal = (item.produto_nome || item.nome || '').toLowerCase().trim();
       // 1. Match por ID exato
       const matchById = produtos.find(p => p.id === item.produto_id);
       // 2. Match por nome exato
@@ -20,11 +20,12 @@ export default function ModalProcessarPortal({ pedido, produtos, onConfirmar, on
           })
         : null;
       const match = matchById || matchByNome || matchParcial;
+      const nomeOriginal = item.produto_nome || item.nome || '';
       return {
         ...item,
         produto_id_vinculado: match?.id || '',
-        produto_nome_portal: item.produto_nome,
-        produto_nome: match?.nome || item.produto_nome,
+        produto_nome_portal: nomeOriginal,
+        produto_nome: match?.nome || nomeOriginal,
       };
     });
     setItensVinculados(itens);

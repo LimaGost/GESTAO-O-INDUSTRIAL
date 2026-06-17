@@ -6,12 +6,20 @@ export default function ModalProcessarBling({ pedido, produtos, onConfirmar, onC
 
   useEffect(() => {
     const itens = (pedido.itens || []).map(item => {
-      // Auto-match pelo nome exato
-      const match = produtos.find(p => p.nome?.toLowerCase() === item.produto_nome?.toLowerCase());
+      const nomeItem = item.produto_nome || item.nome || '';
+      const nomeLower = nomeItem.toLowerCase().trim();
+      // Match exato → parcial
+      const match =
+        produtos.find(p => p.nome?.toLowerCase().trim() === nomeLower) ||
+        produtos.find(p => {
+          const nc = (p.nome || '').toLowerCase().trim();
+          return nc.includes(nomeLower) || nomeLower.includes(nc);
+        });
       return {
         ...item,
         produto_id_vinculado: match?.id || '',
-        produto_nome_bling: item.produto_nome,
+        produto_nome_bling: nomeItem,
+        produto_nome: match?.nome || nomeItem,
       };
     });
     setItensVinculados(itens);
