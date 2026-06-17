@@ -56,7 +56,7 @@ const PIPELINE_SEM_PRODUCAO = [
 
 export default function ModalDetalhesPedido({
   pedido, ocultarValores, podeEditarPrecos,
-  onClose, onRefresh, onSalvarPrecos, produtos = [],
+  onClose, onRefresh, onSalvarPrecos, produtos = [], onCancelar,
 }) {
   const [ordens, setOrdens] = useState([]);
   const [expedicao, setExpedicao] = useState(null);
@@ -702,7 +702,15 @@ export default function ModalDetalhesPedido({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-border flex-shrink-0">
+        <div className="px-5 py-3 border-t border-border flex-shrink-0 space-y-2">
+          {onCancelar && !['cancelado', 'entregue'].includes(pedido.status) && (
+            <button
+              onClick={() => { onCancelar(pedido.id, pedido.numero); onClose(); }}
+              className="w-full flex items-center justify-center gap-2 border border-red-300 bg-red-50 text-red-700 py-2.5 rounded-xl text-sm font-semibold hover:bg-red-100 transition-colors"
+            >
+              <Ban size={14} /> Cancelar Pedido
+            </button>
+          )}
           <button onClick={onClose}
             className="w-full bg-primary text-primary-foreground py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity">
             Fechar
