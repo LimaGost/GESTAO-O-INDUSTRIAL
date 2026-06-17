@@ -5,6 +5,7 @@ import {
   CheckCircle, Clock, Package, Truck, Ban, FileText, Eye, Zap, Tag
 } from 'lucide-react';
 import ModalProcessarBling from '@/components/pedidos/ModalProcessarBling';
+import ModalProcessarPortal from '@/components/pedidos/ModalProcessarPortal';
 import ModalNovoPedido from '@/components/pedidos/ModalNovoPedido';
 import PedidoKanbanCard from '@/components/pedidos/PedidoKanbanCard';
 import ModalDetalhesPedido from '@/components/pedidos/ModalDetalhesPedido';
@@ -42,6 +43,8 @@ export default function Pedidos() {
   const [pedidoDetalhes, setPedidoDetalhes] = useState(null);
   const [pedidoBlingProcessar, setPedidoBlingProcessar] = useState(null);
   const [processandoBling, setProcessandoBling] = useState(false);
+  const [pedidoPortalProcessar, setPedidoPortalProcessar] = useState(null);
+  const [processandoPortal, setProcessandoPortal] = useState(false);
   const [user, setUser] = useState(null);
   const [showFiltros, setShowFiltros] = useState(false);
   const [filtroWL, setFiltroWL] = useState(false);
@@ -289,6 +292,67 @@ export default function Pedidos() {
 
     setProcessandoBling(false);
     setPedidoBlingProcessar(null);
+    await load();
+    const pedidoAtualizado = await base44.entities.Pedido.filter({ id: pedido.id });
+    if (pedidoAtualizado[0]) setPedidoDetalhes(pedidoAtualizado[0]);
+  };
+
+  const processarPedidoPortal = async (itensVinculados) => {
+    const pedido = pedidoPortalProcessar;
+    setProcessandoPortal(true);
+
+    const itensComEstoque = [];
+    const itensSemEstoque = [];
+    for (const item of itensVinculados) {
+      if (!item.produto_id) continue;
+      const p = produtos.find(pr => pr.id === item.produto_id);
+      if (!p) continue;
+      if ((p.estoque_atual || 0) >= item.quantidade) {
+        itensComEstoque.push({ ...item, produto: p });
+      } else {
+        itensSemEstoque.push({ ...item, produto: p, quantidadeFalta: item.quantidade - (p.estoque_atual || 0) });
+      }
+    }
+
+    const precisaProducao = itensSemEstoque.length > 0;
+    const status = precisaProducao ? 'aguardando_estoque' : 'separacao';
+    const numero = pedido.numero;
+
+    await base44.entities.Pedido.update(pedido.id, { itens: itensVinculados, status });
+
+    for (const item of itensComEstoque) {
+      const novoEstoque = (item.produto.estoque_atual || 0) - item.quantidade;
+      await base44.entities.Produto.update(item.produto_id, { estoque_atual: novoEstoque });
+      await registrarLog('Produto', item.produto_id, 'BAIXA_ESTOQUE', `Baixa de ${item.quantidade} para pedido Portal ${numero}`);
+    }
+
+    if (precisaProducao) {
+      const itensParaProducao = itensSemEstoque.map(i => ({
+        produto_id: i.produto_id,
+        produto_nome: i.produto_nome,
+        quantidade: i.quantidadeFalta,
+        disponivel: false,
+      }));
+      const opData = {
+        numero: gerarNumero('OP'),
+        produto_nome: `Pedido ${numero}`,
+        quantidade: itensParaProducao.reduce((s, i) => s + i.quantidade, 0),
+        itens: itensParaProducao,
+        status: 'a_produzir',
+        pedido_id: pedido.id,
+        pedido_numero: numero,
+        origem: 'portal',
+        observacoes: pedido.observacoes || '',
+      };
+      const ordem = await base44.entities.OrdemProducao.create(opData);
+      await base44.entities.Pedido.update(pedido.id, { ordens_producao_ids: [ordem.id] });
+      await registrarLog('OrdemProducao', ordem.id, 'CRIACAO_AUTOMATICA',
+        `OP Portal para pedido ${numero} — ${itensSemEstoque.length} item(s) para produção`);
+    }
+    await registrarLog('Pedido', pedido.id, 'PROCESSAMENTO_PORTAL', `Pedido Portal ${numero} processado. Status: ${status}`);
+
+    setProcessandoPortal(false);
+    setPedidoPortalProcessar(null);
     await load();
     const pedidoAtualizado = await base44.entities.Pedido.filter({ id: pedido.id });
     if (pedidoAtualizado[0]) setPedidoDetalhes(pedidoAtualizado[0]);
@@ -560,6 +624,7 @@ export default function Pedidos() {
                       onExpedir={expedir}
                       onCancelar={cancelarPedido}
                       onProcessarBling={setPedidoBlingProcessar}
+                      onProcessarPortal={setPedidoPortalProcessar}
                       onAvancarSeparado={avancarParaSeparado}
                     />
                   ))
@@ -588,6 +653,16 @@ export default function Pedidos() {
           loading={processandoBling}
           onConfirmar={processarPedidoBling}
           onClose={() => setPedidoBlingProcessar(null)}
+        />
+      )}
+
+      {pedidoPortalProcessar && (
+        <ModalProcessarPortal
+          pedido={pedidoPortalProcessar}
+          produtos={produtos}
+          loading={processandoPortal}
+          onConfirmar={processarPedidoPortal}
+          onClose={() => setPedidoPortalProcessar(null)}
         />
       )}
 

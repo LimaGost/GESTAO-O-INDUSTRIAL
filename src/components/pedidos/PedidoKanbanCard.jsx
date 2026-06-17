@@ -1,4 +1,4 @@
-import { Clock, Package, CheckCircle, Truck, Ban, FileText, AlertTriangle, Zap, Eye, ArrowRight, Tag } from 'lucide-react';
+import { Clock, Package, CheckCircle, Truck, Ban, FileText, AlertTriangle, Zap, Eye, ArrowRight, Tag, Globe } from 'lucide-react';
 import { DestinoBadge } from './DestinoPedido';
 
 const STATUS_CONFIG = {
@@ -17,13 +17,14 @@ function fmtVal(v) {
 
 export default function PedidoKanbanCard({
   pedido, statusEfetivo, ocultarValores,
-  readonly, onVerDetalhes, onExpedir, onCancelar, onProcessarBling, onAvancarSeparado,
+  readonly, onVerDetalhes, onExpedir, onCancelar, onProcessarBling, onAvancarSeparado, onProcessarPortal,
 }) {
   const st = STATUS_CONFIG[statusEfetivo] || STATUS_CONFIG.rascunho;
   const Icon = st.icon;
   const itensTruncados = (pedido.itens || []).slice(0, 2);
   const maisItens = (pedido.itens || []).length - 2;
-  const isBling = (pedido.observacoes || '').toLowerCase().includes('bling') || pedido.origem === 'bling' || (pedido.status === 'rascunho' && pedido.numero);
+  const isPortal = pedido.origem === 'portal';
+  const isBling = !isPortal && ((pedido.observacoes || '').toLowerCase().includes('bling') || pedido.origem === 'bling' || (pedido.status === 'rascunho' && pedido.numero));
 
   return (
     <div
@@ -37,12 +38,17 @@ export default function PedidoKanbanCard({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-bold text-muted-foreground">{pedido.numero || 'Rascunho'}</span>
+              {isPortal && (
+                <span className="inline-flex items-center gap-1 text-[10px] bg-sky-100 text-sky-700 border border-sky-200 px-1.5 py-0.5 rounded-full font-bold">
+                  <Globe size={8} /> PORTAL
+                </span>
+              )}
               {pedido.white_label && (
-                  <span className="inline-flex items-center gap-1 text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-bold">
-                    <Tag size={8} /> WL
-                  </span>
-                )}
-              </div>
+                <span className="inline-flex items-center gap-1 text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-bold">
+                  <Tag size={8} /> WL
+                </span>
+              )}
+            </div>
             <p className="text-sm font-bold text-foreground mt-0.5 truncate">{pedido.cliente_nome}</p>
             {pedido.white_label && pedido.white_label_marca && (
               <p className="text-[10px] text-purple-600 font-medium truncate">→ {pedido.white_label_marca}</p>
@@ -104,7 +110,13 @@ export default function PedidoKanbanCard({
         {/* Ações rápidas */}
         {!readonly && (
           <div className="flex gap-1.5 flex-wrap" onClick={e => e.stopPropagation()}>
-            {statusEfetivo === 'rascunho' && (
+            {statusEfetivo === 'rascunho' && isPortal && onProcessarPortal && (
+              <button onClick={() => onProcessarPortal(pedido)}
+                className="flex items-center gap-1 text-[10px] bg-sky-600 text-white border border-sky-600 px-2 py-1 rounded-lg font-semibold hover:bg-sky-700 transition-colors">
+                <Globe size={9} /> Processar
+              </button>
+            )}
+            {statusEfetivo === 'rascunho' && !isPortal && (
               <button onClick={() => onProcessarBling(pedido)}
                 className="flex items-center gap-1 text-[10px] bg-primary text-primary-foreground border border-primary px-2 py-1 rounded-lg font-semibold hover:opacity-90 transition-opacity">
                 <Zap size={9} /> Processar

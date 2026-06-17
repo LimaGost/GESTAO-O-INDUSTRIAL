@@ -25,6 +25,7 @@ Deno.serve(async (req) => {
       cliente_id: cliente_id || '',
       cliente_nome,
       status: 'rascunho',
+      origem: 'portal',
       data_pedido: new Date().toISOString().split('T')[0],
       data_entrega_prevista: data_entrega_prevista || null,
       itens,
