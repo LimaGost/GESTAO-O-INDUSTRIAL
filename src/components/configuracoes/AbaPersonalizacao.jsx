@@ -33,8 +33,8 @@ export default function AbaPersonalizacao() {
 
   useEffect(() => {
     Promise.all([
-      loadConfig('empresa_config'),
-      loadConfig('empresa_info'),
+      loadConfig('empresa_config', null, true),
+      loadConfig('empresa_info', null, true),
     ]).then(([novo, antigo]) => {
       if (novo && Object.keys(novo).length > 0) {
         setForm(novo);
@@ -63,7 +63,6 @@ export default function AbaPersonalizacao() {
       logo_url: form.logo_url || '',
       cnpj_endereco: form.cnpj || '',
     });
-    localStorage.setItem('empresa_config', JSON.stringify(form));
     window.dispatchEvent(new Event('settings:saved'));
     setSaving(false);
     setSaved(true);

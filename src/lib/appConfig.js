@@ -11,8 +11,8 @@ const _cache = {};
  * Carrega uma configuração do banco pelo chave.
  * Usa cache em memória durante a sessão para evitar requests desnecessários.
  */
-export async function loadConfig(chave, defaultValue = null) {
-  if (_cache[chave] !== undefined) return _cache[chave];
+export async function loadConfig(chave, defaultValue = null, forceRefresh = false) {
+  if (!forceRefresh && _cache[chave] !== undefined) return _cache[chave];
   try {
     const results = await base44.asServiceRole.entities.AppConfig.filter({ chave });
     if (results && results.length > 0) {

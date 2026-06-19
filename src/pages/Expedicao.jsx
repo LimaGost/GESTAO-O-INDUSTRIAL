@@ -9,6 +9,7 @@ import { registrarLog } from '@/lib/audit';
 import ModalConfirmacaoRecebimento from '@/components/expedicao/ModalConfirmacaoRecebimento';
 import NovaExpedicaoModal from '@/components/expedicao/NovaExpedicaoModal';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
+import { loadConfig } from '@/lib/appConfig';
 import AlertaSeparacao from '@/components/expedicao/AlertaSeparacao';
 import ModalItensPedido from '@/components/expedicao/ModalItensPedido';
 const EXP_COLUNAS_DEFAULT = [
@@ -455,7 +456,7 @@ export default function Expedicao() {
       const cs = await base44.entities.Cliente.filter({ id: pedido.cliente_id });
       cliente = cs[0] || null;
     }
-    const empresaConfig = (() => { try { return JSON.parse(localStorage.getItem('empresa_config') || '{}'); } catch { return {}; } })();
+    const empresaConfig = (await loadConfig('empresa_config')) || {};
     const emitente = {
       nome: empresaConfig.nome || 'RAIO DO SOL',
       nome_fantasia: empresaConfig.nome_fantasia || '',

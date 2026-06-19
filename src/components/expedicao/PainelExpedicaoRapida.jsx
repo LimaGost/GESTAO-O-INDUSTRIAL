@@ -1,9 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Package, Printer, CheckCircle, Search, X, Tag, Download, RefreshCw } from 'lucide-react';
-
-function getEmpresa() {
-  try { return JSON.parse(localStorage.getItem('empresa_config') || '{}'); } catch { return {}; }
-}
+import { loadConfig } from '@/lib/appConfig';
 
 function gerarQRCodeURL(texto) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=160&data=${encodeURIComponent(texto)}`;
@@ -211,10 +208,10 @@ export default function PainelExpedicaoRapida({ pedidos }) {
     return total;
   }, [selecionados, volumesPorPedido]);
 
-  const imprimirLote = () => {
+  const imprimirLote = async () => {
     if (selecionados.size === 0) return;
     setImprimindo(true);
-    const empresa = getEmpresa();
+    const empresa = (await loadConfig('empresa_config')) || {};
     const pedidosSel = pedidosFiltrados.filter(p => selecionados.has(p.id));
     const paginas = [];
 
@@ -231,9 +228,9 @@ export default function PainelExpedicaoRapida({ pedidos }) {
     setImprimindo(false);
   };
 
-  const baixarLotePRN = () => {
+  const baixarLotePRN = async () => {
     if (selecionados.size === 0) return;
-    const empresa = getEmpresa();
+    const empresa = (await loadConfig('empresa_config')) || {};
     const { nome: nomeEmpresa = 'Raio do Sol', cnpj = '' } = empresa;
     const pedidosSel = pedidosFiltrados.filter(p => selecionados.has(p.id));
     const blocos = [];

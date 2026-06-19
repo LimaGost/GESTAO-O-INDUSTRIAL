@@ -1,12 +1,9 @@
 import { X, Printer, Plus, Minus, Download } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { loadConfig } from '@/lib/appConfig';
 
 function gerarQRCodeDataURL(texto) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=160&data=${encodeURIComponent(texto)}`;
-}
-
-function getEmpresa() {
-  try { return JSON.parse(localStorage.getItem('empresa_config') || '{}'); } catch { return {}; }
 }
 
 const CSS_ETIQUETA = `
@@ -101,8 +98,13 @@ function gerarPagina({ nomeEmpresa, logoUrl, enderecoEmpresa, telefoneEmpresa, c
 }
 
 export default function EtiquetaEndereco({ expedicao, onClose }) {
-  const empresa = getEmpresa();
   const DEFAULT_LOGO = 'https://media.base44.com/images/public/69ece9d5634df8be56451712/43d0f422a_454646495_1576721726386277_6990662151677958976_n.jpg';
+  const [empresa, setEmpresa] = useState({});
+
+  useEffect(() => {
+    loadConfig('empresa_config', null, true).then(cfg => { if (cfg) setEmpresa(cfg); });
+  }, []);
+
   const nomeEmpresa = empresa.nome || 'Raio do Sol';
   const logoUrl = empresa.logo_url || DEFAULT_LOGO;
   const enderecoEmpresa = empresa.endereco || '';
