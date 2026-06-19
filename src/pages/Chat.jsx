@@ -1,6 +1,39 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Send, Users, MessageCircle, ChevronLeft, Search } from 'lucide-react';
+import { Send, Users, MessageCircle, ChevronLeft, Search, Bell, BellOff } from 'lucide-react';
+
+// Som de notificação via Web Audio API (sem arquivo externo)
+function tocarSomNotificacao() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.2);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.3);
+  } catch {}
+}
+
+function getIniciais(nome, email) {
+  const n = nome || email || 'U';
+  return n.trim().charAt(0).toUpperCase();
+}
+
+function formatarHora(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  const agora = new Date();
+  const diffH = (agora - d) / 3600000;
+  if (diffH < 24) return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  if (diffH < 48) return 'Ontem';
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+}
 
 export default function Chat() {
   const [usuarioAtual, setUsuarioAtual] = useState(null);
@@ -11,67 +44,130 @@ export default function Chat() {
   const [novaMensagem, setNovaMensagem] = useState('');
   const [busca, setBusca] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingUsuarios, setLoadingUsuarios] = useState(true);
+  const [somAtivado, setSomAtivado] = useState(true);
+  const [naoLidas, setNaoLidas] = useState({}); // { conversaId: count }
   const mensagensEndRef = useRef(null);
+  const conversaAtivaRef = useRef(null);
+  const usuarioAtualRef = useRef(null);
+
+  // Mantém refs atualizadas para usar dentro de callbacks
+  useEffect(() => { conversaAtivaRef.current = conversaAtiva; }, [conversaAtiva]);
+  useEffect(() => { usuarioAtualRef.current = usuarioAtual; }, [usuarioAtual]);
 
   // Carrega usuário atual
   useEffect(() => {
-    base44.auth.me().then(setUsuarioAtual).catch(() => {});
+    base44.auth.me().then(u => {
+      setUsuarioAtual(u);
+    }).catch(() => {});
   }, []);
 
-  // Carrega usuários e conversas quando usuário está pronto
+  // Carrega dados quando usuário está pronto
   useEffect(() => {
     if (!usuarioAtual) return;
     carregarDados();
   }, [usuarioAtual]);
 
-  const carregarDados = async () => {
+  const carregarDados = useCallback(async () => {
+    if (!usuarioAtualRef.current) return;
+    const uid = usuarioAtualRef.current.id;
     const [resUsuarios, todasConversas] = await Promise.all([
       base44.functions.invoke('chatListarUsuarios', {}),
       base44.entities.Conversa.list('-data_ultima_mensagem'),
     ]);
-    setUsuarios(resUsuarios.data?.usuarios || []);
-    setConversas(todasConversas.filter(c => c.participantes?.includes(usuarioAtual.id)));
+
+    const lista = resUsuarios.data?.usuarios || [];
+    setUsuarios(lista);
+    setLoadingUsuarios(false);
+
+    const minhasConversas = todasConversas.filter(c => c.participantes?.includes(uid));
+    setConversas(minhasConversas);
+
+    // Conta não lidas por conversa
+    contarNaoLidas(minhasConversas, uid);
+  }, []);
+
+  const contarNaoLidas = async (convs, uid) => {
+    const counts = {};
+    await Promise.all(convs.map(async (c) => {
+      const msgs = await base44.entities.Mensagem.filter({ conversa_id: c.id });
+      const nLidas = msgs.filter(m => !m.lida && m.remetente_id !== uid).length;
+      if (nLidas > 0) counts[c.id] = nLidas;
+    }));
+    setNaoLidas(counts);
   };
 
-  // Scroll automático ao receber mensagens
+  // Scroll automático
   useEffect(() => {
     mensagensEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [mensagens]);
 
-  // Subscribe em tempo real para novas mensagens
+  // Subscribe mensagens em tempo real
   useEffect(() => {
     if (!conversaAtiva) return;
     const unsubscribe = base44.entities.Mensagem.subscribe((event) => {
-      if (event.type === 'create' && event.data?.conversa_id === conversaAtiva.id) {
+      if (event.type === 'create' && event.data?.conversa_id === conversaAtivaRef.current?.id) {
         setMensagens(prev => {
-          // Evita duplicatas
           if (prev.find(m => m.id === event.data.id)) return prev;
+          // Som apenas para mensagens de outros
+          if (event.data.remetente_id !== usuarioAtualRef.current?.id && somAtivado) {
+            tocarSomNotificacao();
+          }
           return [...prev, event.data];
         });
       }
     });
     return () => unsubscribe();
-  }, [conversaAtiva]);
+  }, [conversaAtiva, somAtivado]);
 
-  // Subscribe para atualizar lista de conversas em tempo real
+  // Subscribe global para notificações de novas mensagens em outras conversas
   useEffect(() => {
+    if (!usuarioAtual) return;
+    const unsubscribe = base44.entities.Mensagem.subscribe((event) => {
+      if (event.type !== 'create') return;
+      const msg = event.data;
+      if (!msg || msg.remetente_id === usuarioAtualRef.current?.id) return;
+      // Se não é da conversa ativa → notificação
+      if (msg.conversa_id !== conversaAtivaRef.current?.id) {
+        if (somAtivado) tocarSomNotificacao();
+        setNaoLidas(prev => ({ ...prev, [msg.conversa_id]: (prev[msg.conversa_id] || 0) + 1 }));
+        // Notificação do browser
+        if (Notification.permission === 'granted') {
+          new Notification('Nova mensagem', {
+            body: msg.conteudo?.slice(0, 80) || 'Nova mensagem recebida',
+            icon: '/favicon.ico',
+          });
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, [usuarioAtual, somAtivado]);
+
+  // Solicita permissão de notificação
+  useEffect(() => {
+    if (Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // Subscribe conversas
+  useEffect(() => {
+    if (!usuarioAtual) return;
     const unsubscribe = base44.entities.Conversa.subscribe(() => {
       carregarDados();
     });
     return () => unsubscribe();
-  }, [usuarioAtual]);
+  }, [usuarioAtual, carregarDados]);
 
   const getConversaComUsuario = (usuarioId) => {
     return conversas.find(c =>
-      c.participantes?.includes(usuarioId) && c.participantes?.includes(usuarioAtual.id)
+      c.participantes?.includes(usuarioId) && c.participantes?.includes(usuarioAtual?.id)
     );
   };
 
   const abrirConversa = async (usuario) => {
     let conversa = getConversaComUsuario(usuario.id);
-
     if (!conversa) {
-      // Cria nova conversa
       const res = await base44.functions.invoke('chatCriarConversa', {
         titulo: `${usuarioAtual.full_name || usuarioAtual.email} ↔ ${usuario.full_name || usuario.email}`,
         participantes: [usuarioAtual.id, usuario.id],
@@ -80,15 +176,12 @@ export default function Chat() {
       if (!conversa) return;
       await carregarDados();
     }
-
     setConversaAtiva({ ...conversa, _usuario: usuario });
-
-    // Carrega mensagens
     const res = await base44.functions.invoke('chatListarMensagens', { conversa_id: conversa.id });
     setMensagens(res.data?.mensagens || []);
-
-    // Marca como lidas
     marcarComoLidas(conversa.id);
+    // Limpa badge
+    setNaoLidas(prev => { const n = { ...prev }; delete n[conversa.id]; return n; });
   };
 
   const marcarComoLidas = async (conversaId) => {
@@ -109,36 +202,23 @@ export default function Chat() {
         conversa_id: conversaAtiva.id,
         conteudo,
       });
-      await carregarDados();
-    } catch (e) {
+    } catch {
       alert('Erro ao enviar mensagem');
     } finally {
       setLoading(false);
     }
   };
 
-  const formatarHora = (dateStr) => {
-    if (!dateStr) return '';
-    const d = new Date(dateStr);
-    const agora = new Date();
-    const diffH = (agora - d) / 3600000;
-    if (diffH < 24) return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    if (diffH < 48) return 'Ontem';
-    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-  };
+  const totalNaoLidas = Object.values(naoLidas).reduce((s, v) => s + v, 0);
 
-  // Monta lista de itens para sidebar: todos os usuários, com info da conversa se existir
+  // Monta lista sidebar
   const itensLista = usuarios
     .filter(u => {
       if (!busca.trim()) return true;
       return (u.full_name || u.email || '').toLowerCase().includes(busca.toLowerCase());
     })
-    .map(u => {
-      const conversa = getConversaComUsuario(u.id);
-      return { ...u, conversa };
-    })
+    .map(u => ({ ...u, conversa: getConversaComUsuario(u.id) }))
     .sort((a, b) => {
-      // Conversas recentes primeiro
       const da = a.conversa?.data_ultima_mensagem ? new Date(a.conversa.data_ultima_mensagem) : new Date(0);
       const db = b.conversa?.data_ultima_mensagem ? new Date(b.conversa.data_ultima_mensagem) : new Date(0);
       return db - da;
@@ -151,13 +231,27 @@ export default function Chat() {
 
       {/* Sidebar */}
       <div className={`${conversaAtiva ? 'hidden md:flex' : 'flex'} w-full md:w-80 lg:w-96 flex-col bg-card border-r border-border flex-shrink-0`}>
-        <div className="px-4 py-3.5 border-b border-border flex items-center">
-          <h2 className="font-bold text-foreground text-lg flex-1">Mensagens</h2>
+        {/* Header */}
+        <div className="px-4 py-3.5 border-b border-border flex items-center gap-2">
+          <h2 className="font-bold text-foreground text-lg flex-1">
+            Mensagens
+            {totalNaoLidas > 0 && (
+              <span className="ml-2 text-xs bg-primary text-white rounded-full px-2 py-0.5 font-bold">{totalNaoLidas}</span>
+            )}
+          </h2>
+          <button
+            onClick={() => setSomAtivado(v => !v)}
+            className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${somAtivado ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}
+            title={somAtivado ? 'Desativar som' : 'Ativar som'}
+          >
+            {somAtivado ? <Bell size={15} /> : <BellOff size={15} />}
+          </button>
         </div>
 
+        {/* Busca */}
         <div className="px-3 py-2.5 border-b border-border/50">
           <div className="flex items-center gap-2 bg-muted/60 rounded-full px-3.5 py-2">
-            <Search size={14} className="text-muted-foreground" />
+            <Search size={14} className="text-muted-foreground flex-shrink-0" />
             <input
               value={busca}
               onChange={e => setBusca(e.target.value)}
@@ -167,34 +261,49 @@ export default function Chat() {
           </div>
         </div>
 
+        {/* Lista */}
         <div className="flex-1 overflow-y-auto">
-          {itensLista.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
+          {loadingUsuarios && (
+            <div className="flex items-center justify-center h-32">
+              <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+            </div>
+          )}
+          {!loadingUsuarios && itensLista.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-48 text-muted-foreground px-4 text-center">
               <Users size={36} className="mb-2 opacity-20" />
-              <p className="text-sm">Nenhum usuário encontrado</p>
+              <p className="text-sm">{busca ? 'Nenhum resultado' : 'Nenhum usuário encontrado'}</p>
+              {!busca && <p className="text-xs mt-1 opacity-60">Outros usuários do sistema aparecerão aqui</p>}
             </div>
           )}
           {itensLista.map(usuario => {
-            const ativo = conversaAtiva?.id === usuario.conversa?.id;
+            const ativo = conversaAtiva?._usuario?.id === usuario.id;
+            const qtdNaoLidas = naoLidas[usuario.conversa?.id] || 0;
             return (
               <button
                 key={usuario.id}
                 onClick={() => abrirConversa(usuario)}
-                className={`w-full px-3 py-2.5 transition-colors text-left flex items-center gap-3 border-b border-border/30 ${ativo ? 'bg-primary/10' : 'hover:bg-muted/40'}`}
+                className={`w-full px-3 py-3 transition-colors text-left flex items-center gap-3 border-b border-border/30 ${ativo ? 'bg-primary/10' : 'hover:bg-muted/40'}`}
               >
-                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                  <span className="text-base font-bold text-primary">
-                    {(usuario.full_name || usuario.email || 'U').charAt(0).toUpperCase()}
-                  </span>
+                <div className="relative flex-shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                    <span className="text-base font-bold text-primary">{getIniciais(usuario.full_name, usuario.email)}</span>
+                  </div>
+                  {qtdNaoLidas > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                      {qtdNaoLidas > 9 ? '9+' : qtdNaoLidas}
+                    </span>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline justify-between gap-1 mb-0.5">
-                    <p className="font-semibold text-sm text-foreground truncate">{usuario.full_name || usuario.email}</p>
+                    <p className={`text-sm truncate ${qtdNaoLidas > 0 ? 'font-bold text-foreground' : 'font-semibold text-foreground'}`}>
+                      {usuario.full_name || usuario.email}
+                    </p>
                     <span className="text-[11px] text-muted-foreground flex-shrink-0">
                       {formatarHora(usuario.conversa?.data_ultima_mensagem)}
                     </span>
                   </div>
-                  <p className="text-xs text-muted-foreground truncate">
+                  <p className={`text-xs truncate ${qtdNaoLidas > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
                     {usuario.conversa?.ultima_mensagem || <span className="italic opacity-60">Clique para conversar</span>}
                   </p>
                 </div>
@@ -208,7 +317,7 @@ export default function Chat() {
       <div className={`${conversaAtiva ? 'flex' : 'hidden md:flex'} flex-1 flex-col bg-[#efe7dd] overflow-hidden`}>
         {conversaAtiva && usuarioAtivo ? (
           <>
-            {/* Header da conversa */}
+            {/* Header */}
             <div className="px-4 py-2.5 border-b border-border bg-card flex items-center gap-3 flex-shrink-0">
               <button
                 onClick={() => { setConversaAtiva(null); setMensagens([]); }}
@@ -217,18 +326,16 @@ export default function Chat() {
                 <ChevronLeft size={20} className="text-muted-foreground" />
               </button>
               <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                <span className="text-sm font-bold text-primary">
-                  {(usuarioAtivo.full_name || usuarioAtivo.email || 'U').charAt(0).toUpperCase()}
-                </span>
+                <span className="text-sm font-bold text-primary">{getIniciais(usuarioAtivo.full_name, usuarioAtivo.email)}</span>
               </div>
-              <div>
+              <div className="flex-1 min-w-0">
                 <p className="font-bold text-foreground text-sm">{usuarioAtivo.full_name || usuarioAtivo.email}</p>
-                <p className="text-xs text-muted-foreground">{usuarioAtivo.email}</p>
+                <p className="text-xs text-muted-foreground truncate">{usuarioAtivo.email}</p>
               </div>
             </div>
 
             {/* Mensagens */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            <div className="flex-1 overflow-y-auto p-4 space-y-1">
               {mensagens.length === 0 && (
                 <div className="h-full flex items-center justify-center">
                   <div className="text-center bg-white/80 rounded-xl px-6 py-4">
@@ -240,16 +347,21 @@ export default function Chat() {
               )}
               {mensagens.map((msg, idx) => {
                 const ehMeu = msg.remetente_id === usuarioAtual?.id;
+                const msgAnterior = mensagens[idx - 1];
+                const mesmoRemetente = msgAnterior && msgAnterior.remetente_id === msg.remetente_id;
                 return (
-                  <div key={msg.id || idx} className={`flex ${ehMeu ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[75%] rounded-2xl px-4 py-2 shadow-sm ${ehMeu ? 'bg-[#d9fdd3]' : 'bg-white'}`}>
-                      {!ehMeu && (
+                  <div key={msg.id || idx} className={`flex ${ehMeu ? 'justify-end' : 'justify-start'} ${mesmoRemetente ? 'mt-0.5' : 'mt-3'}`}>
+                    <div className={`max-w-[75%] rounded-2xl px-4 py-2 shadow-sm ${ehMeu ? 'bg-[#d9fdd3] rounded-tr-sm' : 'bg-white rounded-tl-sm'}`}>
+                      {!ehMeu && !mesmoRemetente && (
                         <p className="text-xs font-semibold text-primary mb-0.5">{msg.remetente_nome || 'Usuário'}</p>
                       )}
                       <p className="text-sm break-words leading-relaxed text-foreground">{msg.conteudo}</p>
-                      <p className="text-[10px] text-right mt-1 text-muted-foreground">
-                        {msg.created_date ? new Date(msg.created_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}
-                      </p>
+                      <div className={`flex items-center gap-1 mt-0.5 ${ehMeu ? 'justify-end' : 'justify-start'}`}>
+                        <p className="text-[10px] text-muted-foreground">
+                          {msg.created_date ? new Date(msg.created_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}
+                        </p>
+                        {ehMeu && <span className="text-[10px] text-muted-foreground">{msg.lida ? '✓✓' : '✓'}</span>}
+                      </div>
                     </div>
                   </div>
                 );
@@ -267,6 +379,7 @@ export default function Chat() {
                 placeholder="Digite uma mensagem..."
                 className="flex-1 border border-border rounded-full px-4 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 disabled={loading}
+                autoFocus
               />
               <button
                 onClick={enviarMensagem}
