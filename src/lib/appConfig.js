@@ -1,10 +1,8 @@
 /**
  * Utilitário centralizado para persistência de configurações no banco de dados.
- * Usa base44.entities (cliente do usuário autenticado) — funciona no browser.
  */
 import { base44 } from '@/api/base44Client';
 
-// Cache em memória para evitar múltiplos fetches na mesma sessão
 const _cache = {};
 
 /**
@@ -13,10 +11,11 @@ const _cache = {};
 export async function loadConfig(chave, defaultValue = null, forceRefresh = false) {
   if (!forceRefresh && _cache[chave] !== undefined) return _cache[chave];
   try {
-    const results = await base44.entities.AppConfig.filter({ chave });
-    if (results && results.length > 0) {
-      _cache[chave] = results[0].valor;
-      return results[0].valor;
+    const all = await base44.entities.AppConfig.list();
+    const record = all.find(r => r.chave === chave);
+    if (record) {
+      _cache[chave] = record.valor;
+      return record.valor;
     }
   } catch (e) {
     console.warn(`[appConfig] Erro ao carregar "${chave}":`, e.message);
@@ -31,9 +30,10 @@ export async function loadConfig(chave, defaultValue = null, forceRefresh = fals
 export async function saveConfig(chave, valor) {
   _cache[chave] = valor;
   try {
-    const results = await base44.entities.AppConfig.filter({ chave });
-    if (results && results.length > 0) {
-      await base44.entities.AppConfig.update(results[0].id, { valor });
+    const all = await base44.entities.AppConfig.list();
+    const record = all.find(r => r.chave === chave);
+    if (record) {
+      await base44.entities.AppConfig.update(record.id, { valor });
     } else {
       await base44.entities.AppConfig.create({ chave, valor });
     }
@@ -43,16 +43,10 @@ export async function saveConfig(chave, valor) {
   }
 }
 
-/**
- * Invalida o cache em memória para uma chave específica.
- */
 export function invalidateConfig(chave) {
   delete _cache[chave];
 }
 
-/**
- * Invalida todo o cache.
- */
 export function invalidateAllConfigs() {
   Object.keys(_cache).forEach(k => delete _cache[k]);
 }
