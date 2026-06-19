@@ -25,11 +25,11 @@ export default function Chat() {
   }, [usuarioAtual]);
 
   const carregarDados = async () => {
-    const [todosUsuarios, todasConversas] = await Promise.all([
-      base44.entities.User.list(),
+    const [resUsuarios, todasConversas] = await Promise.all([
+      base44.functions.invoke('chatListarUsuarios', {}),
       base44.entities.Conversa.list('-data_ultima_mensagem'),
     ]);
-    setUsuarios(todosUsuarios.filter(u => u.id !== usuarioAtual.id));
+    setUsuarios(resUsuarios.data?.usuarios || []);
     setConversas(todasConversas.filter(c => c.participantes?.includes(usuarioAtual.id)));
   };
 
