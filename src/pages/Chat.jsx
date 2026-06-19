@@ -1,403 +1,290 @@
 import { useEffect, useState, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Send, Plus, Users, MessageCircle, X, User, CheckCircle, ChevronLeft, Search, Edit2 } from 'lucide-react';
+import { Send, Users, MessageCircle, ChevronLeft, Search } from 'lucide-react';
 
 export default function Chat() {
-  const [usuariosDisponiveis, setUsuariosDisponiveis] = useState([]);
-  const [usuarioSelecionado, setUsuarioSelecionado] = useState(null);
+  const [usuarioAtual, setUsuarioAtual] = useState(null);
+  const [usuarios, setUsuarios] = useState([]);
+  const [conversas, setConversas] = useState([]);
   const [conversaAtiva, setConversaAtiva] = useState(null);
   const [mensagens, setMensagens] = useState([]);
   const [novaMensagem, setNovaMensagem] = useState('');
+  const [busca, setBusca] = useState('');
   const [loading, setLoading] = useState(false);
-  const [usuarioAtual, setUsuarioAtual] = useState(null);
-  const [mensagensNaoLidas, setMensagensNaoLidas] = useState({});
-  const [totalNaoLidas, setTotalNaoLidas] = useState(0);
-
   const mensagensEndRef = useRef(null);
-
-  const scrollToBottom = () => {
-    mensagensEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [mensagens]);
 
   // Carrega usuário atual
   useEffect(() => {
-    base44.auth.me()
-      .then(user => {
-        console.log('[Chat] Usuário atual carregado:', user);
-        setUsuarioAtual(user);
-      })
-      .catch(err => console.error('[Chat] Erro ao carregar usuário atual:', err));
+    base44.auth.me().then(setUsuarioAtual).catch(() => {});
   }, []);
 
-  // Carrega usuários disponíveis para chat
-  const loadUsuarios = async () => {
-    try {
-      console.log('[Chat] loadUsuarios - usuarioAtual:', usuarioAtual);
-      
-      if (!usuarioAtual?.id) {
-        console.log('[Chat] usuarioAtual não carregado ainda, pulando loadUsuarios');
-        return;
-      }
-      
-      const usuarios = await base44.entities.User.list();
-      console.log('[Chat] Total de usuários retornados:', usuarios.length);
-      console.log('[Chat] Usuários:', usuarios.map(u => ({ id: u.id, nome: u.full_name, email: u.email })));
-      
-      const outrosUsuarios = usuarios.filter(u => u.id !== usuarioAtual.id);
-      console.log('[Chat] Outros usuários (excluindo atual):', outrosUsuarios.length);
-      
-      // Carrega conversas existentes para contar mensagens não lidas
-      const todasConversas = await base44.entities.Conversa.list();
-      console.log('[Chat] Total de conversas:', todasConversas.length);
-      
-      // Mapeia TODOS os usuários (ativos e inativos) com status de mensagens não lidas
-      const usuariosComStatus = outrosUsuarios.map(usuario => {
-        const conversa = todasConversas.find(c => 
-          c.participantes?.includes(usuario.id) && c.participantes?.includes(usuarioAtual.id)
-        );
-        const naoLidas = mensagensNaoLidas[conversa?.id] || 0;
-        
-        return {
-          ...usuario,
-          ultimaMensagem: conversa?.ultima_mensagem || null,
-          dataUltimaMensagem: conversa?.data_ultima_mensagem || null,
-          conversaId: conversa?.id || null,
-          naoLidas,
-        };
-      });
-      
-      console.log('[Chat] Usuarios com status:', usuariosComStatus.map(u => ({ nome: u.full_name, temConversa: !!u.conversaId })));
-      setUsuariosDisponiveis(usuariosComStatus);
-    } catch (error) {
-      console.error('[Chat] Erro ao carregar usuários:', error);
-    }
-  };
-
+  // Carrega usuários e conversas quando usuário está pronto
   useEffect(() => {
-    if (usuarioAtual) {
-      loadUsuarios();
-      loadMensagensNaoLidas();
-    }
+    if (!usuarioAtual) return;
+    carregarDados();
   }, [usuarioAtual]);
 
-  // Carrega mensagens da conversa selecionada
-  const loadMensagens = async (conversaId) => {
-    try {
-      const res = await base44.functions.invoke('chatListarMensagens', { conversa_id: conversaId });
-      setMensagens(res.data.mensagens || []);
-    } catch (error) {
-      console.error('Erro ao carregar mensagens:', error);
-    }
+  const carregarDados = async () => {
+    const [todosUsuarios, todasConversas] = await Promise.all([
+      base44.entities.User.list(),
+      base44.entities.Conversa.list('-data_ultima_mensagem'),
+    ]);
+    setUsuarios(todosUsuarios.filter(u => u.id !== usuarioAtual.id));
+    setConversas(todasConversas.filter(c => c.participantes?.includes(usuarioAtual.id)));
   };
 
-  // Conta mensagens não lidas de todas as conversas
-  const loadMensagensNaoLidas = async () => {
-    try {
-      const todasMensagens = await base44.entities.Mensagem.list();
-      const naoLidasPorConversa = {};
-      let total = 0;
-      
-      todasMensagens.forEach(m => {
-        if (!m.lida && m.remetente_id !== usuarioAtual?.id) {
-          naoLidasPorConversa[m.conversa_id] = (naoLidasPorConversa[m.conversa_id] || 0) + 1;
-          total++;
-        }
-      });
-      
-      setMensagensNaoLidas(naoLidasPorConversa);
-      setTotalNaoLidas(total);
-    } catch (error) {
-      console.error('Erro ao carregar não lidas:', error);
-    }
-  };
-
-  // Marca mensagens como lidas ao abrir conversa
-  const marcarComoLidas = async (conversaId) => {
-    try {
-      const mensagens = await base44.entities.Mensagem.filter({ conversa_id: conversaId });
-      await Promise.all(
-        mensagens
-          .filter(m => !m.lida && m.remetente_id !== usuarioAtual?.id)
-          .map(m => base44.entities.Mensagem.update(m.id, { lida: true }))
-      );
-      loadMensagensNaoLidas();
-    } catch (error) {
-      console.error('Erro ao marcar como lidas:', error);
-    }
-  };
+  // Scroll automático ao receber mensagens
+  useEffect(() => {
+    mensagensEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [mensagens]);
 
   // Subscribe em tempo real para novas mensagens
   useEffect(() => {
     if (!conversaAtiva) return;
-
     const unsubscribe = base44.entities.Mensagem.subscribe((event) => {
       if (event.type === 'create' && event.data?.conversa_id === conversaAtiva.id) {
-        setMensagens(prev => [...prev, event.data]);
-        // Se a mensagem não for minha, marca como lida automaticamente
-        if (event.data?.remetente_id !== usuarioAtual?.id) {
-          marcarComoLidas(conversaAtiva.id);
-        }
-        loadUsuarios(); // Atualiza lista de usuários
-      }
-    });
-
-    return () => unsubscribe();
-  }, [conversaAtiva, usuarioAtual]);
-
-  // Subscribe para atualizar lista de usuários
-  useEffect(() => {
-    const unsubscribe = base44.entities.Conversa.subscribe((event) => {
-      if (event.type === 'create' || event.type === 'update') {
-        loadUsuarios();
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  // Seleciona usuário e cria/abre conversa
-  const selecionarUsuario = async (usuario) => {
-    setUsuarioSelecionado(usuario);
-    
-    // Verifica se já existe conversa
-    if (usuario.conversaId) {
-      setConversaAtiva({ id: usuario.conversaId, titulo: usuario.full_name || usuario.email });
-      loadMensagens(usuario.conversaId);
-      marcarComoLidas(usuario.conversaId);
-    } else {
-      // Cria nova conversa automaticamente
-      try {
-        const novaConversa = await base44.functions.invoke('chatCriarConversa', {
-          titulo: `${usuarioAtual.full_name || usuarioAtual.email} ↔ ${usuario.full_name || usuario.email}`,
-          participantes: [usuario.id, usuarioAtual.id],
+        setMensagens(prev => {
+          // Evita duplicatas
+          if (prev.find(m => m.id === event.data.id)) return prev;
+          return [...prev, event.data];
         });
-        
-        const conversaCriada = {
-          id: novaConversa.data.id || novaConversa.data.conversa_id,
-          titulo: usuario.full_name || usuario.email,
-        };
-        setConversaAtiva(conversaCriada);
-        loadUsuarios(); // Recarrega para atualizar status
-      } catch (error) {
-        console.error('Erro ao criar conversa:', error);
       }
+    });
+    return () => unsubscribe();
+  }, [conversaAtiva]);
+
+  // Subscribe para atualizar lista de conversas em tempo real
+  useEffect(() => {
+    const unsubscribe = base44.entities.Conversa.subscribe(() => {
+      carregarDados();
+    });
+    return () => unsubscribe();
+  }, [usuarioAtual]);
+
+  const getConversaComUsuario = (usuarioId) => {
+    return conversas.find(c =>
+      c.participantes?.includes(usuarioId) && c.participantes?.includes(usuarioAtual.id)
+    );
+  };
+
+  const abrirConversa = async (usuario) => {
+    let conversa = getConversaComUsuario(usuario.id);
+
+    if (!conversa) {
+      // Cria nova conversa
+      const res = await base44.functions.invoke('chatCriarConversa', {
+        titulo: `${usuarioAtual.full_name || usuarioAtual.email} ↔ ${usuario.full_name || usuario.email}`,
+        participantes: [usuarioAtual.id, usuario.id],
+      });
+      conversa = res.data?.conversa;
+      if (!conversa) return;
+      await carregarDados();
     }
+
+    setConversaAtiva({ ...conversa, _usuario: usuario });
+
+    // Carrega mensagens
+    const res = await base44.functions.invoke('chatListarMensagens', { conversa_id: conversa.id });
+    setMensagens(res.data?.mensagens || []);
+
+    // Marca como lidas
+    marcarComoLidas(conversa.id);
+  };
+
+  const marcarComoLidas = async (conversaId) => {
+    const msgs = await base44.entities.Mensagem.filter({ conversa_id: conversaId });
+    await Promise.all(
+      msgs.filter(m => !m.lida && m.remetente_id !== usuarioAtual.id)
+          .map(m => base44.entities.Mensagem.update(m.id, { lida: true }))
+    );
   };
 
   const enviarMensagem = async () => {
-    if (!novaMensagem.trim() || !conversaAtiva) return;
-
+    if (!novaMensagem.trim() || !conversaAtiva || loading) return;
     setLoading(true);
+    const conteudo = novaMensagem.trim();
+    setNovaMensagem('');
     try {
       await base44.functions.invoke('chatEnviarMensagem', {
         conversa_id: conversaAtiva.id,
-        conteudo: novaMensagem,
+        conteudo,
       });
-      setNovaMensagem('');
-      loadUsuarios(); // Atualiza última mensagem na lista
-    } catch (error) {
-      alert('Erro ao enviar mensagem: ' + error.message);
+      await carregarDados();
+    } catch (e) {
+      alert('Erro ao enviar mensagem');
     } finally {
       setLoading(false);
     }
   };
 
-
-
-  const formatarData = (dataString) => {
-    if (!dataString) return '';
-    const data = new Date(dataString);
+  const formatarHora = (dateStr) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
     const agora = new Date();
-    const diff = agora - data;
-    const horas = diff / (1000 * 60 * 60);
-    
-    if (horas < 24) {
-      return data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    } else if (horas < 48) {
-      return 'Ontem';
-    } else {
-      return data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-    }
+    const diffH = (agora - d) / 3600000;
+    if (diffH < 24) return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    if (diffH < 48) return 'Ontem';
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
   };
 
+  // Monta lista de itens para sidebar: todos os usuários, com info da conversa se existir
+  const itensLista = usuarios
+    .filter(u => {
+      if (!busca.trim()) return true;
+      return (u.full_name || u.email || '').toLowerCase().includes(busca.toLowerCase());
+    })
+    .map(u => {
+      const conversa = getConversaComUsuario(u.id);
+      return { ...u, conversa };
+    })
+    .sort((a, b) => {
+      // Conversas recentes primeiro
+      const da = a.conversa?.data_ultima_mensagem ? new Date(a.conversa.data_ultima_mensagem) : new Date(0);
+      const db = b.conversa?.data_ultima_mensagem ? new Date(b.conversa.data_ultima_mensagem) : new Date(0);
+      return db - da;
+    });
+
+  const usuarioAtivo = conversaAtiva?._usuario;
+
   return (
-    <div className="flex h-[calc(100vh-80px)] bg-background">
-      {/* Lista de Conversas - Sidebar mais estreita no desktop */}
-      <div className={`md:flex w-full ${usuarioSelecionado ? 'hidden' : 'flex'} md:w-80 lg:w-96 flex-col bg-card border-r border-border`}>
-        {/* Header */}
-        <div className="px-4 py-3.5 border-b border-border bg-card flex items-center justify-between flex-shrink-0">
-          <h2 className="font-bold text-foreground text-lg">Conversas</h2>
-          <button className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center transition-colors">
-            <Edit2 size={18} className="text-primary" />
-          </button>
+    <div className="flex h-[calc(100vh-80px)] bg-background overflow-hidden">
+
+      {/* Sidebar */}
+      <div className={`${conversaAtiva ? 'hidden md:flex' : 'flex'} w-full md:w-80 lg:w-96 flex-col bg-card border-r border-border flex-shrink-0`}>
+        <div className="px-4 py-3.5 border-b border-border flex items-center">
+          <h2 className="font-bold text-foreground text-lg flex-1">Mensagens</h2>
         </div>
 
-        {/* Busca */}
-        <div className="px-3 py-2.5 bg-card sticky top-0 z-10 border-b border-border/50">
-          <div className="flex items-center gap-3 bg-muted/60 rounded-full px-3.5 py-2">
-            <Search size={16} className="text-muted-foreground flex-shrink-0" />
+        <div className="px-3 py-2.5 border-b border-border/50">
+          <div className="flex items-center gap-2 bg-muted/60 rounded-full px-3.5 py-2">
+            <Search size={14} className="text-muted-foreground" />
             <input
-              type="text"
-              placeholder="Pesquisar"
+              value={busca}
+              onChange={e => setBusca(e.target.value)}
+              placeholder="Pesquisar usuário..."
               className="bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none flex-1"
             />
           </div>
         </div>
 
-        {/* Lista de Conversas */}
         <div className="flex-1 overflow-y-auto">
-          {usuariosDisponiveis.map(usuario => (
-            <button
-              key={usuario.id}
-              onClick={() => selecionarUsuario(usuario)}
-              className="w-full px-3 py-2.5 hover:bg-muted/40 transition-colors text-left flex items-center gap-3 border-b border-border/30"
-            >
-              {/* Avatar */}
-              <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 relative overflow-hidden">
-                <span className="text-base font-bold text-primary">
-                  {usuario.full_name?.charAt(0).toUpperCase() || 'U'}
-                </span>
-              </div>
-
-              {/* Conteúdo */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline justify-between gap-2 mb-1">
-                  <p className="font-medium text-sm text-foreground truncate">
-                    {usuario.full_name || usuario.email}
-                  </p>
-                  <span className={`text-[11px] flex-shrink-0 ${usuario.naoLidas > 0 ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
-                    {usuario.dataUltimaMensagem ? formatarData(usuario.dataUltimaMensagem) : ''}
-                  </span>
-                </div>
-                <p className={`text-[13px] truncate ${usuario.naoLidas > 0 ? 'text-foreground font-semibold' : 'text-muted-foreground'}`}>
-                  {usuario.ultimaMensagem || ''}
-                </p>
-              </div>
-
-              {/* Badge de não lidas */}
-              {usuario.naoLidas > 0 && (
-                <span className="bg-primary text-primary-foreground text-[10px] font-bold px-2 py-1 rounded-full min-w-[20px] text-center flex-shrink-0 ml-2">
-                  {usuario.naoLidas}
-                </span>
-              )}
-            </button>
-          ))}
-          {usuariosDisponiveis.length === 0 && (
+          {itensLista.length === 0 && (
             <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
-              <MessageCircle size={40} className="mb-3 opacity-20" />
-              <p className="text-sm">Nenhuma conversa</p>
+              <Users size={36} className="mb-2 opacity-20" />
+              <p className="text-sm">Nenhum usuário encontrado</p>
             </div>
           )}
+          {itensLista.map(usuario => {
+            const ativo = conversaAtiva?.id === usuario.conversa?.id;
+            return (
+              <button
+                key={usuario.id}
+                onClick={() => abrirConversa(usuario)}
+                className={`w-full px-3 py-2.5 transition-colors text-left flex items-center gap-3 border-b border-border/30 ${ativo ? 'bg-primary/10' : 'hover:bg-muted/40'}`}
+              >
+                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                  <span className="text-base font-bold text-primary">
+                    {(usuario.full_name || usuario.email || 'U').charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline justify-between gap-1 mb-0.5">
+                    <p className="font-semibold text-sm text-foreground truncate">{usuario.full_name || usuario.email}</p>
+                    <span className="text-[11px] text-muted-foreground flex-shrink-0">
+                      {formatarHora(usuario.conversa?.data_ultima_mensagem)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {usuario.conversa?.ultima_mensagem || <span className="italic opacity-60">Clique para conversar</span>}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Tela de Conversa - Área principal no desktop */}
-      <div className={`flex-1 ${usuarioSelecionado ? 'flex' : 'hidden'} md:flex flex-col bg-[#efe7dd]`}>
-        {/* Área de Mensagens - estilo WhatsApp */}
-        {usuarioSelecionado && conversaAtiva ? (
-          <div className="flex-1 flex flex-col w-full h-full">
-            {/* Header */}
+      {/* Área de Mensagens */}
+      <div className={`${conversaAtiva ? 'flex' : 'hidden md:flex'} flex-1 flex-col bg-[#efe7dd] overflow-hidden`}>
+        {conversaAtiva && usuarioAtivo ? (
+          <>
+            {/* Header da conversa */}
             <div className="px-4 py-2.5 border-b border-border bg-card flex items-center gap-3 flex-shrink-0">
               <button
-                onClick={() => {
-                  setUsuarioSelecionado(null);
-                  setConversaAtiva(null);
-                }}
-                className="md:hidden w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center transition-colors"
+                onClick={() => { setConversaAtiva(null); setMensagens([]); }}
+                className="md:hidden w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center"
               >
                 <ChevronLeft size={20} className="text-muted-foreground" />
               </button>
-              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 relative">
+              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
                 <span className="text-sm font-bold text-primary">
-                  {usuarioSelecionado.full_name?.charAt(0).toUpperCase() || 'U'}
+                  {(usuarioAtivo.full_name || usuarioAtivo.email || 'U').charAt(0).toUpperCase()}
                 </span>
-                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-foreground text-sm truncate">{usuarioSelecionado.full_name || usuarioSelecionado.email}</p>
-                <p className="text-xs text-green-600 font-medium">Online</p>
+              <div>
+                <p className="font-bold text-foreground text-sm">{usuarioAtivo.full_name || usuarioAtivo.email}</p>
+                <p className="text-xs text-muted-foreground">{usuarioAtivo.email}</p>
               </div>
             </div>
 
-            {/* Mensagens com fundo estilo WhatsApp */}
-            <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 space-y-3" style={{ backgroundImage: 'url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png")', backgroundRepeat: 'repeat', backgroundOpacity: 0.03 }}>
-              {mensagens.map((mensagem, idx) => {
-                const ehMeu = mensagem.remetente_id === usuarioAtual?.id;
+            {/* Mensagens */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {mensagens.length === 0 && (
+                <div className="h-full flex items-center justify-center">
+                  <div className="text-center bg-white/80 rounded-xl px-6 py-4">
+                    <MessageCircle size={28} className="mx-auto mb-2 opacity-30" />
+                    <p className="text-sm font-medium text-foreground">Nenhuma mensagem ainda</p>
+                    <p className="text-xs text-muted-foreground mt-1">Seja o primeiro a enviar!</p>
+                  </div>
+                </div>
+              )}
+              {mensagens.map((msg, idx) => {
+                const ehMeu = msg.remetente_id === usuarioAtual?.id;
                 return (
-                  <div
-                    key={mensagem.id || idx}
-                    className={`flex ${ehMeu ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[85%] md:max-w-[60%] lg:max-w-[50%] rounded-2xl px-4 py-2.5 shadow-md ${
-                        ehMeu
-                          ? 'bg-[#d9fdd3] text-foreground'
-                          : 'bg-white text-foreground'
-                      }`}
-                    >
+                  <div key={msg.id || idx} className={`flex ${ehMeu ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[75%] rounded-2xl px-4 py-2 shadow-sm ${ehMeu ? 'bg-[#d9fdd3]' : 'bg-white'}`}>
                       {!ehMeu && (
-                        <p className="text-xs font-semibold mb-1 text-primary">
-                          {mensagem.remetente_nome || 'Usuário'}
-                        </p>
+                        <p className="text-xs font-semibold text-primary mb-0.5">{msg.remetente_nome || 'Usuário'}</p>
                       )}
-                      <p className="text-base break-words leading-relaxed">{mensagem.conteudo}</p>
-                      <p className={`text-xs mt-1.5 text-right ${ehMeu ? 'text-green-700/70' : 'text-muted-foreground'}`}>
-                        {mensagem.created_date 
-                          ? new Date(mensagem.created_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-                          : ''
-                        }
+                      <p className="text-sm break-words leading-relaxed text-foreground">{msg.conteudo}</p>
+                      <p className="text-[10px] text-right mt-1 text-muted-foreground">
+                        {msg.created_date ? new Date(msg.created_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}
                       </p>
                     </div>
                   </div>
                 );
               })}
-              {mensagens.length === 0 && (
-                <div className="h-full flex items-center justify-center text-muted-foreground">
-                  <div className="text-center bg-white/80 rounded-lg px-6 py-4">
-                    <MessageCircle size={32} className="mx-auto mb-2 opacity-30" />
-                    <p className="text-sm font-medium">Nenhuma mensagem ainda</p>
-                    <p className="text-xs opacity-70 mt-1">Seja o primeiro a enviar!</p>
-                  </div>
-                </div>
-              )}
               <div ref={mensagensEndRef} />
             </div>
 
-            {/* Input de Mensagem - estilo WhatsApp */}
-            <div className="px-4 md:px-6 py-4 bg-card border-t border-border flex items-center gap-3 flex-shrink-0">
+            {/* Input */}
+            <div className="px-4 py-3 bg-card border-t border-border flex items-center gap-3 flex-shrink-0">
               <input
                 type="text"
                 value={novaMensagem}
-                onChange={(e) => setNovaMensagem(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && enviarMensagem()}
-                placeholder="Digite uma mensagem"
-                className="flex-1 border border-border rounded-full px-5 py-3.5 text-base bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                onChange={e => setNovaMensagem(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && enviarMensagem()}
+                placeholder="Digite uma mensagem..."
+                className="flex-1 border border-border rounded-full px-4 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 disabled={loading}
               />
               <button
                 onClick={enviarMensagem}
                 disabled={loading || !novaMensagem.trim()}
-                className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 shadow-md"
+                className="w-11 h-11 rounded-full bg-primary text-white flex items-center justify-center hover:opacity-90 disabled:opacity-50 flex-shrink-0 shadow"
               >
-                <Send size={20} className="ml-0.5" />
+                <Send size={17} className="ml-0.5" />
               </button>
             </div>
-          </div>
+          </>
         ) : (
-          /* Tela vazia - estilo WhatsApp Web */
-          <div className="hidden md:flex flex-1 flex-col items-center justify-center bg-[#efe7dd]">
-            <div className="text-center max-w-md px-6">
-              <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                <Users size={48} className="text-primary opacity-50" />
+          <div className="flex-1 flex flex-col items-center justify-center">
+            <div className="text-center">
+              <div className="w-20 h-20 rounded-full bg-white/40 flex items-center justify-center mx-auto mb-4">
+                <Users size={36} className="text-primary/50" />
               </div>
-              <h3 className="text-lg font-bold text-foreground mb-2">Selecione um usuário</h3>
-              <p className="text-sm text-muted-foreground">
-                Clique em um usuário da lista para começar a conversar
-              </p>
+              <h3 className="text-base font-bold text-foreground/70 mb-1">Selecione uma conversa</h3>
+              <p className="text-sm text-foreground/40">Clique em um usuário para começar a conversar</p>
             </div>
           </div>
         )}
