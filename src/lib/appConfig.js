@@ -1,6 +1,6 @@
 /**
  * Utilitário centralizado para persistência de configurações no banco de dados.
- * Substitui o uso de localStorage para todas as configs do sistema.
+ * Usa base44.entities (cliente do usuário autenticado) — funciona no browser.
  */
 import { base44 } from '@/api/base44Client';
 
@@ -9,12 +9,11 @@ const _cache = {};
 
 /**
  * Carrega uma configuração do banco pelo chave.
- * Usa cache em memória durante a sessão para evitar requests desnecessários.
  */
 export async function loadConfig(chave, defaultValue = null, forceRefresh = false) {
   if (!forceRefresh && _cache[chave] !== undefined) return _cache[chave];
   try {
-    const results = await base44.asServiceRole.entities.AppConfig.filter({ chave });
+    const results = await base44.entities.AppConfig.filter({ chave });
     if (results && results.length > 0) {
       _cache[chave] = results[0].valor;
       return results[0].valor;
@@ -32,14 +31,15 @@ export async function loadConfig(chave, defaultValue = null, forceRefresh = fals
 export async function saveConfig(chave, valor) {
   _cache[chave] = valor;
   try {
-    const results = await base44.asServiceRole.entities.AppConfig.filter({ chave });
+    const results = await base44.entities.AppConfig.filter({ chave });
     if (results && results.length > 0) {
-      await base44.asServiceRole.entities.AppConfig.update(results[0].id, { valor });
+      await base44.entities.AppConfig.update(results[0].id, { valor });
     } else {
-      await base44.asServiceRole.entities.AppConfig.create({ chave, valor });
+      await base44.entities.AppConfig.create({ chave, valor });
     }
   } catch (e) {
     console.error(`[appConfig] Erro ao salvar "${chave}":`, e.message);
+    throw e;
   }
 }
 
