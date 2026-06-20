@@ -65,7 +65,7 @@ const AuthenticatedApp = () => {
     if (authError.type === 'auth_required') { navigateToLogin(); return null; }
   }
 
-  const ROLES_SISTEMA = ['admin', 'gerente_producao', 'vendedor', 'maquinista', 'embalador', 'estoquista', 'motorista'];
+  const ROLES_SISTEMA = ['admin', 'gerente_producao', 'vendedor', 'maquinista', 'embalador', 'estoquista', 'motorista', 'user'];
   if (user && !ROLES_SISTEMA.includes(user.role)) {
     return <AguardandoAprovacao user={user} />;
   }

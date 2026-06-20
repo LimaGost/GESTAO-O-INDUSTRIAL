@@ -71,20 +71,24 @@ export default function Chat() {
   const carregarDados = useCallback(async () => {
     if (!usuarioAtualRef.current) return;
     const uid = usuarioAtualRef.current.id;
-    const [resUsuarios, todasConversas] = await Promise.all([
-      base44.functions.invoke('chatListarUsuarios', {}),
-      base44.entities.Conversa.list('-data_ultima_mensagem'),
-    ]);
+    try {
+      const [resUsuarios, todasConversas] = await Promise.all([
+        base44.functions.invoke('chatListarUsuarios', {}),
+        base44.entities.Conversa.list('-data_ultima_mensagem'),
+      ]);
 
-    const lista = resUsuarios.data?.usuarios || [];
-    setUsuarios(lista);
-    setLoadingUsuarios(false);
+      const lista = resUsuarios.data?.usuarios || [];
+      setUsuarios(lista);
 
-    const minhasConversas = todasConversas.filter(c => c.participantes?.includes(uid));
-    setConversas(minhasConversas);
+      const minhasConversas = todasConversas.filter(c => c.participantes?.includes(uid));
+      setConversas(minhasConversas);
 
-    // Conta não lidas por conversa
-    contarNaoLidas(minhasConversas, uid);
+      contarNaoLidas(minhasConversas, uid);
+    } catch (e) {
+      console.warn('[Chat] Erro ao carregar dados:', e.message);
+    } finally {
+      setLoadingUsuarios(false);
+    }
   }, []);
 
   const contarNaoLidas = async (convs, uid) => {
