@@ -105,6 +105,14 @@ export default function PedidoKanbanCard({
           <DestinoBadge pedido={pedido} />
         )}
 
+        {/* Observações */}
+        {pedido.observacoes && !pedido.observacoes.includes('[bling_id:') && (
+          <div className="text-[11px] bg-yellow-50 text-yellow-800 border border-yellow-200 rounded-lg px-2 py-1.5 flex items-start gap-1">
+            <span className="flex-shrink-0 mt-0.5">📝</span>
+            <span className="line-clamp-2 leading-snug">{pedido.observacoes}</span>
+          </div>
+        )}
+
         {/* Alertas */}
         {statusEfetivo === 'aguardando_estoque' && (
           <div className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 rounded-lg px-2 py-1.5 flex items-center gap-1">
