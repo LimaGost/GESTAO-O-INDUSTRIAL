@@ -175,7 +175,7 @@ export default function Kanban() {
     setOrdens(ords);
     setProdutos(prods);
     const pm = {};
-    for (const p of peds) pm[p.id] = { nome: p.cliente_nome, cliente_id: p.cliente_id, white_label: p.white_label, white_label_marca: p.white_label_marca };
+    for (const p of peds) pm[p.id] = { nome: p.cliente_nome, cliente_id: p.cliente_id, white_label: p.white_label, white_label_marca: p.white_label_marca, observacoes: p.observacoes };
     setPedidoMap(pm);
     const gm = {};
     const gmById = {};
@@ -646,8 +646,8 @@ export default function Kanban() {
                   }
                   const renderCard = (ordem) => {
                    const pedInfo = ordem.pedido_id ? pedidoMap[ordem.pedido_id] : null;
-                   const ordemEnriquecida = pedInfo?.white_label
-                     ? { ...ordem, white_label: true, white_label_marca: pedInfo.white_label_marca }
+                   const ordemEnriquecida = pedInfo
+                     ? { ...ordem, white_label: pedInfo.white_label || ordem.white_label, white_label_marca: pedInfo.white_label_marca || ordem.white_label_marca, observacoes_pedido: pedInfo.observacoes }
                      : ordem;
                    return (
                    <KanbanCard

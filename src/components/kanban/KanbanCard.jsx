@@ -147,6 +147,12 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
           {ordem.lote && <span className="font-mono">{ordem.lote}</span>}
         </div>
 
+        {ordem.observacoes_pedido && (
+          <div className="flex items-start gap-1 bg-yellow-50 border border-yellow-200 rounded-lg px-2 py-1.5 mb-2">
+            <span className="text-[10px] flex-shrink-0 mt-0.5">📝</span>
+            <p className="text-[10px] text-yellow-800 font-medium line-clamp-2 leading-snug">{ordem.observacoes_pedido}</p>
+          </div>
+        )}
         {ordem.observacoes && (
           <p className="text-[10px] text-muted-foreground italic line-clamp-1 mb-2">{ordem.observacoes}</p>
         )}
