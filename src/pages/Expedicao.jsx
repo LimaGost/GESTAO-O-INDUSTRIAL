@@ -270,12 +270,11 @@ export default function Expedicao() {
   const [filtroDestino, setFiltroDestino] = useState('todos');
 
   const load = async () => {
-    const exps = await base44.entities.Expedicao.list('-created_date');
-    await new Promise(r => setTimeout(r, 150));
-    const ordens = await base44.entities.OrdemProducao.list('-created_date');
-    await new Promise(r => setTimeout(r, 150));
-    const pedidos = await base44.entities.Pedido.list();
-    await new Promise(r => setTimeout(r, 150));
+    const [exps, ordens, pedidos] = await Promise.all([
+      base44.entities.Expedicao.list('-created_date'),
+      base44.entities.OrdemProducao.list('-created_date'),
+      base44.entities.Pedido.list(),
+    ]);
     setExpedicoes(exps);
 
     const expPedidoIds = new Set(exps.map(e => e.pedido_id).filter(Boolean));
