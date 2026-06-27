@@ -163,14 +163,29 @@ export default function Chat() {
     return () => unsubscribe();
   }, [usuarioAtual, carregarDados]);
 
+  // Retorna a conversa 1:1 única entre os dois usuários (participantes exatamente [uid, outroId])
   const getConversaComUsuario = (usuarioId) => {
-    return conversas.find(c =>
-      c.participantes?.includes(usuarioId) && c.participantes?.includes(usuarioAtual?.id)
-    );
+    return conversas.find(c => {
+      const p = c.participantes || [];
+      return p.length === 2 && p.includes(usuarioId) && p.includes(usuarioAtual?.id);
+    });
   };
 
   const abrirConversa = async (usuario) => {
+    // 1. Tenta achar no estado local primeiro
     let conversa = getConversaComUsuario(usuario.id);
+
+    // 2. Se não achou localmente, busca no banco para evitar duplicatas
+    if (!conversa) {
+      const todasConversas = await base44.entities.Conversa.list('-data_ultima_mensagem');
+      const uid = usuarioAtual.id;
+      conversa = todasConversas.find(c => {
+        const p = c.participantes || [];
+        return p.length === 2 && p.includes(uid) && p.includes(usuario.id);
+      });
+    }
+
+    // 3. Só cria se realmente não existir
     if (!conversa) {
       const res = await base44.functions.invoke('chatCriarConversa', {
         titulo: `${usuarioAtual.full_name || usuarioAtual.email} ↔ ${usuario.full_name || usuario.email}`,
@@ -180,11 +195,11 @@ export default function Chat() {
       if (!conversa) return;
       await carregarDados();
     }
+
     setConversaAtiva({ ...conversa, _usuario: usuario });
     const res = await base44.functions.invoke('chatListarMensagens', { conversa_id: conversa.id });
     setMensagens(res.data?.mensagens || []);
     marcarComoLidas(conversa.id);
-    // Limpa badge
     setNaoLidas(prev => { const n = { ...prev }; delete n[conversa.id]; return n; });
   };
 
