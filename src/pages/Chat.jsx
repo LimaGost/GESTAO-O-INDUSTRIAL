@@ -207,20 +207,10 @@ export default function Chat() {
   };
 
   const abrirConversa = async (usuario) => {
-    // 1. Tenta achar no estado local primeiro
+    // Tenta achar no estado local
     let conversa = getConversaComUsuario(usuario.id);
 
-    // 2. Se não achou localmente, busca no banco para evitar duplicatas
-    if (!conversa) {
-      const todasConversas = await base44.entities.Conversa.list('-data_ultima_mensagem');
-      const uid = usuarioAtual.id;
-      conversa = todasConversas.find(c => {
-        const p = c.participantes || [];
-        return p.length === 2 && p.includes(uid) && p.includes(usuario.id);
-      });
-    }
-
-    // 3. Só cria se realmente não existir
+    // Só cria se realmente não existir
     if (!conversa) {
       const res = await base44.functions.invoke('chatCriarConversa', {
         titulo: `${usuarioAtual.full_name || usuarioAtual.email} ↔ ${usuario.full_name || usuario.email}`,
