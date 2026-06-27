@@ -118,12 +118,16 @@ export default function Chat() {
   }, []);
 
   const contarNaoLidas = async (convs, uid) => {
+    if (convs.length === 0) return;
     const counts = {};
-    await Promise.all(convs.map(async (c) => {
-      const msgs = await base44.entities.Mensagem.filter({ conversa_id: c.id });
-      const nLidas = msgs.filter(m => !m.lida && m.remetente_id !== uid).length;
-      if (nLidas > 0) counts[c.id] = nLidas;
-    }));
+    // Busca todas as mensagens não lidas de uma vez só (sem loop de queries)
+    const todasNaoLidas = await base44.entities.Mensagem.filter({ lida: false });
+    const convIds = new Set(convs.map(c => c.id));
+    for (const m of todasNaoLidas) {
+      if (m.remetente_id === uid) continue;
+      if (!convIds.has(m.conversa_id)) continue;
+      counts[m.conversa_id] = (counts[m.conversa_id] || 0) + 1;
+    }
     setNaoLidas(counts);
   };
 
