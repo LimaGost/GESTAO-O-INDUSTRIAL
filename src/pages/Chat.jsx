@@ -73,6 +73,7 @@ export default function Chat() {
   const conversaAtivaRef = useRef(null);
   const usuarioAtualRef = useRef(null);
   const usuariosRef = useRef([]);
+  const minhasConversasRef = useRef([]); // IDs das conversas onde sou participante
 
   // Mantém refs atualizadas para usar dentro de callbacks
   useEffect(() => { conversaAtivaRef.current = conversaAtiva; }, [conversaAtiva]);
@@ -106,6 +107,7 @@ export default function Chat() {
 
       const minhasConversas = todasConversas.filter(c => c.participantes?.includes(uid));
       setConversas(minhasConversas);
+      minhasConversasRef.current = minhasConversas.map(c => c.id);
 
       contarNaoLidas(minhasConversas, uid);
     } catch (e) {
@@ -154,6 +156,9 @@ export default function Chat() {
       if (event.type !== 'create') return;
       const msg = event.data;
       if (!msg || msg.remetente_id === usuarioAtualRef.current?.id) return;
+      // Só notifica se esta conversa pertence ao usuário atual
+      if (!minhasConversasRef.current.includes(msg.conversa_id)) return;
+
       if (msg.conversa_id !== conversaAtivaRef.current?.id) {
         if (somAtivado) tocarSomAlerta();
         setNaoLidas(prev => ({ ...prev, [msg.conversa_id]: (prev[msg.conversa_id] || 0) + 1 }));
