@@ -1,9 +1,9 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Send, Users, MessageCircle, ChevronLeft, Search, Bell, BellOff } from 'lucide-react';
+import { Send, Users, MessageCircle, ChevronLeft, Search, Bell, BellOff, X } from 'lucide-react';
 
-// Som de notificação via Web Audio API (sem arquivo externo)
-function tocarSomNotificacao() {
+// Som suave para mensagem na conversa ativa
+function tocarSomMensagem() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const osc = ctx.createOscillator();
@@ -11,12 +11,32 @@ function tocarSomNotificacao() {
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(880, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.2);
-    gain.gain.setValueAtTime(0.3, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    osc.frequency.setValueAtTime(660, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
     osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.3);
+    osc.stop(ctx.currentTime + 0.25);
+  } catch {}
+}
+
+// Som de alerta para nova mensagem em outra conversa
+function tocarSomAlerta() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [0, 0.15].forEach((delay, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime + delay);
+      osc.frequency.exponentialRampToValueAtTime(1100, ctx.currentTime + delay + 0.1);
+      gain.gain.setValueAtTime(0.25, ctx.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.2);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + 0.2);
+    });
   } catch {}
 }
 
@@ -47,9 +67,12 @@ export default function Chat() {
   const [loadingUsuarios, setLoadingUsuarios] = useState(true);
   const [somAtivado, setSomAtivado] = useState(true);
   const [naoLidas, setNaoLidas] = useState({}); // { conversaId: count }
+  const [toastNotificacao, setToastNotificacao] = useState(null); // { nome, texto, usuarioId }
+  const toastTimerRef = useRef(null);
   const mensagensEndRef = useRef(null);
   const conversaAtivaRef = useRef(null);
   const usuarioAtualRef = useRef(null);
+  const usuariosRef = useRef([]);
 
   // Mantém refs atualizadas para usar dentro de callbacks
   useEffect(() => { conversaAtivaRef.current = conversaAtiva; }, [conversaAtiva]);
@@ -79,6 +102,7 @@ export default function Chat() {
 
       const lista = resUsuarios.data?.usuarios || [];
       setUsuarios(lista);
+      usuariosRef.current = lista;
 
       const minhasConversas = todasConversas.filter(c => c.participantes?.includes(uid));
       setConversas(minhasConversas);
@@ -106,16 +130,15 @@ export default function Chat() {
     mensagensEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [mensagens]);
 
-  // Subscribe mensagens em tempo real
+  // Subscribe mensagens em tempo real (conversa ativa)
   useEffect(() => {
     if (!conversaAtiva) return;
     const unsubscribe = base44.entities.Mensagem.subscribe((event) => {
       if (event.type === 'create' && event.data?.conversa_id === conversaAtivaRef.current?.id) {
         setMensagens(prev => {
           if (prev.find(m => m.id === event.data.id)) return prev;
-          // Som apenas para mensagens de outros
           if (event.data.remetente_id !== usuarioAtualRef.current?.id && somAtivado) {
-            tocarSomNotificacao();
+            tocarSomMensagem();
           }
           return [...prev, event.data];
         });
@@ -124,20 +147,27 @@ export default function Chat() {
     return () => unsubscribe();
   }, [conversaAtiva, somAtivado]);
 
-  // Subscribe global para notificações de novas mensagens em outras conversas
+  // Subscribe global — notificações de outras conversas
   useEffect(() => {
     if (!usuarioAtual) return;
     const unsubscribe = base44.entities.Mensagem.subscribe((event) => {
       if (event.type !== 'create') return;
       const msg = event.data;
       if (!msg || msg.remetente_id === usuarioAtualRef.current?.id) return;
-      // Se não é da conversa ativa → notificação
       if (msg.conversa_id !== conversaAtivaRef.current?.id) {
-        if (somAtivado) tocarSomNotificacao();
+        if (somAtivado) tocarSomAlerta();
         setNaoLidas(prev => ({ ...prev, [msg.conversa_id]: (prev[msg.conversa_id] || 0) + 1 }));
+
+        // Toast visual in-app
+        const remetente = usuariosRef.current.find(u => u.id === msg.remetente_id);
+        const nomeRemetente = remetente?.full_name || remetente?.email || 'Alguém';
+        clearTimeout(toastTimerRef.current);
+        setToastNotificacao({ nome: nomeRemetente, texto: msg.conteudo?.slice(0, 60) || '...', remetente_id: msg.remetente_id });
+        toastTimerRef.current = setTimeout(() => setToastNotificacao(null), 5000);
+
         // Notificação do browser
         if (Notification.permission === 'granted') {
-          new Notification('Nova mensagem', {
+          new Notification(`💬 ${nomeRemetente}`, {
             body: msg.conteudo?.slice(0, 80) || 'Nova mensagem recebida',
             icon: '/favicon.ico',
           });
@@ -246,7 +276,33 @@ export default function Chat() {
   const usuarioAtivo = conversaAtiva?._usuario;
 
   return (
-    <div className="flex h-[calc(100vh-80px)] bg-background overflow-hidden">
+    <div className="flex h-[calc(100vh-80px)] bg-background overflow-hidden relative">
+
+      {/* Toast de nova mensagem */}
+      {toastNotificacao && (
+        <div className="absolute top-4 right-4 z-50 flex items-start gap-3 bg-card border border-primary/30 shadow-xl rounded-2xl px-4 py-3 max-w-xs animate-in slide-in-from-right-4 duration-300">
+          <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <span className="text-sm font-bold text-primary">{getIniciais(toastNotificacao.nome, '')}</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-bold text-foreground">{toastNotificacao.nome}</p>
+            <p className="text-xs text-muted-foreground truncate mt-0.5">{toastNotificacao.texto}</p>
+            <button
+              onClick={() => {
+                const u = usuariosRef.current.find(u => u.id === toastNotificacao.remetente_id);
+                if (u) abrirConversa(u);
+                setToastNotificacao(null);
+              }}
+              className="mt-1.5 text-[11px] text-primary font-semibold hover:underline"
+            >
+              Ver mensagem →
+            </button>
+          </div>
+          <button onClick={() => setToastNotificacao(null)} className="text-muted-foreground hover:text-foreground flex-shrink-0">
+            <X size={13} />
+          </button>
+        </div>
+      )}
 
       {/* Sidebar */}
       <div className={`${conversaAtiva ? 'hidden md:flex' : 'flex'} w-full md:w-80 lg:w-96 flex-col bg-card border-r border-border flex-shrink-0`}>
