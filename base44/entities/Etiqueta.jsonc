@@ -29,5 +29,93 @@
   },
   "required": [
     "produto_nome"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "gerente_producao"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "embalador"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "gerente_producao"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "embalador"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "gerente_producao"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "embalador"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "gerente_producao"
+          }
+        }
+      ]
+    }
+  }
 }
