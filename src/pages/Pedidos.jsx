@@ -155,16 +155,16 @@ export default function Pedidos() {
     }
     const itensAgrupados = Object.values(mapaItens);
 
-    const itensComEstoque = [];
+    const itensParaReserva = [];
     const itensSemEstoque = [];
     for (const item of itensAgrupados) {
       const p = produtos.find(pr => pr.id === item.produto_id);
       if (!p) continue;
-      if ((p.estoque_atual || 0) >= item.quantidade) {
-        itensComEstoque.push({ ...item, produto: p, reposicao: (p.estoque_atual - item.quantidade) < (p.estoque_minimo || 0) });
-      } else {
-        itensSemEstoque.push({ ...item, produto: p, quantidadeFalta: item.quantidade - (p.estoque_atual || 0) });
-      }
+      const disponivelAtual = p.estoque_atual || 0;
+      const qtdReservar = Math.min(disponivelAtual, item.quantidade);
+      const qtdFalta = item.quantidade - qtdReservar;
+      if (qtdReservar > 0) itensParaReserva.push({ ...item, produto: p, qtdReservar });
+      if (qtdFalta > 0) itensSemEstoque.push({ ...item, produto: p, quantidadeFalta: qtdFalta });
     }
 
     const precisaProducao = itensSemEstoque.length > 0;
@@ -182,10 +182,11 @@ export default function Pedidos() {
 
     const idsOrdens = [];
 
-    for (const item of itensComEstoque) {
-      const novoEstoque = (item.produto.estoque_atual || 0) - item.quantidade;
+    // Reserva (baixa) todo o estoque disponível imediatamente
+    for (const item of itensParaReserva) {
+      const novoEstoque = (item.produto.estoque_atual || 0) - item.qtdReservar;
       await base44.entities.Produto.update(item.produto_id, { estoque_atual: novoEstoque });
-      await registrarLog('Produto', item.produto_id, 'BAIXA_ESTOQUE', `Baixa de ${item.quantidade} para pedido ${numero}`);
+      await registrarLog('Produto', item.produto_id, 'RESERVA_ESTOQUE', `Reserva de ${item.qtdReservar} para pedido ${numero}`);
     }
 
     if (precisaProducao) {
@@ -241,16 +242,16 @@ export default function Pedidos() {
     }
     const itensAgrupados = Object.values(mapaItens);
 
-    const itensComEstoque = [];
+    const itensParaReservaBling = [];
     const itensSemEstoque = [];
     for (const item of itensAgrupados) {
       const p = produtos.find(pr => pr.id === item.produto_id);
       if (!p) continue;
-      if ((p.estoque_atual || 0) >= item.quantidade) {
-        itensComEstoque.push({ ...item, produto: p });
-      } else {
-        itensSemEstoque.push({ ...item, produto: p, quantidadeFalta: item.quantidade - (p.estoque_atual || 0) });
-      }
+      const disponivelAtual = p.estoque_atual || 0;
+      const qtdReservar = Math.min(disponivelAtual, item.quantidade);
+      const qtdFalta = item.quantidade - qtdReservar;
+      if (qtdReservar > 0) itensParaReservaBling.push({ ...item, produto: p, qtdReservar });
+      if (qtdFalta > 0) itensSemEstoque.push({ ...item, produto: p, quantidadeFalta: qtdFalta });
     }
 
     const precisaProducao = itensSemEstoque.length > 0;
@@ -259,10 +260,10 @@ export default function Pedidos() {
 
     await base44.entities.Pedido.update(pedido.id, { itens: itensVinculados, status, numero });
 
-    for (const item of itensComEstoque) {
-      const novoEstoque = (item.produto.estoque_atual || 0) - item.quantidade;
+    for (const item of itensParaReservaBling) {
+      const novoEstoque = (item.produto.estoque_atual || 0) - item.qtdReservar;
       await base44.entities.Produto.update(item.produto_id, { estoque_atual: novoEstoque });
-      await registrarLog('Produto', item.produto_id, 'BAIXA_ESTOQUE', `Baixa de ${item.quantidade} para pedido Bling ${numero}`);
+      await registrarLog('Produto', item.produto_id, 'RESERVA_ESTOQUE', `Reserva de ${item.qtdReservar} para pedido Bling ${numero}`);
     }
 
     if (precisaProducao) {
@@ -301,17 +302,17 @@ export default function Pedidos() {
     const pedido = pedidoPortalProcessar;
     setProcessandoPortal(true);
 
-    const itensComEstoque = [];
+    const itensParaReservaPortal = [];
     const itensSemEstoque = [];
     for (const item of itensVinculados) {
       if (!item.produto_id) continue;
       const p = produtos.find(pr => pr.id === item.produto_id);
       if (!p) continue;
-      if ((p.estoque_atual || 0) >= item.quantidade) {
-        itensComEstoque.push({ ...item, produto: p });
-      } else {
-        itensSemEstoque.push({ ...item, produto: p, quantidadeFalta: item.quantidade - (p.estoque_atual || 0) });
-      }
+      const disponivelAtual = p.estoque_atual || 0;
+      const qtdReservar = Math.min(disponivelAtual, item.quantidade);
+      const qtdFalta = item.quantidade - qtdReservar;
+      if (qtdReservar > 0) itensParaReservaPortal.push({ ...item, produto: p, qtdReservar });
+      if (qtdFalta > 0) itensSemEstoque.push({ ...item, produto: p, quantidadeFalta: qtdFalta });
     }
 
     const precisaProducao = itensSemEstoque.length > 0;
@@ -320,10 +321,10 @@ export default function Pedidos() {
 
     await base44.entities.Pedido.update(pedido.id, { itens: itensVinculados, status });
 
-    for (const item of itensComEstoque) {
-      const novoEstoque = (item.produto.estoque_atual || 0) - item.quantidade;
+    for (const item of itensParaReservaPortal) {
+      const novoEstoque = (item.produto.estoque_atual || 0) - item.qtdReservar;
       await base44.entities.Produto.update(item.produto_id, { estoque_atual: novoEstoque });
-      await registrarLog('Produto', item.produto_id, 'BAIXA_ESTOQUE', `Baixa de ${item.quantidade} para pedido Portal ${numero}`);
+      await registrarLog('Produto', item.produto_id, 'RESERVA_ESTOQUE', `Reserva de ${item.qtdReservar} para pedido Portal ${numero}`);
     }
 
     if (precisaProducao) {
@@ -384,19 +385,23 @@ export default function Pedidos() {
       await base44.entities.Expedicao.delete(expVinculada.id);
     }
 
-    // 4. Restaura estoque dos itens que foram atendidos por estoque (não estavam nas OPs)
+    // 4. Restaura o estoque reservado no momento do pedido
+    // A quantidade reservada = quantidade total do pedido MENOS o que ficou nas OPs (que ainda não baixou)
     if (pedidoParaCancelar?.itens?.length > 0) {
       const todosItensOPs = opsVinculadas.flatMap(op => op.itens || []);
+      const produtosAtuais = await base44.entities.Produto.list();
       for (const item of pedidoParaCancelar.itens) {
         if (!item.produto_id) continue;
         const qtdNasOPs = todosItensOPs
           .filter(oi => oi.produto_id === item.produto_id)
           .reduce((s, oi) => s + (oi.quantidade || 0), 0);
-        const qtdEstoque = Math.max(0, (item.quantidade || 0) - qtdNasOPs);
-        if (qtdEstoque > 0) {
-          const produtoAtual = produtos.find(p => p.id === item.produto_id);
+        // O que foi reservado em estoque = total do item - o que ainda está pendente nas OPs
+        const qtdRestaurar = Math.max(0, (item.quantidade || 0) - qtdNasOPs);
+        if (qtdRestaurar > 0) {
+          const produtoAtual = produtosAtuais.find(p => p.id === item.produto_id);
           if (produtoAtual) {
-            await base44.entities.Produto.update(item.produto_id, { estoque_atual: (produtoAtual.estoque_atual || 0) + qtdEstoque });
+            await base44.entities.Produto.update(item.produto_id, { estoque_atual: (produtoAtual.estoque_atual || 0) + qtdRestaurar });
+            await registrarLog('Produto', item.produto_id, 'DEVOLUCAO_ESTOQUE', `Devolução de ${qtdRestaurar} un para pedido cancelado ${numero}`);
           }
         }
       }
