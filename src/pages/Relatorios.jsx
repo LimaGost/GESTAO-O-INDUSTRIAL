@@ -138,14 +138,17 @@ export default function Relatorios() {
 
   useEffect(() => {
     async function load() {
-      const [ords, peds, prods, cls, exps] = await Promise.all([
+      const [ords, peds, prods] = await Promise.all([
         base44.entities.OrdemProducao.list('-created_date'),
         base44.entities.Pedido.list('-created_date'),
         base44.entities.Produto.list(),
+      ]);
+      setOrdens(ords); setPedidos(peds); setProdutos(prods);
+      const [cls, exps] = await Promise.all([
         base44.entities.Cliente.list(),
         base44.entities.Expedicao.list('-created_date'),
       ]);
-      setOrdens(ords); setPedidos(peds); setProdutos(prods); setClientes(cls); setExpedicoes(exps);
+      setClientes(cls); setExpedicoes(exps);
       setLoading(false);
     }
     load();
