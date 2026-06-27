@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
       ? participantes 
       : [...participantes, user.id];
 
-    const conversa = await base44.entities.Conversa.create({
+    const conversa = await base44.asServiceRole.entities.Conversa.create({
       titulo,
       participantes: participantesComCriador,
       criado_por_id: user.id,
