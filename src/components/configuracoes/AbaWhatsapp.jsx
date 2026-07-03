@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Save, Plus, Trash2, MessageCircle } from 'lucide-react';
 import { loadConfig, saveConfig } from '@/lib/appConfig';
+import PainelTesteWhatsapp from './PainelTesteWhatsapp';
 
 export default function AbaWhatsapp() {
   const [loading, setLoading] = useState(true);
@@ -90,6 +91,15 @@ export default function AbaWhatsapp() {
     }));
   };
 
+  // Aplica um template pronto ao campo de mensagem correspondente
+  const aplicarTemplate = (modulo, etapa, tipo, conteudo) => {
+    if (modulo === 'kanban') {
+      setKanban(prev => ({ ...prev, [tipo === 'interno' ? 'msg_interno' : 'msg_cliente']: conteudo }));
+    } else {
+      setExpedicao(prev => ({ ...prev, [tipo === 'interno' ? 'msg_interno' : 'msg_cliente']: conteudo }));
+    }
+  };
+
   const adicionarNumero = () => {
     const n = novoNumero.trim();
     if (!n) return;
@@ -105,6 +115,9 @@ export default function AbaWhatsapp() {
 
   return (
     <div className="space-y-5">
+      {/* Painel de Teste */}
+      <PainelTesteWhatsapp kanban={kanban} expedicao={expedicao} onAplicarTemplate={aplicarTemplate} />
+
       {/* Kanban */}
       <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
         <div className="flex items-center gap-3">
