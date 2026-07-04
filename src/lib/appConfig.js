@@ -28,7 +28,6 @@ export async function loadConfig(chave, defaultValue = null, forceRefresh = fals
  * Salva uma configuração no banco. Cria se não existir, atualiza se já existir.
  */
 export async function saveConfig(chave, valor) {
-  _cache[chave] = valor;
   try {
     const all = await base44.entities.AppConfig.list();
     const record = all.find(r => r.chave === chave);
@@ -37,8 +36,11 @@ export async function saveConfig(chave, valor) {
     } else {
       await base44.entities.AppConfig.create({ chave, valor });
     }
+    // Atualiza o cache apenas após persistir com sucesso
+    _cache[chave] = valor;
   } catch (e) {
     console.error(`[appConfig] Erro ao salvar "${chave}":`, e.message);
+    delete _cache[chave];
     throw e;
   }
 }

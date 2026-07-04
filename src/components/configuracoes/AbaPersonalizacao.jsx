@@ -32,20 +32,23 @@ export default function AbaPersonalizacao() {
   const fileRef = useRef(null);
 
   useEffect(() => {
-    Promise.all([
-      loadConfig('empresa_config', null, true),
-      loadConfig('empresa_info', null, true),
-    ]).then(([novo, antigo]) => {
-      if (novo && Object.keys(novo).length > 0) {
-        setForm(novo);
-      } else if (antigo) {
-        // migra dados antigos para o novo schema
-        setForm({
-          nome: antigo.nome_empresa || '',
-          nome_fantasia: antigo.nome_empresa || '',
-          logo_url: antigo.logo_url || '',
-          cnpj: antigo.cnpj_endereco || '',
-        });
+    // Carrega o registro único da empresa
+    loadConfig('empresa_config', null, true).then(async (config) => {
+      if (config && Object.keys(config).length > 0) {
+        setForm(config);
+      } else {
+        // Migração única do schema antigo (empresa_info) → empresa_config
+        const antigo = await loadConfig('empresa_info', null, true);
+        if (antigo) {
+          const migrado = {
+            nome: antigo.nome_empresa || '',
+            nome_fantasia: antigo.nome_empresa || '',
+            logo_url: antigo.logo_url || '',
+            cnpj: antigo.cnpj_endereco || '',
+          };
+          setForm(migrado);
+          await saveConfig('empresa_config', migrado);
+        }
       }
       setLoading(false);
     });
@@ -55,14 +58,8 @@ export default function AbaPersonalizacao() {
 
   const salvar = async () => {
     setSaving(true);
-    // salva no novo key
+    // Registro único — reflete em todas as áreas do sistema
     await saveConfig('empresa_config', form);
-    // mantém compatibilidade com o key antigo (empresa_info) usado em outros lugares
-    await saveConfig('empresa_info', {
-      nome_empresa: form.nome || form.nome_fantasia || '',
-      logo_url: form.logo_url || '',
-      cnpj_endereco: form.cnpj || '',
-    });
     window.dispatchEvent(new Event('settings:saved'));
     setSaving(false);
     setSaved(true);
