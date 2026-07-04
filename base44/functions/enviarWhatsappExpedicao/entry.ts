@@ -20,8 +20,18 @@ function renderMensagem(template, vars) {
     .replace(/{etapa}/g, vars.etapa || '');
 }
 
+// Normaliza para o formato da SMClick: 55 + DDD + 9 + número.
+// Aceita tanto "61 9 9999-9999" (sem 55) quanto "55 61 9 9999-9999".
+function normalizarTelefone(telefone) {
+  let d = String(telefone || '').replace(/\D/g, '');
+  if (!d) return '';
+  if (d.length === 13 && d.startsWith('55')) return d;
+  if (d.length === 11 || d.length === 10) return '55' + d;
+  return d;
+}
+
 async function enviarMensagem(telefone, mensagem) {
-  const telefoneFormatado = String(telefone).replace(/\D/g, '');
+  const telefoneFormatado = normalizarTelefone(telefone);
   const res = await fetch('https://api.smclick.com.br/instances/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-API-KEY': SMCLICK_API_KEY },

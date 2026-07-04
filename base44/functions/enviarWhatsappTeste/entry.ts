@@ -14,7 +14,14 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Telefone e mensagem são obrigatórios' }, { status: 400 });
     }
 
-    const telefoneFormatado = String(telefone).replace(/\D/g, '');
+    // Normaliza: adiciona 55 automaticamente se vier sem código de país
+    const telefoneFormatado = (() => {
+      let d = String(telefone).replace(/\D/g, '');
+      if (!d) return '';
+      if (d.length === 13 && d.startsWith('55')) return d;
+      if (d.length === 11 || d.length === 10) return '55' + d;
+      return d;
+    })();
     const res = await fetch('https://api.smclick.com.br/instances/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-API-KEY': SMCLICK_API_KEY },

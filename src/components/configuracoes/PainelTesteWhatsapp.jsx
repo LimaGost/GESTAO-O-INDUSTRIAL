@@ -9,22 +9,19 @@ import {
 // Painel de teste de disparo WhatsApp
 // Permite escolher um cenário (Kanban/Expedição + etapa + interno/cliente),
 // ver preview renderizado com dados de exemplo, e disparar para um número de teste.
-// Formata e valida o telefone no formato DD+9+número (ex: 55 61 9 9999-9999)
-// DD = código do país (55 Brasil), DDD implícito, 9 obrigatório, 8 dígitos.
+// Formata o telefone como DDD + 9 + número (ex: 61 9 9999-9999).
+// Não exige o 55 — ele é adicionado automaticamente no disparo.
 function formatarTelefoneWhatsApp(valor) {
-  const digits = String(valor || '').replace(/\D/g, '').slice(0, 13);
-  // Aplica máscara progressiva
+  const digits = String(valor || '').replace(/\D/g, '').slice(0, 11);
   if (digits.length <= 2) return digits;
-  if (digits.length <= 4) return `${digits.slice(0, 2)} ${digits.slice(2)}`;
-  if (digits.length <= 5) return `${digits.slice(0, 2)} ${digits.slice(2, 4)} ${digits.slice(4)}`;
-  if (digits.length <= 9) return `${digits.slice(0, 2)} ${digits.slice(2, 4)} ${digits.slice(4, 5)} ${digits.slice(5)}`;
-  return `${digits.slice(0, 2)} ${digits.slice(2, 4)} ${digits.slice(4, 5)} ${digits.slice(5, 9)}-${digits.slice(9)}`;
+  if (digits.length <= 7) return `${digits.slice(0, 2)} ${digits.slice(2)}`;
+  return `${digits.slice(0, 2)} ${digits.slice(2, 7)}-${digits.slice(7)}`;
 }
 
 function telefoneValido(valor) {
   const digits = String(valor || '').replace(/\D/g, '');
-  // 13 dígitos: DD(2) + DDD(2) + 9 + 8 dígitos
-  return digits.length === 13 && digits.startsWith('55') && digits[4] === '9';
+  // 11 dígitos: DDD(2) + 9 + 8 dígitos (celular), ou 10 (fixo)
+  return (digits.length === 11 && digits[2] === '9') || digits.length === 10;
 }
 
 export default function PainelTesteWhatsapp({ kanban, expedicao, onAplicarTemplate }) {
@@ -60,7 +57,7 @@ export default function PainelTesteWhatsapp({ kanban, expedicao, onAplicarTempla
   const handleEnviarTeste = async () => {
     const tel = telefone.replace(/\D/g, '');
     if (!telefoneValido(telefone)) {
-      setResultado({ ok: false, msg: 'Formato inválido. Use DD+9+número (ex: 55 61 9 9999-9999 — 13 dígitos).' });
+      setResultado({ ok: false, msg: 'Formato inválido. Use DDD+9+número (ex: 61 9 9999-9999).' });
       return;
     }
     setEnviando(true);
@@ -165,10 +162,10 @@ export default function PainelTesteWhatsapp({ kanban, expedicao, onAplicarTempla
       {/* Telefone + botão de teste */}
       <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
         <div className="flex-1">
-          <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Número de teste (DD+9+número)</label>
+          <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Número de teste (DDD+9+número)</label>
           <input value={telefone} onChange={e => setTelefone(formatarTelefoneWhatsApp(e.target.value))}
             inputMode="numeric"
-            placeholder="55 61 9 9999-9999"
+            placeholder="61 9 9999-9999"
             className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary" />
         </div>
         <button onClick={handleEnviarTeste} disabled={enviando}
