@@ -4,9 +4,10 @@ import {
   ArrowRight, Settings2, Users, Lock,
 } from 'lucide-react';
 import {
-  KANBANS, CORES, ICONES, ROLES, TRIGGERS, ACOES,
+  KANBANS, CORES, ROLES, TRIGGERS, ACOES,
   getIcon, loadKanbanFluxo, saveKanbanFluxo, DEFAULTS,
 } from '@/lib/kanbanFluxo';
+import IconPicker from './IconPicker';
 
 export default function AbaGestaoFluxos() {
   const [kanbanAtivo, setKanbanAtivo] = useState('pedidos');
@@ -189,10 +190,7 @@ export default function AbaGestaoFluxos() {
                       </select>
 
                       {/* Ícone */}
-                      <select value={stage.icone} onChange={e => updateStage(idx, 'icone', e.target.value)}
-                        className="border border-border rounded-lg px-2 py-1.5 text-xs bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary w-28">
-                        {ICONES.map(ic => <option key={ic} value={ic}>{ic}</option>)}
-                      </select>
+                      <IconPicker value={stage.icone} onChange={name => updateStage(idx, 'icone', name)} />
 
                       {/* Excluir */}
                       {!stage.fixo ? (
