@@ -10,6 +10,7 @@ import AbaUsuarios from '@/components/configuracoes/AbaUsuarios';
 import AbaPersonalizacao from '@/components/configuracoes/AbaPersonalizacao.jsx';
 import AbaEtiquetas from '@/components/configuracoes/AbaEtiquetas.jsx';
 import AbaKanban from '@/components/configuracoes/AbaKanban.jsx';
+import AbaGestaoFluxos from '@/components/configuracoes/AbaGestaoFluxos.jsx';
 import AbaVinculoKanbans from '@/components/configuracoes/AbaVinculoKanbans';
 import AbaWhatsapp from '@/components/configuracoes/AbaWhatsapp.jsx';
 import AbaExpedicao from '@/components/configuracoes/AbaExpedicao.jsx';
@@ -680,6 +681,7 @@ const TAB_GROUPS = [
   {
     label: 'Sistema',
     items: [
+      { key: 'gestao_fluxos',  label: 'Gestão de Fluxos / Kanbans', icon: Columns,      desc: 'Etapas, automações e fluxo integrado' },
       { key: 'personalizacao', label: 'Personalização', icon: Paintbrush,  desc: 'Logo, empresa e visual' },
       { key: 'kanban',         label: 'Kanban de Produção',          icon: Columns,     desc: 'Colunas e ações' },
       { key: 'expedicao',      label: 'Kanban de Expedição',        icon: Truck,         desc: 'Colunas do Kanban' },
@@ -789,8 +791,9 @@ export default function Configuracoes() {
             )}
           </div>
 
-          {aba === 'personalizacao' && <AbaPersonalizacao />}
-          {aba === 'kanban'         && <AbaKanban />}
+          {aba === 'personalizacao'  && <AbaPersonalizacao />}
+          {aba === 'gestao_fluxos'   && <AbaGestaoFluxos />}
+          {aba === 'kanban'          && <AbaKanban />}
           {aba === 'vinculos'       && <AbaVinculoKanbans />}
           {aba === 'checklists'     && <AbaChecklists />}
           {aba === 'producao'       && <AbaProducao />}

@@ -4,30 +4,16 @@ import { registrarLog } from '@/lib/audit';
 import { agoraISO, hojeData } from '@/lib/brasilia';
 import { gerarLote } from '@/lib/numeracao';
 import { criarSeparacaoFromPedido, criarSeparacaoFromGrupo } from '@/lib/separacao';
+import { buildColunas, readStagesLocal } from '@/lib/kanbanFluxo';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 import SeparacaoCard from '@/components/separacao/SeparacaoCard';
 import SeparacaoKpis from '@/components/separacao/SeparacaoKpis';
-import {
-  ClipboardCheck, Clock, Package, CheckCircle, BadgeCheck, Truck,
-  Plus, X, Search, RefreshCw
-} from 'lucide-react';
+import { ClipboardCheck, Plus, X, Search, RefreshCw } from 'lucide-react';
 
-const COLUNAS = [
-  { key: 'aguardando_separacao', label: 'Aguardando Separação', accent: '#64748B', bg: '#F8FAFC', border: '#CBD5E1', dot: '#94A3B8', icon: Clock },
-  { key: 'em_separacao',         label: 'Em Separação',          accent: '#0EA5E9', bg: '#F0F9FF', border: '#7DD3FC', dot: '#0EA5E9', icon: Package },
-  { key: 'separado',             label: 'Separado',              accent: '#22C55E', bg: '#F0FDF4', border: '#86EFAC', dot: '#22C55E', icon: CheckCircle },
-  { key: 'em_conferencia',       label: 'Em Conferência',        accent: '#F59E0B', bg: '#FFFBEB', border: '#FCD34D', dot: '#F59E0B', icon: ClipboardCheck },
-  { key: 'conferido',            label: 'Conferido',             accent: '#A855F7', bg: '#FAF5FF', border: '#D8B4FE', dot: '#A855F7', icon: BadgeCheck },
-  { key: 'liberado_expedicao',   label: 'Liberado p/ Expedição', accent: '#14B8A6', bg: '#F0FDFA', border: '#99F6E4', dot: '#14B8A6', icon: Truck },
-];
-
-const PROXIMOS = {
-  aguardando_separacao: 'em_separacao',
-  em_separacao: 'separado',
-  separado: 'em_conferencia',
-  em_conferencia: 'conferido',
-  conferido: 'liberado_expedicao',
-};
+function buildSepColunas() {
+  const stages = readStagesLocal('separacao');
+  return buildColunas(stages);
+}
 
 export default function KanbanSeparacao() {
   const { somenteLeitura } = usePermissoes();
@@ -42,11 +28,19 @@ export default function KanbanSeparacao() {
   const [buscaPedido, setBuscaPedido] = useState('');
   const [criando, setCriando] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [colunas, setColunas] = useState(buildSepColunas);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Atualiza colunas quando a configuração centralizada é salva
+  useEffect(() => {
+    const onSettings = () => setColunas(buildSepColunas());
+    window.addEventListener('separacao:settings:saved', onSettings);
+    return () => window.removeEventListener('separacao:settings:saved', onSettings);
   }, []);
 
   const load = async () => {
@@ -76,7 +70,7 @@ export default function KanbanSeparacao() {
   }, []);
 
   const avancar = async (sep) => {
-    const proximo = PROXIMOS[sep.status];
+    const proximo = colunas.find(c => c.key === sep.status)?.proximo;
     if (!proximo) return;
     setSeparacoes(prev => prev.map(s => s.id === sep.id ? { ...s, status: proximo } : s));
     setLoadingId(sep.id);
@@ -115,7 +109,7 @@ export default function KanbanSeparacao() {
       }
 
       await base44.entities.Separacao.update(sep.id, updates);
-      const labelProximo = COLUNAS.find(c => c.key === proximo)?.label || proximo;
+      const labelProximo = colunas.find(c => c.key === proximo)?.label || proximo;
       registrarLog('Separacao', sep.id, 'AVANCO_STATUS', `Separação ${sep.numero} avançou para "${labelProximo}"`).catch(() => {});
 
       // Liberação → marcar pedido como separado quando todas as separações do pedido estiverem liberadas
@@ -226,7 +220,7 @@ export default function KanbanSeparacao() {
 
         {/* Progress bars */}
         <div className={`mt-4 grid gap-2 ${isMobile ? 'grid-cols-3 md:grid-cols-6' : 'grid-cols-6'}`}>
-          {COLUNAS.map((col) => {
+          {colunas.map((col) => {
             const count = separacoes.filter(s => s.status === col.key).length;
             const pct = separacoes.length > 0 ? Math.round(count / separacoes.length * 100) : 0;
             return (
@@ -244,11 +238,10 @@ export default function KanbanSeparacao() {
 
       {/* Colunas */}
       <div className={`flex gap-3 overflow-x-auto pb-4 flex-1 min-h-0 items-start ${isMobile ? 'snap-x snap-mandatory' : ''}`}>
-        {COLUNAS.map(({ key, label, icon: Icon, accent, bg, border, dot }) => {
+        {colunas.map(({ key, label, icon: Icon, accent, bg, border, dot, proximo, proximoLabel }) => {
           const colSeps = separacoesFiltradas.filter(s => s.status === key);
           const total = separacoes.filter(s => s.status === key).length;
-          const proximo = PROXIMOS[key];
-          const labelBotao = proximo ? `→ ${COLUNAS.find(c => c.key === proximo)?.label || ''}` : null;
+          const labelBotao = proximo ? proximoLabel : null;
 
           return (
             <div key={key} className={`flex-shrink-0 ${colWidth} rounded-2xl flex flex-col overflow-hidden ${isMobile ? 'snap-center' : ''}`}
