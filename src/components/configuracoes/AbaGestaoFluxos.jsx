@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Save, Plus, Trash2, ChevronUp, ChevronDown, GripVertical, Zap,
-  ArrowRight, Settings2, Users, Lock,
+  ArrowRight, Settings2, Users,
 } from 'lucide-react';
 import {
   KANBANS, CORES, ROLES, TRIGGERS, ACOES,
@@ -41,8 +41,6 @@ export default function AbaGestaoFluxos() {
   };
 
   const removeStage = (idx) => {
-    const stage = cfg.stages[idx];
-    if (stage.fixo) return;
     setCfg(c => ({ ...c, stages: c.stages.filter((_, i) => i !== idx) }));
   };
 
@@ -179,8 +177,7 @@ export default function AbaGestaoFluxos() {
                       {/* Nome */}
                       <div className="flex-1 min-w-[140px]">
                         <input value={stage.label} onChange={e => updateStage(idx, 'label', e.target.value)}
-                          disabled={stage.fixo}
-                          className="w-full border border-border rounded-lg px-2.5 py-1.5 text-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-60" />
+                          className="w-full border border-border rounded-lg px-2.5 py-1.5 text-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
                       </div>
 
                       {/* Cor */}
@@ -193,13 +190,9 @@ export default function AbaGestaoFluxos() {
                       <IconPicker value={stage.icone} onChange={name => updateStage(idx, 'icone', name)} />
 
                       {/* Excluir */}
-                      {!stage.fixo ? (
-                        <button onClick={() => removeStage(idx)} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
-                          <Trash2 size={14} />
-                        </button>
-                      ) : (
-                        <span className="p-1.5 text-muted-foreground/40" title="Etapa fixa"><Lock size={13} /></span>
-                      )}
+                      <button onClick={() => removeStage(idx)} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
+                        <Trash2 size={14} />
+                      </button>
                     </div>
 
                     {/* Responsáveis */}
