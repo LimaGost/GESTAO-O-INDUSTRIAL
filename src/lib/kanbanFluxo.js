@@ -62,11 +62,11 @@ export const DEFAULTS = {
   },
   producao: {
     stages: [
-      { key: 'a_produzir',          label: 'Aguardando Produção', cor: 0, icone: 'Clock',     responsaveis: ['gerente_producao'] },
-      { key: 'em_producao',         label: 'Em Produção',         cor: 1, icone: 'Factory',   responsaveis: ['maquinista'] },
-      { key: 'produzido',           label: 'Produzido',           cor: 2, icone: 'CheckCircle',responsaveis: ['maquinista'] },
-      { key: 'em_embalagem',        label: 'Em Embalagem',        cor: 3, icone: 'Package',   responsaveis: ['embalador'] },
-      { key: 'producao_finalizada', label: 'Produção Finalizada', cor: 4, icone: 'Flag',      responsaveis: ['gerente_producao'] },
+      { key: 'a_produzir',          label: 'Aguardando Produção', cor: 0, icone: 'Clock',     responsaveis: ['gerente_producao'], acao: 'nenhuma' },
+      { key: 'em_producao',         label: 'Em Produção',         cor: 1, icone: 'Factory',   responsaveis: ['maquinista'],    acao: 'registrar_data_inicio' },
+      { key: 'produzido',           label: 'Produzido',           cor: 2, icone: 'CheckCircle',responsaveis: ['maquinista'],   acao: 'registrar_data_fim_producao' },
+      { key: 'em_embalagem',        label: 'Em Embalagem',        cor: 3, icone: 'Package',   responsaveis: ['embalador'],     acao: 'registrar_data_embalagem' },
+      { key: 'producao_finalizada', label: 'Produção Finalizada', cor: 4, icone: 'Flag',      responsaveis: ['gerente_producao'], acao: 'finalizar_producao' },
     ],
     automacoes: [
       { trigger: 'producao_finalizada', acao: 'criar_separacao', ativo: true },
@@ -181,7 +181,7 @@ export async function saveKanbanFluxo(kanbanKey, data) {
   if (ls) {
     // Para produção/expedição, mantém o formato legado esperado pelas páginas
     if (kanbanKey === 'producao') {
-      localStorage.setItem(ls, JSON.stringify(data.stages.map(s => ({ key: s.key, label: s.label, cor: s.cor, icone: s.icone, acao: 'nenhuma' }))));
+      localStorage.setItem(ls, JSON.stringify(data.stages.map(s => ({ key: s.key, label: s.label, cor: s.cor, icone: s.icone, acao: s.acao || 'nenhuma' }))));
     } else if (kanbanKey === 'expedicao') {
       localStorage.setItem(ls, JSON.stringify(data.stages.map(s => ({ key: s.key, label: s.label, cor: s.cor, desc: '', fixo: !!s.fixo }))));
     } else {
