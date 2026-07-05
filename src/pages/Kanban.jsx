@@ -12,7 +12,7 @@ import KanbanCard from '@/components/kanban/KanbanCard';
 import KanbanCardModal from '@/components/kanban/KanbanCardModal';
 import ModalTotalProducao from '@/components/kanban/ModalTotalProducao';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
-import { readStagesLocal } from '@/lib/kanbanFluxo';
+import { readStagesLocal, loadKanbanFluxo, getIcon } from '@/lib/kanbanFluxo';
 
 const CORES_OPCOES = [
 { accent: '#64748B', bg: '#F8FAFC', border: '#CBD5E1', dot: '#94A3B8' },
@@ -43,12 +43,12 @@ function buildColunas() {
   if (stages && stages.length > 0) {
     return stages.map((c) => {
       const cores = CORES_OPCOES[c.cor] || CORES_OPCOES[0];
-      return { ...c, icon: ICON_MAP[c.icone] || Clock, ...cores };
+      return { ...c, icon: getIcon(c.icone), ...cores };
     });
   }
   return COLUNAS_DEFAULT.map((c) => {
     const cores = CORES_OPCOES[c.cor] || CORES_OPCOES[0];
-    return { ...c, icon: ICON_MAP[c.icone] || Clock, ...cores };
+    return { ...c, icon: getIcon(c.icone), ...cores };
   });
 }
 
@@ -159,6 +159,22 @@ export default function Kanban() {
       return [...salvas.filter((k) => todasKeys.includes(k)), ...novas];
     } catch {return todasKeys;}
   });
+
+  // Carrega a config do banco (fonte canônica) e espelha para o localStorage
+  useEffect(() => {
+    loadKanbanFluxo('producao').then(({ stages }) => {
+      localStorage.setItem('kanban_colunas_config', JSON.stringify(
+        stages.map((s) => ({ key: s.key, label: s.label, cor: s.cor, icone: s.icone, acao: s.acao || 'nenhuma' }))
+      ));
+      const novas = buildColunas();
+      setKanbanColunas(novas);
+      setColunasVisiveis((prev) => {
+        const keys = novas.map((c) => c.key);
+        const adicionadas = keys.filter((k) => !prev.includes(k));
+        return [...prev.filter((k) => keys.includes(k)), ...adicionadas];
+      });
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const onSettings = () => {

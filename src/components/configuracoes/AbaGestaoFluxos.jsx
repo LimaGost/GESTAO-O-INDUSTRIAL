@@ -4,7 +4,7 @@ import {
   ArrowRight, Settings2, Users,
 } from 'lucide-react';
 import {
-  KANBANS, CORES, ROLES, TRIGGERS, ACOES,
+  KANBANS, CORES, ROLES, TRIGGERS, ACOES, ACOES_ETAPA,
   getIcon, loadKanbanFluxo, saveKanbanFluxo, DEFAULTS,
 } from '@/lib/kanbanFluxo';
 import IconPicker from './IconPicker';
@@ -36,7 +36,7 @@ export default function AbaGestaoFluxos() {
     const novaKey = `etapa_${Date.now().toString(36)}`;
     setCfg(c => ({
       ...c,
-      stages: [...c.stages, { key: novaKey, label: 'Nova Etapa', cor: c.stages.length % 8, icone: 'Clock', responsaveis: [] }],
+      stages: [...c.stages, { key: novaKey, label: 'Nova Etapa', cor: c.stages.length % 8, icone: 'Clock', responsaveis: [], acao: 'nenhuma' }],
     }));
   };
 
@@ -194,6 +194,17 @@ export default function AbaGestaoFluxos() {
                         <Trash2 size={14} />
                       </button>
                     </div>
+
+                    {/* Ação automática da etapa */}
+                    {ACOES_ETAPA[kanbanAtivo] && (
+                      <div className="mt-2.5 pl-1 flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] text-muted-foreground flex items-center gap-1"><Zap size={10} /> Ação ao entrar:</span>
+                        <select value={stage.acao || 'nenhuma'} onChange={e => updateStage(idx, 'acao', e.target.value)}
+                          className="border border-border rounded-lg px-2 py-1 text-[11px] bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
+                          {ACOES_ETAPA[kanbanAtivo].map(a => <option key={a.key} value={a.key}>{a.label}</option>)}
+                        </select>
+                      </div>
+                    )}
 
                     {/* Responsáveis */}
                     <div className="mt-2.5 pl-1 flex items-center gap-1.5 flex-wrap">
