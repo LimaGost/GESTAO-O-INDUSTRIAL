@@ -28,6 +28,7 @@ const navGroups = [
       { path: '/Dashboard',  label: 'Dashboard',       icon: LayoutDashboard },
       { path: '/Pedidos',    label: 'Pedidos',          icon: ShoppingCart },
       { path: '/Kanban',     label: 'Kanban Produção',  icon: Factory },
+      { path: '/KanbanSeparacao', label: 'Separação',  icon: ClipboardCheck },
       { path: '/Estoque',    label: 'Estoque',          icon: Archive },
     ],
   },
@@ -35,7 +36,6 @@ const navGroups = [
     label: 'OPERACIONAL',
     items: [
       { path: '/Etiquetas',       label: 'Etiquetas',  icon: Tag },
-      { path: '/KanbanSeparacao', label: 'Separação',  icon: ClipboardCheck },
       { path: '/Expedicao',       label: 'Expedição',  icon: Truck },
       { path: '/Clientes',        label: 'Clientes',   icon: Users },
       { path: '/Produtos',        label: 'Produtos',   icon: Settings },
