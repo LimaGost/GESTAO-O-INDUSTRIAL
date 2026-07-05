@@ -49,12 +49,10 @@ export const KANBANS = [
 export const DEFAULTS = {
   pedidos: {
     stages: [
-      { key: 'rascunho',          label: 'Rascunho',            cor: 0, icone: 'FileText',      responsaveis: ['vendedor'] },
-      { key: 'aguardando_estoque',label: 'Aguardando Estoque',  cor: 6, icone: 'Archive',       responsaveis: ['estoquista'] },
-      { key: 'separacao',         label: 'Em Separação',        cor: 1, icone: 'ClipboardCheck',responsaveis: ['estoquista'] },
-      { key: 'separado',          label: 'Separado',           cor: 2, icone: 'CheckCircle',   responsaveis: ['estoquista'] },
-      { key: 'expedido',          label: 'Expedido',           cor: 4, icone: 'Truck',         responsaveis: ['motorista'] },
-      { key: 'entregue',          label: 'Entregue',           cor: 7, icone: 'PackageCheck',  responsaveis: ['motorista'] },
+      { key: 'pendente',  label: 'Pendente',  cor: 3, icone: 'Clock',        responsaveis: ['vendedor'] },
+      { key: 'expedido',  label: 'Expedido',  cor: 6, icone: 'Truck',        responsaveis: ['motorista'] },
+      { key: 'entregue',  label: 'Entregue',  cor: 2, icone: 'PackageCheck', responsaveis: ['motorista'] },
+      { key: 'cancelado', label: 'Cancelado', cor: 5, icone: 'AlertTriangle',responsaveis: [] },
     ],
     automacoes: [
       { trigger: 'separacao_concluida', acao: 'criar_expedicao', ativo: true },
@@ -62,11 +60,11 @@ export const DEFAULTS = {
   },
   producao: {
     stages: [
-      { key: 'a_produzir',          label: 'Aguardando Produção', cor: 0, icone: 'Clock',     responsaveis: ['gerente_producao'], acao: 'nenhuma' },
-      { key: 'em_producao',         label: 'Em Produção',         cor: 1, icone: 'Factory',   responsaveis: ['maquinista'],    acao: 'registrar_data_inicio' },
-      { key: 'produzido',           label: 'Produzido',           cor: 2, icone: 'CheckCircle',responsaveis: ['maquinista'],   acao: 'registrar_data_fim_producao' },
-      { key: 'em_embalagem',        label: 'Em Embalagem',        cor: 3, icone: 'Package',   responsaveis: ['embalador'],     acao: 'registrar_data_embalagem' },
-      { key: 'producao_finalizada', label: 'Produção Finalizada', cor: 4, icone: 'Flag',      responsaveis: ['gerente_producao'], acao: 'finalizar_producao' },
+      { key: 'a_produzir',             label: 'Aguardando Produção',   cor: 0, icone: 'Clock',      responsaveis: ['gerente_producao'], acao: 'nenhuma' },
+      { key: 'producao_planejada',     label: 'Produção Planejada',    cor: 7, icone: 'Flag',       responsaveis: ['gerente_producao'], acao: 'nenhuma' },
+      { key: 'em_producao',            label: 'Em Produção',           cor: 1, icone: 'Factory',    responsaveis: ['maquinista'],    acao: 'registrar_data_inicio' },
+      { key: 'aguardando_finalizacao', label: 'Aguardando Finalização',cor: 3, icone: 'Package',    responsaveis: ['embalador'],     acao: 'nenhuma' },
+      { key: 'producao_finalizada',    label: 'Produção Finalizada',   cor: 2, icone: 'CheckCircle',responsaveis: ['gerente_producao'], acao: 'finalizar_producao' },
     ],
     automacoes: [
       { trigger: 'producao_finalizada', acao: 'criar_separacao', ativo: true },
@@ -139,6 +137,18 @@ export const ACOES = {
   expedicao: [
     { key: 'finalizar_pedido', label: 'Finalizar pedido' },
     { key: 'notificar_cliente', label: 'Notificar cliente' },
+  ],
+};
+
+// Ações automáticas executadas quando um card ENTRA na etapa (usadas pelo Kanban de Produção)
+export const ACOES_ETAPA = {
+  producao: [
+    { key: 'nenhuma', label: 'Nenhuma ação' },
+    { key: 'registrar_data_inicio', label: 'Registrar início da produção' },
+    { key: 'registrar_data_fim_producao', label: 'Finalizar produção (entrada no estoque)' },
+    { key: 'registrar_data_embalagem', label: 'Registrar data de embalagem' },
+    { key: 'finalizar_producao', label: 'Finalizar produção + criar Separação' },
+    { key: 'saida_estoque', label: 'Saída de estoque + gerar etiquetas' },
   ],
 };
 
