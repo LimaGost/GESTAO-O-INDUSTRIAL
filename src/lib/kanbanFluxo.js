@@ -227,6 +227,7 @@ export function readStagesLocal(kanbanKey) {
         icone: s.icone || s.icon || 'Clock',
         responsaveis: s.responsaveis || [],
         fixo: !!s.fixo,
+        acao: s.acao || 'nenhuma',
       }));
     }
   } catch {}

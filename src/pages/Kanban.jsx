@@ -12,6 +12,7 @@ import KanbanCard from '@/components/kanban/KanbanCard';
 import KanbanCardModal from '@/components/kanban/KanbanCardModal';
 import ModalTotalProducao from '@/components/kanban/ModalTotalProducao';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
+import { readStagesLocal } from '@/lib/kanbanFluxo';
 
 const CORES_OPCOES = [
 { accent: '#64748B', bg: '#F8FAFC', border: '#CBD5E1', dot: '#94A3B8' },
@@ -37,15 +38,14 @@ const COLUNAS_DEFAULT = [
 
 
 function buildColunas() {
-  try {
-    const saved = JSON.parse(localStorage.getItem('kanban_colunas_config') || 'null');
-    if (saved && Array.isArray(saved) && saved.length > 0) {
-      return saved.map((c) => {
-        const cores = CORES_OPCOES[c.cor] || CORES_OPCOES[0];
-        return { ...c, icon: ICON_MAP[c.icone] || Clock, ...cores };
-      });
-    }
-  } catch {}
+  // Lê da config centralizada (kanbanFluxo.js), que preserva o campo `acao` essencial para as automações.
+  const stages = readStagesLocal('producao');
+  if (stages && stages.length > 0) {
+    return stages.map((c) => {
+      const cores = CORES_OPCOES[c.cor] || CORES_OPCOES[0];
+      return { ...c, icon: ICON_MAP[c.icone] || Clock, ...cores };
+    });
+  }
   return COLUNAS_DEFAULT.map((c) => {
     const cores = CORES_OPCOES[c.cor] || CORES_OPCOES[0];
     return { ...c, icon: ICON_MAP[c.icone] || Clock, ...cores };
