@@ -2,13 +2,10 @@ import { Clock, Package, CheckCircle, Truck, Ban, FileText, AlertTriangle, Zap, 
 import { DestinoBadge } from './DestinoPedido';
 
 const STATUS_CONFIG = {
-  rascunho:           { label: 'Rascunho',       color: '#64748B', bg: '#F8FAFC', icon: FileText },
-  aguardando_estoque: { label: 'Ag. Estoque',    color: '#F59E0B', bg: '#FFFBEB', icon: Clock },
-  separacao:          { label: 'Em Separação',   color: '#3B82F6', bg: '#EFF6FF', icon: Package },
-  separado:           { label: 'Separado',       color: '#22C55E', bg: '#F0FDF4', icon: CheckCircle },
-  expedido:           { label: 'Expedido',       color: '#F97316', bg: '#FFF7ED', icon: Truck },
-  entregue:           { label: 'Entregue',       color: '#10B981', bg: '#F0FDF4', icon: CheckCircle },
-  cancelado:          { label: 'Cancelado',      color: '#EF4444', bg: '#FFF5F5', icon: Ban },
+  pendente:  { label: 'Pendente',  color: '#F59E0B', bg: '#FFFBEB', icon: Clock },
+  expedido:  { label: 'Expedido',  color: '#F97316', bg: '#FFF7ED', icon: Truck },
+  entregue:  { label: 'Entregue',  color: '#10B981', bg: '#F0FDF4', icon: CheckCircle },
+  cancelado: { label: 'Cancelado', color: '#EF4444', bg: '#FFF5F5', icon: Ban },
 };
 
 function fmtVal(v) {
@@ -19,7 +16,11 @@ export default function PedidoKanbanCard({
   pedido, statusEfetivo, ocultarValores,
   readonly, onVerDetalhes, onExpedir, onCancelar, onProcessarBling, onAvancarSeparado, onProcessarPortal,
 }) {
-  const st = STATUS_CONFIG[statusEfetivo] || STATUS_CONFIG.rascunho;
+  const st = STATUS_CONFIG[statusEfetivo] || STATUS_CONFIG.pendente;
+  const isPendente = statusEfetivo === 'pendente';
+  const isRascunho = isPendente && pedido.status === 'rascunho';
+  const aguardaEstoque = isPendente && pedido.status === 'aguardando_estoque';
+  const prontoParaExpedir = isPendente && ['separacao', 'separado'].includes(pedido.status);
   const Icon = st.icon;
   const itensTruncados = (pedido.itens || []).slice(0, 2);
   const maisItens = (pedido.itens || []).length - 2;
@@ -87,7 +88,7 @@ export default function PedidoKanbanCard({
             {ocultarValores ? '••••••' : fmtVal(pedido.valor_total)}
           </span>
           <div className="flex items-center gap-2">
-            {statusEfetivo === 'rascunho' && pedido.data_pedido && (
+            {isRascunho && pedido.data_pedido && (
               <span className="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded flex items-center gap-1 font-mono">
                 <Clock size={9} /> {new Date(pedido.data_pedido + 'T12:00:00').toLocaleDateString('pt-BR')}
               </span>
@@ -113,41 +114,45 @@ export default function PedidoKanbanCard({
           </div>
         )}
 
-        {/* Alertas */}
-        {statusEfetivo === 'aguardando_estoque' && (
-          <div className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 rounded-lg px-2 py-1.5 flex items-center gap-1">
-            <AlertTriangle size={9} /> Aguardando produção
+        {/* Situação do pedido pendente */}
+        {aguardaEstoque && (
+          <div className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 rounded-lg px-2 py-1.5 flex items-center gap-1 font-semibold">
+            <AlertTriangle size={9} /> Aguardando estoque (em produção)
+          </div>
+        )}
+        {prontoParaExpedir && (
+          <div className="text-[10px] bg-green-50 text-green-700 border border-green-200 rounded-lg px-2 py-1.5 flex items-center gap-1 font-semibold">
+            <CheckCircle size={9} /> Estoque OK — pronto para expedir
+          </div>
+        )}
+        {isRascunho && (
+          <div className="text-[10px] bg-slate-50 text-slate-600 border border-slate-200 rounded-lg px-2 py-1.5 flex items-center gap-1 font-semibold">
+            <FileText size={9} /> Aguardando processamento
           </div>
         )}
 
         {/* Ações rápidas */}
         {!readonly && (
           <div className="flex gap-1.5 flex-wrap" onClick={e => e.stopPropagation()}>
-            {statusEfetivo === 'rascunho' && isPortal && onProcessarPortal && (
+            {isRascunho && isPortal && onProcessarPortal && (
               <button onClick={() => onProcessarPortal(pedido)}
                 className="flex items-center gap-1 text-[10px] bg-sky-600 text-white border border-sky-600 px-2 py-1 rounded-lg font-semibold hover:bg-sky-700 transition-colors">
                 <Globe size={9} /> Processar
               </button>
             )}
-            {statusEfetivo === 'rascunho' && !isPortal && (
+            {isRascunho && !isPortal && (
               <button onClick={() => onProcessarBling(pedido)}
                 className="flex items-center gap-1 text-[10px] bg-primary text-primary-foreground border border-primary px-2 py-1 rounded-lg font-semibold hover:opacity-90 transition-opacity">
                 <Zap size={9} /> Processar
               </button>
             )}
-            {statusEfetivo === 'separacao' && onAvancarSeparado && (
-              <button onClick={() => onAvancarSeparado(pedido)}
-                className="flex items-center gap-1 text-[10px] bg-green-100 text-green-700 border border-green-200 px-2 py-1 rounded-lg font-semibold hover:bg-green-200 transition-colors">
-                <ArrowRight size={9} /> Separado
-              </button>
-            )}
-            {statusEfetivo === 'separado' && (
+            {prontoParaExpedir && (
               <button onClick={() => onExpedir(pedido)}
                 className="flex items-center gap-1 text-[10px] bg-orange-100 text-orange-700 border border-orange-200 px-2 py-1 rounded-lg font-semibold hover:bg-orange-200 transition-colors">
                 <Truck size={9} /> Expedir
               </button>
             )}
-            {!['expedido', 'cancelado', 'separado', 'entregue', 'separacao', 'aguardando_estoque'].includes(statusEfetivo) && (
+            {isPendente && (
               <button onClick={() => onCancelar(pedido.id, pedido.numero)}
                 className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-red-600 border border-border px-2 py-1 rounded-lg hover:border-red-200 hover:bg-red-50 transition-colors">
                 <Ban size={9} /> Cancelar

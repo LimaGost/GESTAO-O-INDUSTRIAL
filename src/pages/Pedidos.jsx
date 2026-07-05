@@ -18,13 +18,10 @@ import { usePermissoes } from '@/lib/usePermissoes.jsx';
 const VALOR_OCULTO = '••••••';
 
 const COLUNAS_KANBAN = [
-  { key: 'rascunho',           label: 'Rascunho',       color: '#64748B', bg: '#F8FAFC', border: '#CBD5E1', icon: FileText },
-  { key: 'aguardando_estoque', label: 'Ag. Estoque',    color: '#F59E0B', bg: '#FFFBEB', border: '#FCD34D', icon: Clock },
-  { key: 'separacao',          label: 'Em Separação',   color: '#3B82F6', bg: '#EFF6FF', border: '#93C5FD', icon: Package },
-  { key: 'separado',           label: 'Separado',       color: '#22C55E', bg: '#F0FDF4', border: '#86EFAC', icon: CheckCircle },
-  { key: 'expedido',           label: 'Expedido',       color: '#F97316', bg: '#FFF7ED', border: '#FDBA74', icon: Truck },
-  { key: 'entregue',           label: 'Entregue',       color: '#10B981', bg: '#ECFDF5', border: '#6EE7B7', icon: CheckCircle },
-  { key: 'cancelado',          label: 'Cancelado',      color: '#EF4444', bg: '#FFF5F5', border: '#FCA5A5', icon: Ban },
+  { key: 'pendente',  label: 'Pendente',  color: '#F59E0B', bg: '#FFFBEB', border: '#FCD34D', icon: Clock },
+  { key: 'expedido',  label: 'Expedido',  color: '#F97316', bg: '#FFF7ED', border: '#FDBA74', icon: Truck },
+  { key: 'entregue',  label: 'Entregue',  color: '#10B981', bg: '#ECFDF5', border: '#6EE7B7', icon: CheckCircle },
+  { key: 'cancelado', label: 'Cancelado', color: '#EF4444', bg: '#FFF5F5', border: '#FCA5A5', icon: Ban },
 ];
 
 export default function Pedidos() {
@@ -39,7 +36,7 @@ export default function Pedidos() {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [busca, setBusca] = useState('');
-  const [colunasVisiveis, setColunasVisiveis] = useState(['rascunho', 'aguardando_estoque', 'separacao', 'separado', 'expedido']);
+  const [colunasVisiveis, setColunasVisiveis] = useState(['pendente', 'expedido', 'entregue']);
   const [pedidoDetalhes, setPedidoDetalhes] = useState(null);
   const [pedidoBlingProcessar, setPedidoBlingProcessar] = useState(null);
   const [processandoBling, setProcessandoBling] = useState(false);
@@ -445,6 +442,8 @@ export default function Pedidos() {
       const exp = expedicoes.find(e => e.pedido_id === pedido.id);
       if (exp?.confirmado_pelo_cliente || exp?.status === 'entregue') return 'entregue';
     }
+    // Fluxo simplificado: tudo antes da expedição fica em "Pendente"
+    if (['rascunho', 'aguardando_estoque', 'separacao', 'separado'].includes(pedido.status)) return 'pendente';
     return pedido.status;
   };
 
@@ -540,7 +539,7 @@ export default function Pedidos() {
         </div>
 
         {/* Stats rápidas */}
-        <div className="mt-4 grid grid-cols-4 md:grid-cols-7 gap-2">
+        <div className="mt-4 grid grid-cols-4 gap-2">
           {COLUNAS_KANBAN.map(col => {
             const count = totalPorStatus[col.key] || 0;
             const Icon = col.icon;
