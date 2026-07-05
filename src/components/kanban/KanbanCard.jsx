@@ -8,13 +8,13 @@ function fmtData(iso) {
 }
 
 const PROXIMOS = {
-  a_produzir: 'em_producao', em_producao: 'produzido',
-  produzido: 'em_embalagem', em_embalagem: 'finalizado',
+  a_produzir: 'producao_planejada', producao_planejada: 'em_producao',
+  em_producao: 'aguardando_finalizacao', aguardando_finalizacao: 'producao_finalizada',
 };
 
 
 
-const ETAPAS = ['a_produzir', 'em_producao', 'produzido', 'em_embalagem', 'finalizado'];
+const ETAPAS = ['a_produzir', 'producao_planejada', 'em_producao', 'aguardando_finalizacao', 'producao_finalizada'];
 
 const ORIGEM_CONFIG = {
   pedido:        { label: 'Pedido',    bg: '#EFF6FF', color: '#2563EB', border: '#BFDBFE' },
@@ -23,8 +23,10 @@ const ORIGEM_CONFIG = {
 };
 
 const STATUS_ACCENT = {
-  a_produzir: '#64748B', em_producao: '#0EA5E9', produzido: '#22C55E',
-  em_embalagem: '#F59E0B', finalizado: '#A855F7',
+  a_produzir: '#64748B', producao_planejada: '#14B8A6', em_producao: '#0EA5E9',
+  aguardando_finalizacao: '#F59E0B', producao_finalizada: '#22C55E',
+  // legados (compatibilidade)
+  produzido: '#22C55E', em_embalagem: '#F59E0B', finalizado: '#A855F7', em_separacao: '#0EA5E9',
 };
 
 function tempoDecorrido(dataISO) {
@@ -50,8 +52,8 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
 
   const dataEntradaEtapa =
     ordem.status === 'em_producao' ? ordem.data_inicio :
-    ordem.status === 'produzido' ? ordem.data_fim_producao :
-    ordem.status === 'em_embalagem' ? ordem.data_embalagem :
+    ordem.status === 'producao_finalizada' ? ordem.data_fim_producao :
+    ordem.status === 'aguardando_finalizacao' ? (ordem.data_fim_producao || ordem.created_date) :
     ordem.created_date;
 
   const tempo = tempoDecorrido(dataEntradaEtapa);
@@ -158,7 +160,7 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
         )}
 
         {/* Progress bar */}
-        {ordem.status !== 'finalizado' && (
+        {ordem.status !== 'producao_finalizada' && (
           <div className="flex gap-0.5 mb-2">
             {ETAPAS.slice(0, -1).map((e, i) => {
               const idx = ETAPAS.indexOf(ordem.status);
@@ -224,11 +226,11 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
           </button>
         )}
 
-        {ordem.status === 'finalizado' ? (
+        {ordem.status === 'producao_finalizada' ? (
           <div className="flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-green-600 bg-green-50 rounded-xl">
-            <CheckCircle size={12} /> Concluído
+            <CheckCircle size={12} /> Produção Concluída
           </div>
-        ) : onAvancar && PROXIMOS[ordem.status] ? (
+        ) : onAvancar && labelBotao ? (
           <button
             onClick={() => onAvancar(ordem)}
             disabled={loading || !checklistCompleto}

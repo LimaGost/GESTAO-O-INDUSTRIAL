@@ -5,6 +5,7 @@ export const MODULO_PATH = {
   Dashboard:    '/Dashboard',
   Pedidos:      '/Pedidos',
   Kanban:       '/Kanban',
+  Separacao:    '/KanbanSeparacao',
   Estoque:      '/Estoque',
   Embalagem:    '/Embalagem',
   Etiquetas:    '/Etiquetas',
@@ -24,12 +25,12 @@ export const MODULOS_FINANCEIROS = ['Relatorios', 'Faturamento', 'Precos', 'Dash
 
 const DEFAULTS = {
   admin:            null,
-  gerente_producao: { Dashboard: 'full', Pedidos: 'full', Kanban: 'full', Estoque: 'full', Embalagem: 'full', Etiquetas: 'full', Expedicao: 'full', Clientes: 'view', Produtos: 'full', Relatorios: 'full', Perdas: 'full', Faturamento: 'view', Precos: 'view', Auditoria: 'view', Configuracoes: 'none' },
-  vendedor:         { Dashboard: 'view', Pedidos: 'full', Kanban: 'view', Estoque: 'view', Embalagem: 'none', Etiquetas: 'none', Expedicao: 'view', Clientes: 'full', Produtos: 'view', Relatorios: 'none', Perdas: 'none', Faturamento: 'none', Precos: 'none', Auditoria: 'none', Configuracoes: 'none' },
-  maquinista:       { Dashboard: 'view', Pedidos: 'none', Kanban: 'full', Estoque: 'view', Embalagem: 'none', Etiquetas: 'none', Expedicao: 'none', Clientes: 'none', Produtos: 'none', Relatorios: 'none', Perdas: 'view', Faturamento: 'none', Precos: 'none', Auditoria: 'none', Configuracoes: 'none' },
-  embalador:        { Dashboard: 'view', Pedidos: 'none', Kanban: 'view', Estoque: 'view', Embalagem: 'full', Etiquetas: 'full', Expedicao: 'none', Clientes: 'none', Produtos: 'none', Relatorios: 'none', Perdas: 'view', Faturamento: 'none', Precos: 'none', Auditoria: 'none', Configuracoes: 'none' },
-  estoquista:       { Dashboard: 'view', Pedidos: 'view', Kanban: 'view', Estoque: 'full', Embalagem: 'none', Etiquetas: 'full', Expedicao: 'none', Clientes: 'none', Produtos: 'view', Relatorios: 'none', Perdas: 'view', Faturamento: 'none', Precos: 'none', Auditoria: 'none', Configuracoes: 'none' },
-  motorista:        { Dashboard: 'view', Pedidos: 'none', Kanban: 'none', Estoque: 'none', Embalagem: 'none', Etiquetas: 'none', Expedicao: 'full', Clientes: 'none', Produtos: 'none', Relatorios: 'none', Perdas: 'none', Faturamento: 'none', Precos: 'none', Auditoria: 'none', Configuracoes: 'none' },
+  gerente_producao: { Dashboard: 'full', Pedidos: 'full', Kanban: 'full', Separacao: 'full', Estoque: 'full', Embalagem: 'full', Etiquetas: 'full', Expedicao: 'full', Clientes: 'view', Produtos: 'full', Relatorios: 'full', Perdas: 'full', Faturamento: 'view', Precos: 'view', Auditoria: 'view', Configuracoes: 'none' },
+  vendedor:         { Dashboard: 'view', Pedidos: 'full', Kanban: 'view', Separacao: 'view', Estoque: 'view', Embalagem: 'none', Etiquetas: 'none', Expedicao: 'view', Clientes: 'full', Produtos: 'view', Relatorios: 'none', Perdas: 'none', Faturamento: 'none', Precos: 'none', Auditoria: 'none', Configuracoes: 'none' },
+  maquinista:       { Dashboard: 'view', Pedidos: 'none', Kanban: 'full', Separacao: 'none', Estoque: 'view', Embalagem: 'none', Etiquetas: 'none', Expedicao: 'none', Clientes: 'none', Produtos: 'none', Relatorios: 'none', Perdas: 'view', Faturamento: 'none', Precos: 'none', Auditoria: 'none', Configuracoes: 'none' },
+  embalador:        { Dashboard: 'view', Pedidos: 'none', Kanban: 'view', Separacao: 'view', Estoque: 'view', Embalagem: 'full', Etiquetas: 'full', Expedicao: 'none', Clientes: 'none', Produtos: 'none', Relatorios: 'none', Perdas: 'view', Faturamento: 'none', Precos: 'none', Auditoria: 'none', Configuracoes: 'none' },
+  estoquista:       { Dashboard: 'view', Pedidos: 'view', Kanban: 'view', Separacao: 'full', Estoque: 'full', Embalagem: 'none', Etiquetas: 'full', Expedicao: 'none', Clientes: 'none', Produtos: 'view', Relatorios: 'none', Perdas: 'view', Faturamento: 'none', Precos: 'none', Auditoria: 'none', Configuracoes: 'none' },
+  motorista:        { Dashboard: 'view', Pedidos: 'none', Kanban: 'none', Separacao: 'none', Estoque: 'none', Embalagem: 'none', Etiquetas: 'none', Expedicao: 'full', Clientes: 'none', Produtos: 'none', Relatorios: 'none', Perdas: 'none', Faturamento: 'none', Precos: 'none', Auditoria: 'none', Configuracoes: 'none' },
 };
 
 const PermissoesContext = createContext(null);

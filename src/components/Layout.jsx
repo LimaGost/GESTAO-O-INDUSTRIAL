@@ -5,7 +5,7 @@ import {
   LayoutDashboard, ShoppingCart, Factory, Package,
   Truck, Settings, ChevronLeft, ChevronRight, ChevronUp,
   Bell, Tag, Users, Archive, SlidersHorizontal, BarChart2,
-  Database, MoreHorizontal, RefreshCw, Trash2, MessageCircle, LogOut, User, AlertTriangle, HeadphonesIcon
+  Database, MoreHorizontal, RefreshCw, Trash2, MessageCircle, LogOut, User, AlertTriangle, HeadphonesIcon, ClipboardCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
@@ -34,10 +34,11 @@ const navGroups = [
   {
     label: 'OPERACIONAL',
     items: [
-      { path: '/Etiquetas',  label: 'Etiquetas',  icon: Tag },
-      { path: '/Expedicao',  label: 'Expedição',  icon: Truck },
-      { path: '/Clientes',   label: 'Clientes',   icon: Users },
-      { path: '/Produtos',   label: 'Produtos',   icon: Settings },
+      { path: '/Etiquetas',       label: 'Etiquetas',  icon: Tag },
+      { path: '/KanbanSeparacao', label: 'Separação',  icon: ClipboardCheck },
+      { path: '/Expedicao',       label: 'Expedição',  icon: Truck },
+      { path: '/Clientes',        label: 'Clientes',   icon: Users },
+      { path: '/Produtos',        label: 'Produtos',   icon: Settings },
     ],
   },
   {
@@ -63,6 +64,7 @@ const allNavItems = [
   { path: '/Dashboard',      label: 'Dashboard',        icon: LayoutDashboard },
   { path: '/Pedidos',        label: 'Pedidos',           icon: ShoppingCart },
   { path: '/Kanban',         label: 'Kanban Produção',   icon: Factory },
+  { path: '/KanbanSeparacao', label: 'Separação',        icon: ClipboardCheck },
   { path: '/Estoque',        label: 'Estoque',           icon: Archive },
   { path: '/Etiquetas',      label: 'Etiquetas',         icon: Tag },
   { path: '/Expedicao',      label: 'Expedição',         icon: Truck },
@@ -81,6 +83,7 @@ const PATH_MODULO = {
   '/Dashboard':    'Dashboard',
   '/Pedidos':      'Pedidos',
   '/Kanban':       'Kanban',
+  '/KanbanSeparacao': 'Separacao',
   '/Estoque':      'Estoque',
   '/Embalagem':    'Embalagem',
   '/Etiquetas':    'Etiquetas',

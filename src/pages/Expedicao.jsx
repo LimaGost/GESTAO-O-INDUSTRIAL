@@ -94,7 +94,7 @@ function OPFinalizadaCard({ op, clienteNome, onEmitirNF, emitindo, onVerPedido }
           )}
         </div>
         <div className="text-right flex-shrink-0">
-          <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-semibold">Finalizado</span>
+          <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-semibold">{op._origem === 'pedido' ? 'Separado' : 'Finalizado'}</span>
           <p className="text-xs text-muted-foreground mt-1">{qtdTotal} un</p>
         </div>
       </div>
@@ -280,12 +280,27 @@ export default function Expedicao() {
     const expPedidoIds = new Set(exps.map(e => e.pedido_id).filter(Boolean));
 
     const finalizadas = ordens.filter(o => {
-      if (o.status !== 'finalizado') return false;
+      if (!['finalizado', 'producao_finalizada'].includes(o.status)) return false;
       if (!o.pedido_id) return false;
       return !expPedidoIds.has(o.pedido_id);
     });
 
-    setOpsFinalizadas(finalizadas);
+    // Pedidos liberados pela Separação (status 'separado') sem expedição ainda
+    const pedidosSeparadosParaExpedir = pedidos.filter(p =>
+      p.status === 'separado' && !expPedidoIds.has(p.id)
+    ).map(p => ({
+      _origem: 'pedido',
+      id: `ped_${p.id}`,
+      pedido_id: p.id,
+      numero: p.numero,
+      pedido_numero: p.numero,
+      produto_nome: p.cliente_nome,
+      itens: p.itens || [],
+      data_finalizacao: p.updated_date,
+      quantidade: (p.itens || []).reduce((s, i) => s + (i.quantidade || 0), 0),
+    }));
+
+    setOpsFinalizadas([...finalizadas, ...pedidosSeparadosParaExpedir]);
 
     const pm = {};
     for (const p of pedidos) pm[p.id] = {
@@ -327,7 +342,7 @@ export default function Expedicao() {
       pedido_id: op.pedido_id || '',
       pedido_numero: pedInfo?.numero || op.pedido_numero || '',
       cliente_nome: pedInfo?.nome || op.produto_nome,
-      ordem_producao_id: op.id,
+      ordem_producao_id: op._origem === 'pedido' ? '' : op.id,
       itens: pedInfo?.itens || op.itens || [{ produto_nome: op.produto_nome, quantidade: op.quantidade }],
       status: 'emitida',
       data_emissao: hoje,
