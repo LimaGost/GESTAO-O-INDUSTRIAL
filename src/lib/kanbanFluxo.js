@@ -60,11 +60,12 @@ export const DEFAULTS = {
   },
   producao: {
     stages: [
-      { key: 'a_produzir',             label: 'Aguardando Produção',   cor: 0, icone: 'Clock',      responsaveis: ['gerente_producao'], acao: 'nenhuma' },
-      { key: 'producao_planejada',     label: 'Produção Planejada',    cor: 7, icone: 'Flag',       responsaveis: ['gerente_producao'], acao: 'nenhuma' },
-      { key: 'em_producao',            label: 'Em Produção',           cor: 1, icone: 'Factory',    responsaveis: ['maquinista'],    acao: 'registrar_data_inicio' },
-      { key: 'aguardando_finalizacao', label: 'Aguardando Finalização',cor: 3, icone: 'Package',    responsaveis: ['embalador'],     acao: 'nenhuma' },
-      { key: 'producao_finalizada',    label: 'Produção Finalizada',   cor: 2, icone: 'CheckCircle',responsaveis: ['gerente_producao'], acao: 'finalizar_producao' },
+      { key: 'a_produzir',   label: 'Aguardando Produção', cor: 0, icone: 'Clock',      responsaveis: ['gerente_producao'], acao: 'nenhuma' },
+      { key: 'em_producao',  label: 'Em Produção',         cor: 1, icone: 'Factory',    responsaveis: ['maquinista'],    acao: 'registrar_data_inicio' },
+      { key: 'produzido',    label: 'Produzido',           cor: 2, icone: 'CheckCircle',responsaveis: ['maquinista'],    acao: 'registrar_data_fim_producao' },
+      { key: 'em_embalagem', label: 'Em Embalagem',        cor: 3, icone: 'Package',    responsaveis: ['embalador'],     acao: 'registrar_data_embalagem' },
+      { key: 'em_separacao', label: 'Em Separação',        cor: 7, icone: 'Layers',     responsaveis: ['estoquista'],    acao: 'saida_estoque' },
+      { key: 'finalizado',   label: 'Finalizado',          cor: 4, icone: 'Flag',       responsaveis: ['gerente_producao'], acao: 'finalizar_expedicao' },
     ],
     automacoes: [
       { trigger: 'producao_finalizada', acao: 'criar_separacao', ativo: true },
@@ -149,6 +150,7 @@ export const ACOES_ETAPA = {
     { key: 'registrar_data_embalagem', label: 'Registrar data de embalagem' },
     { key: 'finalizar_producao', label: 'Finalizar produção + criar Separação' },
     { key: 'saida_estoque', label: 'Saída de estoque + gerar etiquetas' },
+    { key: 'finalizar_expedicao', label: 'Finalizar (pedido pronto p/ expedir)' },
   ],
 };
 

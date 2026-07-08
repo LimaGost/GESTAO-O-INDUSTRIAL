@@ -27,14 +27,15 @@ const CORES_OPCOES = [
 
 const ICON_MAP = { Clock, Factory, CheckCircle, Package, Flag, Truck: Package, Archive: Package, Layers: Package };
 
-// Kanban de Produção — exclusivamente atividades produtivas.
-// A separação/conferência/expedição agora vivem no Kanban de Separação.
+// Kanban de Produção — fluxo completo: produção, embalagem, separação e finalização.
+// Entrada no estoque ocorre ao mover para "Produzido"; saída ao mover para "Em Separação".
 const COLUNAS_DEFAULT = [
-{ key: 'a_produzir',            label: 'Aguardando Produção',   cor: 0, icone: 'Clock',       acao: 'nenhuma' },
-{ key: 'producao_planejada',    label: 'Produção Planejada',    cor: 7, icone: 'Flag',        acao: 'nenhuma' },
-{ key: 'em_producao',           label: 'Em Produção',           cor: 1, icone: 'Factory',    acao: 'registrar_data_inicio' },
-{ key: 'aguardando_finalizacao', label: 'Aguardando Finalização', cor: 3, icone: 'Package',  acao: 'nenhuma' },
-{ key: 'producao_finalizada',   label: 'Produção Finalizada',  cor: 2, icone: 'CheckCircle', acao: 'finalizar_producao' }];
+{ key: 'a_produzir',   label: 'Aguardando Produção', cor: 0, icone: 'Clock',       acao: 'nenhuma' },
+{ key: 'em_producao',  label: 'Em Produção',         cor: 1, icone: 'Factory',     acao: 'registrar_data_inicio' },
+{ key: 'produzido',    label: 'Produzido',           cor: 2, icone: 'CheckCircle', acao: 'registrar_data_fim_producao' },
+{ key: 'em_embalagem', label: 'Em Embalagem',        cor: 3, icone: 'Package',     acao: 'registrar_data_embalagem' },
+{ key: 'em_separacao', label: 'Em Separação',        cor: 7, icone: 'Layers',      acao: 'saida_estoque' },
+{ key: 'finalizado',   label: 'Finalizado',          cor: 4, icone: 'Flag',        acao: 'finalizar_expedicao' }];
 
 
 function buildColunas() {
@@ -50,39 +51,6 @@ function buildColunas() {
     const cores = CORES_OPCOES[c.cor] || CORES_OPCOES[0];
     return { ...c, icon: getIcon(c.icone), ...cores };
   });
-}
-
-// Migra OPs com status antigos (produzido/em_embalagem/em_separacao/finalizado) para as novas etapas de produção.
-// Cria registros de Separação para OPs que já haviam chegado à separação/expedição.
-async function migrarStatusAntigos() {
-  if (localStorage.getItem('kanban_producao_migrado_v2')) return;
-  try {
-    const todas = await base44.entities.OrdemProducao.list();
-    const migrar = [];
-    for (const o of todas) {
-      let novoStatus = null;
-      if (o.status === 'produzido' || o.status === 'em_embalagem') novoStatus = 'aguardando_finalizacao';
-      else if (o.status === 'em_separacao') novoStatus = 'producao_finalizada';
-      else if (o.status === 'finalizado') novoStatus = 'producao_finalizada';
-      if (novoStatus && novoStatus !== o.status) migrar.push({ id: o.id, status: novoStatus, ordem: o });
-    }
-    if (migrar.length > 0) {
-      await base44.entities.OrdemProducao.bulkUpdate(migrar.map(m => ({ id: m.id, status: m.status })));
-      // OPs que já estavam em separação/finalizado → criam Separação no estado correspondente
-      const { criarSeparacaoFromOP } = await import('@/lib/separacao');
-      for (const m of migrar) {
-        if (m.ordem.status === 'em_separacao') {
-          criarSeparacaoFromOP(m.ordem, 'em_separacao').catch(() => {});
-        } else if (m.ordem.status === 'finalizado') {
-          criarSeparacaoFromOP(m.ordem, 'liberado_expedicao').catch(() => {});
-        }
-      }
-    }
-  } catch (e) {
-    console.warn('[migrarStatusAntigos]', e.message);
-  } finally {
-    localStorage.setItem('kanban_producao_migrado_v2', '1');
-  }
 }
 
 function buildProximos(colunas) {
@@ -215,7 +183,6 @@ export default function Kanban() {
 
   const load = async (invalidate = false) => {
     if (invalidate) {cacheInvalidate('OrdemProducao');cacheInvalidate('Produto');cacheInvalidate('Pedido');}
-    await migrarStatusAntigos();
     const [ords, prods, checklists, peds, gps] = await Promise.all([
     cachedFetch('OrdemProducao', () => base44.entities.OrdemProducao.list('-created_date'), 30_000),
     cachedFetch('Produto', () => base44.entities.Produto.list(), 120_000),
