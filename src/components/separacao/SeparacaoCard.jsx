@@ -42,9 +42,6 @@ export default function SeparacaoCard({ separacao, onAvancar, loading, labelBota
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex items-center gap-1.5 flex-1 min-w-0 flex-wrap">
             <span className="text-xs font-bold text-foreground truncate">{separacao.numero}</span>
-            {separacao.pedido_numero && (
-              <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-medium flex-shrink-0">📋 {separacao.pedido_numero}</span>
-            )}
             {separacao.ordem_producao_numero && (
               <span className="text-[10px] bg-green-50 text-green-600 px-1.5 py-0.5 rounded font-medium flex-shrink-0">🏭 {separacao.ordem_producao_numero}</span>
             )}
@@ -59,6 +56,14 @@ export default function SeparacaoCard({ separacao, onAvancar, loading, labelBota
             {origem.label}
           </span>
         </div>
+
+        {/* Vínculo com pedido */}
+        {separacao.pedido_numero && (
+          <div className="flex items-center gap-1 text-[10px] font-bold mb-1.5 px-2 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-200">
+            <ClipboardList size={10} className="flex-shrink-0" />
+            <span className="truncate">Pedido {separacao.pedido_numero}</span>
+          </div>
+        )}
 
         {/* Atraso */}
         {atrasada && (

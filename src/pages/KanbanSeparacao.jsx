@@ -82,29 +82,34 @@ export default function KanbanSeparacao() {
     if (proximo === 'liberado_expedicao') updates.data_liberacao = agora;
 
     try {
-      // Ao separar: dá baixa no estoque e gera etiquetas dos itens
+      // Ao separar: gera etiquetas dos itens
       if (proximo === 'separado' && sep.itens?.length > 0) {
         const produtos = await base44.entities.Produto.list();
         const lote = gerarLote(sep.id);
         const dataProducao = hojeData();
         await Promise.all((sep.itens || []).map(async (item) => {
           const prod = produtos.find(p => p.id === item.produto_id);
-          const [,] = await Promise.all([
-            prod
-              ? base44.entities.Produto.update(prod.id, { estoque_atual: Math.max(0, (prod.estoque_atual || 0) - (item.quantidade || 0)) })
-                  .then(() => registrarLog('Produto', prod.id, 'SAIDA_ESTOQUE', `Saída de ${item.quantidade} un de ${prod.nome} via separação ${sep.numero}`).catch(() => {}))
-                  .catch(() => {})
-              : Promise.resolve(),
-            base44.entities.Etiqueta.create({
-              ordem_producao_id: sep.ordem_producao_id || null,
-              produto_id: item.produto_id || null,
-              produto_nome: item.produto_nome,
-              quantidade: item.quantidade,
-              lote, data_producao: dataProducao,
-              codigo_barras: prod?.codigo ? String(prod.codigo) : '',
-              impresso: false,
-            }).catch(() => {}),
-          ]);
+          await base44.entities.Etiqueta.create({
+            ordem_producao_id: sep.ordem_producao_id || null,
+            produto_id: item.produto_id || null,
+            produto_nome: item.produto_nome,
+            quantidade: item.quantidade,
+            lote, data_producao: dataProducao,
+            codigo_barras: prod?.codigo ? String(prod.codigo) : '',
+            impresso: false,
+          }).catch(() => {});
+        }));
+      }
+
+      // Ao finalizar a separação: baixa o estoque — quantidade reservada ao pedido
+      if (proximo === 'liberado_expedicao' && sep.itens?.length > 0) {
+        const produtos = await base44.entities.Produto.list();
+        await Promise.all((sep.itens || []).map(async (item) => {
+          const prod = produtos.find(p => p.id === item.produto_id);
+          if (!prod) return;
+          await base44.entities.Produto.update(prod.id, { estoque_atual: Math.max(0, (prod.estoque_atual || 0) - (item.quantidade || 0)) });
+          registrarLog('Produto', prod.id, 'SAIDA_ESTOQUE',
+            `Saída de ${item.quantidade} un de ${prod.nome} — reservado ao pedido ${sep.pedido_numero || sep.grupo_cliente_nome || sep.numero} (separação ${sep.numero} finalizada)`).catch(() => {});
         }));
       }
 
