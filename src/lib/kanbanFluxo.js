@@ -173,16 +173,7 @@ export async function loadKanbanFluxo(kanbanKey) {
   if (val && Array.isArray(val.stages) && val.stages.length > 0) {
     return { stages: val.stages, automacoes: val.automacoes || [] };
   }
-  // fallback localStorage
-  const ls = LS_KEYS[kanbanKey];
-  if (ls) {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(ls) || 'null');
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return { stages: parsed, automacoes: DEFAULTS[kanbanKey].automacoes };
-      }
-    } catch {}
-  }
+  // Sem config no banco: usa os defaults (ignora localStorage, que pode estar desatualizado)
   return DEFAULTS[kanbanKey];
 }
 

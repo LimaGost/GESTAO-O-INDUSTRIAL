@@ -686,6 +686,7 @@ export default function Kanban() {
                       loading={loadingId === ordem.id}
                       onOpenModal={() => setOrdemSelecionada(ordem)}
                       labelBotao={PROXIMOS[key] ? `→ ${kanbanColunas.find((c) => c.key === PROXIMOS[key])?.label || ''}` : null}
+                      etapasKeys={kanbanColunas.map((c) => c.key)}
                       acaoAtual={kanbanColunas.find((c) => c.key === key)?.acao || ''}
                       onCancelar={key === 'a_produzir' && podeGerenciarProducao && !readonly ? cancelarOP : null}
                       />

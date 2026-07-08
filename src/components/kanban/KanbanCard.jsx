@@ -43,7 +43,7 @@ function tempoDecorrido(dataISO) {
   return { text: `${m}min`, hours };
 }
 
-export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, checklistOk, setChecklistOk, onAvancar, loading, onOpenModal, labelBotao, acaoAtual, onCancelar }) {
+export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, checklistOk, setChecklistOk, onAvancar, loading, onOpenModal, labelBotao, acaoAtual, onCancelar, etapasKeys }) {
   const origem = ordem.origem || 'manual';
   const origemCfg = ORIGEM_CONFIG[origem] || ORIGEM_CONFIG.manual;
   const checkKey = `${ordem.id}_${ordem.status}`;
@@ -160,10 +160,15 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
         )}
 
         {/* Progress bar */}
-        {ordem.status !== 'producao_finalizada' && (
+        {(() => {
+          const etapas = etapasKeys && etapasKeys.length > 0 ? etapasKeys : ETAPAS;
+          const idxAtual = etapas.indexOf(ordem.status);
+          return idxAtual >= 0 && idxAtual < etapas.length - 1;
+        })() && (
           <div className="flex gap-0.5 mb-2">
-            {ETAPAS.slice(0, -1).map((e, i) => {
-              const idx = ETAPAS.indexOf(ordem.status);
+            {(etapasKeys && etapasKeys.length > 0 ? etapasKeys : ETAPAS).slice(0, -1).map((e, i) => {
+              const etapas = etapasKeys && etapasKeys.length > 0 ? etapasKeys : ETAPAS;
+              const idx = etapas.indexOf(ordem.status);
               const filled = i < idx;
               const current = i === idx;
               return (
@@ -226,7 +231,7 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
           </button>
         )}
 
-        {ordem.status === 'producao_finalizada' ? (
+        {!labelBotao ? (
           <div className="flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-green-600 bg-green-50 rounded-xl">
             <CheckCircle size={12} /> Produção Concluída
           </div>
