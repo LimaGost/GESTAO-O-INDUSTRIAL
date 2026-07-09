@@ -107,6 +107,7 @@ export default function Kanban() {
   const [loadingId, setLoadingId] = useState(null);
   const [showNovaOP, setShowNovaOP] = useState(false);
   const [novaOP, setNovaOP] = useState({ produto_id: '', produto_nome: '', quantidade: 1, observacoes: '' });
+  const [buscaProdutoOP, setBuscaProdutoOP] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [variacoesOP, setVariacoesOP] = useState([]);
   const [filtroOrigem, setFiltroOrigem] = useState('todas');
@@ -742,17 +743,50 @@ export default function Kanban() {
             <div className="p-6 space-y-4">
               <div>
                 <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Produto *</label>
-                <select value={novaOP.produto_id}
-              onChange={(e) => {
-                const p = produtos.find((p) => p.id === e.target.value);
-                setNovaOP((n) => ({ ...n, produto_id: e.target.value, produto_nome: p ? p.nome : '' }));
-                if (p?.variacoes?.length > 0) setVariacoesOP(p.variacoes.map((v) => ({ nome: v, quantidade: 0 })));else
-                setVariacoesOP([]);
-              }}
-              className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
-                  <option value="">Selecione um produto...</option>
-                  {produtos.map((p) => <option key={p.id} value={p.id}>{p.nome} — Est: {p.estoque_atual || 0}</option>)}
-                </select>
+                {novaOP.produto_id ? (
+                  <div className="flex items-center justify-between gap-2 border border-primary/30 bg-primary/5 rounded-xl px-3 py-2.5">
+                    <span className="text-sm font-medium text-foreground truncate">{novaOP.produto_nome}</span>
+                    <button
+                      onClick={() => { setNovaOP((n) => ({ ...n, produto_id: '', produto_nome: '' })); setVariacoesOP([]); setBuscaProdutoOP(''); }}
+                      className="text-muted-foreground hover:text-foreground flex-shrink-0">
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 border border-border rounded-xl px-3 py-2.5 bg-background">
+                      <Search size={14} className="text-muted-foreground flex-shrink-0" />
+                      <input
+                        autoFocus
+                        value={buscaProdutoOP}
+                        onChange={(e) => setBuscaProdutoOP(e.target.value)}
+                        placeholder="Buscar produto por nome ou código..."
+                        className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground" />
+                      {buscaProdutoOP && <button onClick={() => setBuscaProdutoOP('')} className="text-muted-foreground hover:text-foreground"><X size={13} /></button>}
+                    </div>
+                    <div className="mt-2 max-h-52 overflow-y-auto border border-border rounded-xl divide-y divide-border/40 bg-background">
+                      {(() => {
+                        const q = buscaProdutoOP.trim().toLowerCase();
+                        const lista = q
+                          ? produtos.filter((p) => (p.nome || '').toLowerCase().includes(q) || (p.codigo || '').toLowerCase().includes(q))
+                          : produtos;
+                        if (lista.length === 0) return <p className="text-xs text-muted-foreground text-center py-4">Nenhum produto encontrado</p>;
+                        return lista.slice(0, 50).map((p) => (
+                          <button key={p.id}
+                            onClick={() => {
+                              setNovaOP((n) => ({ ...n, produto_id: p.id, produto_nome: p.nome }));
+                              if (p?.variacoes?.length > 0) setVariacoesOP(p.variacoes.map((v) => ({ nome: v, quantidade: 0 })));
+                              else setVariacoesOP([]);
+                            }}
+                            className="w-full flex items-center justify-between gap-2 px-3 py-2 text-left hover:bg-muted/50 transition-colors">
+                            <span className="text-sm text-foreground truncate">{p.nome}</span>
+                            <span className="text-[10px] text-muted-foreground flex-shrink-0">Est: {p.estoque_atual || 0}</span>
+                          </button>
+                        ));
+                      })()}
+                    </div>
+                  </>
+                )}
               </div>
               {variacoesOP.length > 0 ?
             <div>
