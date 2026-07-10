@@ -75,7 +75,10 @@ export default function DashboardKpis({ rawData, loading, period, ocultarValores
     const aberto = pedidos.filter(p => ['rascunho', 'aguardando_estoque'].includes(p.status)).length;
     const emProducao = pedidos.filter(p => ['separacao', 'separado'].includes(p.status)).length;
     const concluidos = pedidos.filter(p => p.status === 'entregue').length;
-    const faturados = pedidos.filter(p => p.status === 'expedido').length;
+
+    // Faturamento baseado nas Expedições (registro que persiste após o pedido sair do fluxo)
+    const expsPeriodo = (expedicoes || []).filter(e => isInRange(e.data_emissao || e.created_date, from, to));
+    const faturados = expsPeriodo.length;
 
     const hoje = new Date().toISOString().split('T')[0];
     const atrasados = pedidos.filter(p =>
@@ -83,17 +86,13 @@ export default function DashboardKpis({ rawData, loading, period, ocultarValores
       p.data_entrega_prevista && p.data_entrega_prevista < hoje
     ).length;
 
-    const faturamentoMes = pedidos
-      .filter(p => p.status === 'expedido')
-      .reduce((s, p) => s + (p.valor_total || 0), 0);
+    const faturamentoMes = expsPeriodo.reduce((s, e) => s + (e.valor_total || 0), 0);
 
     const totalProduzido = ordens
       .filter(isOPFinalizada)
       .reduce((s, o) => s + (o.itens?.length > 0 ? o.itens.reduce((a, i) => a + (i.quantidade || 0), 0) : (o.quantidade || 0)), 0);
 
-    const ticketMedio = faturados > 0
-      ? pedidos.filter(p => p.status === 'expedido').reduce((s, p) => s + (p.valor_total || 0), 0) / faturados
-      : 0;
+    const ticketMedio = faturados > 0 ? faturamentoMes / faturados : 0;
 
     const clientesAtivos = new Set(pedidos.filter(p => p.status !== 'cancelado').map(p => p.cliente_nome)).size;
 
@@ -111,11 +110,11 @@ export default function DashboardKpis({ rawData, loading, period, ocultarValores
     { icon: ShoppingCart,  color: 'bg-blue-500',    label: 'Pedidos em Aberto',     value: fmt(kpis?.aberto),        sub: 'Rascunho + Ag. Estoque',    path: '/Pedidos',   alert: false },
     { icon: Factory,       color: 'bg-amber-500',   label: 'Pedidos em Produção',   value: fmt(kpis?.emProducao),    sub: 'Separação + Separado',      path: '/Kanban',    alert: false },
     { icon: CheckCircle,   color: 'bg-emerald-500', label: 'Pedidos Concluídos',    value: fmt(kpis?.concluidos),    sub: 'Entregues no período',       path: '/Pedidos',   alert: false },
-    { icon: Truck,         color: 'bg-purple-500',  label: 'Pedidos Faturados',     value: fmt(kpis?.faturados),     sub: 'NF emitida / expedidos',     path: '/Expedicao', alert: false },
+    { icon: Truck,         color: 'bg-purple-500',  label: 'Pedidos Faturados',     value: fmt(kpis?.faturados),     sub: 'Expedições no período',      path: '/Expedicao', alert: false },
     { icon: AlertTriangle, color: 'bg-red-500',     label: 'Pedidos Atrasados',     value: fmt(kpis?.atrasados),     sub: 'Além da data prevista',      path: '/Pedidos',   alert: (kpis?.atrasados || 0) > 0 },
     { icon: TrendingUp,    color: 'bg-green-600',   label: 'Faturamento do Mês',    value: fR(kpis?.faturamentoMes), sub: 'Total expedido no período',   path: '/Expedicao', alert: false },
     { icon: Package,       color: 'bg-orange-500',  label: 'Produção do Mês',       value: fmt(kpis?.totalProduzido),sub: 'Unidades finalizadas',        path: '/Kanban',    alert: false },
-    { icon: DollarSign,    color: 'bg-sky-500',     label: 'Ticket Médio',          value: fR(kpis?.ticketMedio),   sub: 'Por pedido expedido',         path: '/Pedidos',   alert: false },
+    { icon: DollarSign,    color: 'bg-sky-500',     label: 'Ticket Médio',          value: fR(kpis?.ticketMedio),   sub: 'Por expedição no período',         path: '/Pedidos',   alert: false },
     { icon: Users,         color: 'bg-indigo-500',  label: 'Clientes Ativos',       value: fmt(kpis?.clientesAtivos),sub: 'Com pedidos no período',      path: '/Clientes',  alert: false },
     { icon: Tag,           color: 'bg-pink-500',    label: 'Total Produzido',       value: fmt(kpis?.totalProduzido),sub: 'OPs finalizadas no período',   path: '/Kanban',    alert: false },
   ];
