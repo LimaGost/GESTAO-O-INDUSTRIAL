@@ -269,6 +269,7 @@ export default function Expedicao() {
   const [pedidoDetalhes, setPedidoDetalhes] = useState(null);
   const [filtroDestino, setFiltroDestino] = useState('todos');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [etapaMobile, setEtapaMobile] = useState('a_expedir');
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -538,6 +539,30 @@ export default function Expedicao() {
     .filter(([id]) => !expedicoes.some(e => e.pedido_id === id))
     .map(([id, info]) => ({ id, ...info }));
 
+  const renderCardKanban = (coluna, card) => coluna.key === 'a_expedir' ? (
+    <OPFinalizadaCard
+      key={card.id}
+      op={card}
+      clienteNome={card.pedido_id ? pedidoMap[card.pedido_id]?.nome : null}
+      onEmitirNF={readonly ? null : emitirNFdaOP}
+      emitindo={emitindoOpId === card.id}
+      onVerPedido={abrirPedido}
+    />
+  ) : (
+    <ExpedicaoCard
+      key={card.id}
+      exp={card}
+      coluna={coluna}
+      advancing={advancingId === card.id}
+      onAvancar={readonly ? null : atualizarStatus}
+      onImprimirNF={imprimirDANFE}
+      onImprimirDocTransporte={imprimirDocumentoTransporte}
+      onImprimirEtiqueta={readonly ? null : (exp) => setEtiquetaExpedicao(exp)}
+      onConfirmarRecebimento={readonly ? null : (exp) => setModalConfirmacao(exp)}
+      onVerPedido={abrirPedido}
+    />
+  );
+
   return (
     <div className="flex flex-col h-full space-y-4">
       <AlertaSeparacao />
@@ -637,45 +662,72 @@ export default function Expedicao() {
         </div>
       )}
 
-      {/* Kanban integrado */}
-      {aba === 'kanban' && <div className={`flex gap-3 md:gap-4 overflow-x-auto pb-2 md:pb-4 flex-1 min-h-0 ${isMobile ? 'snap-x snap-mandatory items-stretch' : 'items-start'}`}>
+      {/* Visão Mobile: lista vertical por etapa */}
+      {aba === 'kanban' && isMobile && (
+        <div className="flex-1 min-h-0 flex flex-col">
+          {/* Seletor de etapas */}
+          <div className="flex gap-2 overflow-x-auto pb-2 flex-shrink-0">
+            {colunasExp.map(col => {
+              const ativo = etapaMobile === col.key;
+              return (
+                <button key={col.key} onClick={() => setEtapaMobile(col.key)}
+                  className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold flex-shrink-0 whitespace-nowrap border transition-all"
+                  style={ativo
+                    ? { background: col.accent, borderColor: col.accent, color: '#fff' }
+                    : { background: '#fff', borderColor: '#E2E8F0', color: '#64748B' }}>
+                  {col.label}
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+                    style={ativo
+                      ? { background: 'rgba(255,255,255,0.3)', color: '#fff' }
+                      : { background: `${col.accent}20`, color: col.accent }}>
+                    {counts[col.key]}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Lista de cards da etapa selecionada */}
+          {(() => {
+            const coluna = colunasExp.find(c => c.key === etapaMobile) || colunasExp[0];
+            const Icon = coluna.icon;
+            const cards = coluna.key === 'a_expedir' ? opsFiltradas : expFiltradas.filter(e => e.status === coluna.key);
+            return (
+              <div className="flex-1 overflow-y-auto space-y-3 pb-4">
+                {cards.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 opacity-40">
+                    <div className="w-12 h-12 rounded-full border-2 border-dashed flex items-center justify-center mb-2"
+                      style={{ borderColor: coluna.accent }}>
+                      <Icon size={18} style={{ color: coluna.accent }} />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {coluna.key === 'a_expedir' ? 'Nenhuma OP finalizada' : 'Sem expedições nesta etapa'}
+                    </p>
+                  </div>
+                ) : (
+                  cards.map(card => renderCardKanban(coluna, card))
+                )}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* Kanban desktop */}
+      {aba === 'kanban' && !isMobile && <div className="flex gap-4 overflow-x-auto pb-4 flex-1 min-h-0 items-start">
         {colunasExp.map((coluna) => {
           const Icon = coluna.icon;
           const isAExpedir = coluna.key === 'a_expedir';
           const cards = isAExpedir ? opsFiltradas : expFiltradas.filter(e => e.status === coluna.key);
           const count = counts[coluna.key];
 
-          const renderCard = (card) => isAExpedir ? (
-            <OPFinalizadaCard
-              key={card.id}
-              op={card}
-              clienteNome={card.pedido_id ? pedidoMap[card.pedido_id]?.nome : null}
-              onEmitirNF={readonly ? null : emitirNFdaOP}
-              emitindo={emitindoOpId === card.id}
-              onVerPedido={abrirPedido}
-            />
-          ) : (
-            <ExpedicaoCard
-              key={card.id}
-              exp={card}
-              coluna={coluna}
-              advancing={advancingId === card.id}
-              onAvancar={readonly ? null : atualizarStatus}
-              onImprimirNF={imprimirDANFE}
-              onImprimirDocTransporte={imprimirDocumentoTransporte}
-              onImprimirEtiqueta={readonly ? null : (exp) => setEtiquetaExpedicao(exp)}
-              onConfirmarRecebimento={readonly ? null : (exp) => setModalConfirmacao(exp)}
-              onVerPedido={abrirPedido}
-            />
-          );
+          const renderCard = (card) => renderCardKanban(coluna, card);
 
           return (
             <div
               key={coluna.key}
-              className={`flex-shrink-0 ${isMobile ? 'w-[88vw] max-w-sm snap-center' : 'w-80'} rounded-2xl flex flex-col overflow-hidden`}
-              style={isMobile
-                ? { background: coluna.bg, border: `1.5px solid ${coluna.border}` }
-                : { height: 'calc(100vh - 320px)', minHeight: '420px', background: coluna.bg, border: `1.5px solid ${coluna.border}` }}
+              className="flex-shrink-0 w-80 rounded-2xl flex flex-col overflow-hidden"
+              style={{ height: 'calc(100vh - 320px)', minHeight: '420px', background: coluna.bg, border: `1.5px solid ${coluna.border}` }}
             >
               {/* Coluna header */}
               <div className="px-4 py-3 flex items-center justify-between sticky top-0 z-10"
