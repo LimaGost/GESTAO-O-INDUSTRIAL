@@ -544,14 +544,14 @@ export default function Expedicao() {
 
       {/* Header */}
       <div className="bg-card border border-border rounded-2xl px-4 md:px-5 py-4 flex-shrink-0">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-2.5 md:gap-3 min-w-0">
-            <div className="w-9 md:w-10 h-9 md:h-10 rounded-2xl bg-purple-100 flex items-center justify-center flex-shrink-0">
+        <div className="flex items-center justify-between flex-wrap gap-2 md:gap-3">
+          <div className="hidden md:flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-purple-100 flex items-center justify-center flex-shrink-0">
               <Truck size={19} className="text-purple-600" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-base md:text-lg font-bold text-foreground">Expedição</h2>
-              <p className="text-[11px] md:text-xs text-muted-foreground leading-snug">
+              <h2 className="text-lg font-bold text-foreground">Expedição</h2>
+              <p className="text-xs text-muted-foreground leading-snug">
                 {counts.a_expedir} a expedir · {counts.emitida} emitida · {counts.enviada} em trânsito · {counts.entregue} entregue
               </p>
             </div>
@@ -597,7 +597,7 @@ export default function Expedicao() {
         </div>
 
         {/* Abas */}
-        <div className="mt-4 flex gap-2 border-b border-border pb-1 overflow-x-auto">
+        <div className="mt-3 flex gap-2 border-b border-border pb-1 overflow-x-auto">
           <button
             onClick={() => setAba('kanban')}
             className={`text-xs font-semibold px-4 py-2.5 rounded-t-lg transition-colors border-b-2 flex-shrink-0 whitespace-nowrap ${aba === 'kanban' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
@@ -616,7 +616,7 @@ export default function Expedicao() {
         </div>
 
         {/* Progress summary — apenas no kanban */}
-        {aba === 'kanban' && <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: `repeat(${colunasExp.length}, 1fr)` }}>
+        {aba === 'kanban' && <div className="mt-3 hidden md:grid gap-2" style={{ gridTemplateColumns: `repeat(${colunasExp.length}, 1fr)` }}>
           {colunasExp.map(col => (
             <div key={col.key} className="text-center">
               <div className="h-1.5 rounded-full mb-1.5 overflow-hidden bg-muted">
@@ -638,7 +638,7 @@ export default function Expedicao() {
       )}
 
       {/* Kanban integrado */}
-      {aba === 'kanban' && <div className={`flex gap-3 md:gap-4 overflow-x-auto pb-4 flex-1 items-start ${isMobile ? 'snap-x snap-mandatory' : ''}`}>
+      {aba === 'kanban' && <div className={`flex gap-3 md:gap-4 overflow-x-auto pb-2 md:pb-4 flex-1 min-h-0 ${isMobile ? 'snap-x snap-mandatory items-stretch' : 'items-start'}`}>
         {colunasExp.map((coluna) => {
           const Icon = coluna.icon;
           const isAExpedir = coluna.key === 'a_expedir';
@@ -672,8 +672,10 @@ export default function Expedicao() {
           return (
             <div
               key={coluna.key}
-              className={`flex-shrink-0 ${isMobile ? 'w-[85vw] max-w-sm snap-center' : 'w-80'} rounded-2xl flex flex-col overflow-hidden`}
-              style={{ height: isMobile ? 'calc(100vh - 340px)' : 'calc(100vh - 320px)', minHeight: '420px', background: coluna.bg, border: `1.5px solid ${coluna.border}` }}
+              className={`flex-shrink-0 ${isMobile ? 'w-[88vw] max-w-sm snap-center' : 'w-80'} rounded-2xl flex flex-col overflow-hidden`}
+              style={isMobile
+                ? { background: coluna.bg, border: `1.5px solid ${coluna.border}` }
+                : { height: 'calc(100vh - 320px)', minHeight: '420px', background: coluna.bg, border: `1.5px solid ${coluna.border}` }}
             >
               {/* Coluna header */}
               <div className="px-4 py-3 flex items-center justify-between sticky top-0 z-10"
