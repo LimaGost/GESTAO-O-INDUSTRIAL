@@ -119,7 +119,7 @@ function OPFinalizadaCard({ op, clienteNome, onEmitirNF, emitindo, onVerPedido }
         {onVerPedido && op.pedido_id && (
           <button
             onClick={() => onVerPedido(op.pedido_id)}
-            className="flex items-center gap-1.5 text-xs border border-border px-2.5 py-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground"
+            className="flex items-center gap-1.5 text-xs border border-border px-2.5 py-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground"
           >
             <Eye size={11} /> Ver Pedido
           </button>
@@ -199,25 +199,25 @@ function ExpedicaoCard({ exp, coluna, onAvancar, onImprimirNF, onImprimirEtiquet
         {/* Linha 1: ações secundárias */}
         <div className="flex gap-1.5 flex-wrap">
           <button onClick={() => onImprimirNF(exp)}
-            className="flex items-center gap-1 text-xs border border-border px-2 py-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
+            className="flex items-center gap-1 text-xs border border-border px-2.5 py-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
             <Printer size={11} /> NF
           </button>
 
           <button onClick={() => onImprimirDocTransporte(exp)}
-            className="flex items-center gap-1 text-xs border border-blue-200 bg-blue-50 text-blue-700 px-2 py-1.5 rounded-lg hover:bg-blue-100 transition-colors font-medium">
+            className="flex items-center gap-1 text-xs border border-blue-200 bg-blue-50 text-blue-700 px-2.5 py-2 rounded-lg hover:bg-blue-100 transition-colors font-medium">
             <FileText size={11} /> Doc. Transporte
           </button>
 
           {onImprimirEtiqueta && (
             <button onClick={() => onImprimirEtiqueta(exp)}
-              className="flex items-center gap-1 text-xs border border-border px-2 py-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
+              className="flex items-center gap-1 text-xs border border-border px-2.5 py-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
               <Tag size={11} /> Etiqueta
             </button>
           )}
 
           {exp.pedido_id && onVerPedido && (
             <button onClick={() => onVerPedido(exp.pedido_id)}
-              className="flex items-center gap-1 text-xs border border-primary/30 bg-primary/5 text-primary px-2 py-1.5 rounded-lg hover:bg-primary/10 transition-colors font-medium">
+              className="flex items-center gap-1 text-xs border border-primary/30 bg-primary/5 text-primary px-2.5 py-2 rounded-lg hover:bg-primary/10 transition-colors font-medium">
               <Eye size={11} /> Pedido
             </button>
           )}
@@ -268,6 +268,13 @@ export default function Expedicao() {
   const [aba, setAba] = useState('kanban'); // 'kanban' | 'rapida'
   const [pedidoDetalhes, setPedidoDetalhes] = useState(null);
   const [filtroDestino, setFiltroDestino] = useState('todos');
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const load = async () => {
     const [exps, ordens, pedidos] = await Promise.all([
@@ -536,45 +543,45 @@ export default function Expedicao() {
       <AlertaSeparacao />
 
       {/* Header */}
-      <div className="bg-card border border-border rounded-2xl px-5 py-4 flex-shrink-0">
+      <div className="bg-card border border-border rounded-2xl px-4 md:px-5 py-4 flex-shrink-0">
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-purple-100 flex items-center justify-center">
+          <div className="flex items-center gap-2.5 md:gap-3 min-w-0">
+            <div className="w-9 md:w-10 h-9 md:h-10 rounded-2xl bg-purple-100 flex items-center justify-center flex-shrink-0">
               <Truck size={19} className="text-purple-600" />
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-foreground">Expedição</h2>
-              <p className="text-xs text-muted-foreground">
+            <div className="min-w-0">
+              <h2 className="text-base md:text-lg font-bold text-foreground">Expedição</h2>
+              <p className="text-[11px] md:text-xs text-muted-foreground leading-snug">
                 {counts.a_expedir} a expedir · {counts.emitida} emitida · {counts.enviada} em trânsito · {counts.entregue} entregue
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="relative">
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <div className="relative flex-1 md:flex-none">
               <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input value={busca} onChange={e => setBusca(e.target.value)}
                 placeholder="Buscar NF, OP, cliente..."
-                className="border border-border rounded-xl pl-8 pr-8 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary w-52" />
+                className="border border-border rounded-xl pl-8 pr-8 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary w-full md:w-52" />
               {busca && (
                 <button onClick={() => setBusca('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                   <X size={13} />
                 </button>
               )}
             </div>
-            <button onClick={load} className="p-2.5 border border-border rounded-xl hover:bg-muted transition-colors">
+            <button onClick={load} className="p-2.5 border border-border rounded-xl hover:bg-muted transition-colors flex-shrink-0">
               <RefreshCw size={15} className="text-muted-foreground" />
             </button>
             {!readonly && (
               <button onClick={() => setShowForm(true)}
-                className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm">
-                <Plus size={16} /> Nova NF
+                className="flex items-center gap-1.5 md:gap-2 bg-primary text-primary-foreground px-3 md:px-4 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm flex-shrink-0 whitespace-nowrap">
+                <Plus size={16} /> <span className="hidden sm:inline">Nova NF</span><span className="sm:hidden">NF</span>
               </button>
             )}
           </div>
         </div>
 
         {/* Filtro por destino */}
-        <div className="mt-3 flex gap-2 flex-wrap">
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-1 flex-nowrap md:flex-wrap">
           {[
             { k: 'todos', l: '📦 Todos' },
             { k: 'retirada_fabrica', l: '🏭 Retirada Fábrica' },
@@ -583,23 +590,23 @@ export default function Expedicao() {
             { k: 'entrega_cliente', l: '🏠 Entrega Cliente' },
           ].map(f => (
             <button key={f.k} onClick={() => setFiltroDestino(f.k)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${filtroDestino === f.k ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-border'}`}>
+              className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all flex-shrink-0 whitespace-nowrap ${filtroDestino === f.k ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-border'}`}>
               {f.l}
             </button>
           ))}
         </div>
 
         {/* Abas */}
-        <div className="mt-4 flex gap-2 border-b border-border pb-1">
+        <div className="mt-4 flex gap-2 border-b border-border pb-1 overflow-x-auto">
           <button
             onClick={() => setAba('kanban')}
-            className={`text-xs font-semibold px-4 py-2 rounded-t-lg transition-colors border-b-2 ${aba === 'kanban' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+            className={`text-xs font-semibold px-4 py-2.5 rounded-t-lg transition-colors border-b-2 flex-shrink-0 whitespace-nowrap ${aba === 'kanban' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
           >
             📦 Kanban Expedição
           </button>
           <button
             onClick={() => setAba('rapida')}
-            className={`flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-t-lg transition-colors border-b-2 ${aba === 'rapida' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+            className={`flex items-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-t-lg transition-colors border-b-2 flex-shrink-0 whitespace-nowrap ${aba === 'rapida' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
           >
             🏷️ Etiquetas em Lote
             {pedidosSeparados.length > 0 && (
@@ -616,7 +623,7 @@ export default function Expedicao() {
                 <div className="h-full rounded-full transition-all duration-500"
                   style={{ width: counts[col.key] > 0 ? '100%' : '0%', background: col.accent }} />
               </div>
-              <p className="text-lg font-bold text-foreground">{counts[col.key]}</p>
+              <p className="text-base md:text-lg font-bold text-foreground">{counts[col.key]}</p>
               <p className="text-[10px] text-muted-foreground leading-tight hidden sm:block">{col.label}</p>
             </div>
           ))}
@@ -631,7 +638,7 @@ export default function Expedicao() {
       )}
 
       {/* Kanban integrado */}
-      {aba === 'kanban' && <div className="flex gap-4 overflow-x-auto pb-4 flex-1 items-start">
+      {aba === 'kanban' && <div className={`flex gap-3 md:gap-4 overflow-x-auto pb-4 flex-1 items-start ${isMobile ? 'snap-x snap-mandatory' : ''}`}>
         {colunasExp.map((coluna) => {
           const Icon = coluna.icon;
           const isAExpedir = coluna.key === 'a_expedir';
@@ -665,8 +672,8 @@ export default function Expedicao() {
           return (
             <div
               key={coluna.key}
-              className="flex-shrink-0 w-80 rounded-2xl flex flex-col overflow-hidden"
-              style={{ minHeight: '60vh', background: coluna.bg, border: `1.5px solid ${coluna.border}` }}
+              className={`flex-shrink-0 ${isMobile ? 'w-[85vw] max-w-sm snap-center' : 'w-80'} rounded-2xl flex flex-col overflow-hidden`}
+              style={{ height: isMobile ? 'calc(100vh - 340px)' : 'calc(100vh - 320px)', minHeight: '420px', background: coluna.bg, border: `1.5px solid ${coluna.border}` }}
             >
               {/* Coluna header */}
               <div className="px-4 py-3 flex items-center justify-between sticky top-0 z-10"
@@ -679,7 +686,7 @@ export default function Expedicao() {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">{coluna.desc}</span>
+                  <span className="text-xs text-muted-foreground hidden lg:inline">{coluna.desc}</span>
                   <span className="text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full text-white"
                     style={{ background: coluna.accent, opacity: count === 0 ? 0.4 : 1 }}>
                     {count}
