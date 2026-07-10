@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { gerarDANFEHTML } from '@/lib/danfeGenerator';
 import { gerarDocumentoTransporteHTML } from '@/lib/documentoTransporte';
-import { Truck, FileText, CheckCircle, Plus, Search, X, Send, Printer, ExternalLink, RefreshCw, Package, ArrowRight, Eye, Tag, MapPin, Factory, Building2, Home } from 'lucide-react';
+import { Truck, FileText, CheckCircle, Plus, Search, X, Send, Printer, ExternalLink, RefreshCw, Package, ArrowRight, Eye, Tag, MapPin, Factory, Building2, Home, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import { getDestinoLabel, DestinoBadge } from '@/components/pedidos/DestinoPedido';
 import { gerarNumero } from '@/lib/numeracao';
 import { registrarLog } from '@/lib/audit';
@@ -265,6 +265,7 @@ export default function Expedicao() {
   const [filtroDestino, setFiltroDestino] = useState('todos');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [etapaMobile, setEtapaMobile] = useState('a_expedir');
+  const [headerAberto, setHeaderAberto] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -563,7 +564,18 @@ export default function Expedicao() {
       <AlertaSeparacao />
 
       {/* Header */}
-      <div className="bg-card border border-border rounded-2xl px-4 md:px-5 py-4 flex-shrink-0">
+      <div className="bg-card border border-border rounded-2xl px-4 md:px-5 py-3 md:py-4 flex-shrink-0">
+        {/* Toggle mobile: mostrar/esconder busca e filtros */}
+        <button onClick={() => setHeaderAberto(v => !v)}
+          className="md:hidden w-full flex items-center justify-between py-1">
+          <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <SlidersHorizontal size={14} className="text-primary" /> Busca e filtros
+            {(busca || filtroDestino !== 'todos') && <span className="w-2 h-2 rounded-full bg-primary inline-block" />}
+          </span>
+          <ChevronDown size={16} className={`text-muted-foreground transition-transform ${headerAberto ? 'rotate-180' : ''}`} />
+        </button>
+
+        <div className={`${headerAberto ? 'block mt-3' : 'hidden'} md:block md:mt-0`}>
         <div className="flex items-center justify-between flex-wrap gap-2 md:gap-3">
           <div className="hidden md:flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-2xl bg-purple-100 flex items-center justify-center flex-shrink-0">
@@ -616,8 +628,10 @@ export default function Expedicao() {
           ))}
         </div>
 
-        {/* Abas */}
-        <div className="mt-3 flex gap-2 border-b border-border pb-1 overflow-x-auto">
+        </div>
+
+        {/* Abas — sempre visíveis */}
+        <div className="mt-2 md:mt-3 flex gap-2 border-b border-border pb-1 overflow-x-auto">
           <button
             onClick={() => setAba('kanban')}
             className={`text-xs font-semibold px-4 py-2.5 rounded-t-lg transition-colors border-b-2 flex-shrink-0 whitespace-nowrap ${aba === 'kanban' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
