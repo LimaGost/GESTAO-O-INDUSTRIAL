@@ -6,15 +6,19 @@ import {
 } from 'recharts';
 import CustomTooltip from './CustomTooltip';
 import ExportableChart from './ExportableChart';
+import { isOPFinalizada, dataFinalizacaoOP } from '@/lib/opStatus';
 
 const STATUS_OP = {
-  a_produzir:   { label: 'A Produzir',   color: '#64748B' },
-  em_producao:  { label: 'Em Produção',  color: '#0EA5E9' },
-  produzido:    { label: 'Produzido',    color: '#22C55E' },
-  em_embalagem: { label: 'Em Embalagem', color: '#F59E0B' },
-  em_separacao: { label: 'Em Separação', color: '#14B8A6' },
-  finalizado:   { label: 'Finalizado',   color: '#A855F7' },
-  cancelado:    { label: 'Cancelado',    color: '#EF4444' },
+  a_produzir:             { label: 'A Produzir',       color: '#64748B' },
+  producao_planejada:     { label: 'Planejada',        color: '#14B8A6' },
+  em_producao:            { label: 'Em Produção',      color: '#0EA5E9' },
+  aguardando_finalizacao: { label: 'Ag. Finalização',  color: '#F97316' },
+  produzido:              { label: 'Produzido',        color: '#22C55E' },
+  em_embalagem:           { label: 'Em Embalagem',     color: '#F59E0B' },
+  em_separacao:           { label: 'Em Separação',     color: '#14B8A6' },
+  producao_finalizada:    { label: 'Prod. Finalizada', color: '#22C55E' },
+  finalizado:             { label: 'Finalizado',       color: '#A855F7' },
+  cancelado:              { label: 'Cancelado',        color: '#EF4444' },
 };
 
 function isInRange(dateStr, from, to) {
@@ -62,7 +66,7 @@ export default function DashboardProducao({ rawData, loading, period }) {
       diasMap[k] = { data: dt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }), finalizadas: 0, iniciadas: 0 };
     }
     for (const op of allOrdens) {
-      const kf = (op.data_finalizacao || '').split('T')[0];
+      const kf = (dataFinalizacaoOP(op) || '').split('T')[0];
       if (diasMap[kf]) diasMap[kf].finalizadas += 1;
       const ki = (op.data_inicio || '').split('T')[0];
       if (diasMap[ki]) diasMap[ki].iniciadas += 1;
@@ -71,14 +75,15 @@ export default function DashboardProducao({ rawData, loading, period }) {
 
     // Resumo do dia
     const todayStr = hoje.toISOString().split('T')[0];
-    const finalizadasHoje = allOrdens.filter(o => (o.data_finalizacao || '').startsWith(todayStr)).length;
+    const finalizadasHoje = allOrdens.filter(o => (dataFinalizacaoOP(o) || '').startsWith(todayStr)).length;
     const iniciadasHoje = allOrdens.filter(o => (o.data_inicio || '').startsWith(todayStr)).length;
 
     // Semana
     const semanaInicio = new Date(hoje); semanaInicio.setDate(hoje.getDate() - 6);
     const finalizadasSemana = allOrdens.filter(o => {
-      if (!o.data_finalizacao) return false;
-      const d = new Date(o.data_finalizacao);
+      const df = dataFinalizacaoOP(o);
+      if (!df) return false;
+      const d = new Date(df);
       return d >= semanaInicio && d <= hoje;
     }).length;
 
@@ -89,8 +94,9 @@ export default function DashboardProducao({ rawData, loading, period }) {
     );
 
     // Eficiência: finalizadas vs total
-    const total = ordens.length;
-    const finalizadas = ordens.filter(o => o.status === 'finalizado').length;
+    const ativas = ordens.filter(o => o.status !== 'cancelado');
+    const total = ativas.length;
+    const finalizadas = ativas.filter(isOPFinalizada).length;
     const eficiencia = total > 0 ? Math.round((finalizadas / total) * 100) : 0;
 
     // Meses anteriores para gráfico de produção mensal
@@ -100,9 +106,10 @@ export default function DashboardProducao({ rawData, loading, period }) {
       const k = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
       mesesMap[k] = { mes: dt.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }), finalizadas: 0 };
     }
-    for (const op of allOrdens.filter(o => o.status === 'finalizado')) {
-      if (!op.data_finalizacao) continue;
-      const dt = new Date(op.data_finalizacao);
+    for (const op of allOrdens.filter(isOPFinalizada)) {
+      const df = dataFinalizacaoOP(op);
+      if (!df) continue;
+      const dt = new Date(df);
       const k = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
       if (mesesMap[k]) mesesMap[k].finalizadas += 1;
     }

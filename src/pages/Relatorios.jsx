@@ -19,6 +19,7 @@ import TabEstoque from '@/components/relatorios/TabEstoque';
 import TabExpedicaoRel from '@/components/relatorios/TabExpedicaoRel';
 import TabWhiteLabelRel from '@/components/relatorios/TabWhiteLabelRel';
 import { diffHoras, fmtHoras } from '@/lib/brasilia';
+import { isOPFinalizada, dataFinalizacaoOP, OP_STATUS_LABEL } from '@/lib/opStatus';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 
 const COLORS = ['#F59E0B', '#3B82F6', '#22C55E', '#F97316', '#A855F7', '#EC4899', '#14B8A6', '#EF4444'];
@@ -250,7 +251,7 @@ function TabVisaoGeral({ pedidos, ordens, produtos, clientes, ocultar, allPedido
   const faturamento = ativos.reduce((s, p) => s + (p.valor_total || 0), 0);
   const expedidos = pedidos.filter(p => p.status === 'expedido' || p.status === 'entregue');
   const entregues = pedidos.filter(p => p.status === 'entregue');
-  const emProducao = ordens.filter(o => ['a_produzir', 'em_producao', 'produzido', 'em_embalagem'].includes(o.status));
+  const emProducao = ordens.filter(o => ['a_produzir', 'producao_planejada', 'em_producao', 'aguardando_finalizacao', 'produzido', 'em_embalagem', 'em_separacao'].includes(o.status));
   const opsAtrasadas = ordens.filter(o =>
     ['a_produzir', 'em_producao'].includes(o.status) &&
     o.created_date && new Date(o.created_date) < new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
@@ -612,7 +613,8 @@ function TabComercial({ pedidos, clientes, produtos, ocultar, allPedidos }) {
 
 /* ── PRODUÇÃO ─────────────────────────────────────────────────────────────── */
 function TabProducao({ ordens, allOrdens }) {
-  const finalizadas = ordens.filter(o => o.status === 'finalizado');
+  const finalizadas = ordens.filter(isOPFinalizada);
+  const opsAtivas = ordens.filter(o => o.status !== 'cancelado');
   const totalProduzido = finalizadas.reduce((s, o) =>
     s + (o.itens?.length > 0 ? o.itens.reduce((a, i) => a + (i.quantidade || 0), 0) : (o.quantidade || 0)), 0);
   const opsAtrasadas = ordens.filter(o =>
@@ -621,11 +623,15 @@ function TabProducao({ ordens, allOrdens }) {
   );
 
   const statusData = [
-    { name: 'A Produzir',   value: ordens.filter(o => o.status === 'a_produzir').length,   color: '#94A3B8' },
-    { name: 'Em Produção',  value: ordens.filter(o => o.status === 'em_producao').length,  color: '#3B82F6' },
-    { name: 'Produzido',    value: ordens.filter(o => o.status === 'produzido').length,    color: '#22C55E' },
-    { name: 'Embalagem',    value: ordens.filter(o => o.status === 'em_embalagem').length, color: '#F59E0B' },
-    { name: 'Finalizado',   value: ordens.filter(o => o.status === 'finalizado').length,   color: '#A855F7' },
+    { name: 'A Produzir',      value: ordens.filter(o => o.status === 'a_produzir').length,             color: '#94A3B8' },
+    { name: 'Planejada',       value: ordens.filter(o => o.status === 'producao_planejada').length,     color: '#14B8A6' },
+    { name: 'Em Produção',     value: ordens.filter(o => o.status === 'em_producao').length,            color: '#3B82F6' },
+    { name: 'Ag. Finalização', value: ordens.filter(o => o.status === 'aguardando_finalizacao').length, color: '#F97316' },
+    { name: 'Produzido',       value: ordens.filter(o => o.status === 'produzido').length,              color: '#22C55E' },
+    { name: 'Embalagem',       value: ordens.filter(o => o.status === 'em_embalagem').length,           color: '#F59E0B' },
+    { name: 'Em Separação',    value: ordens.filter(o => o.status === 'em_separacao').length,           color: '#0EA5E9' },
+    { name: 'Finalizado',      value: finalizadas.length,                                               color: '#A855F7' },
+    { name: 'Cancelado',       value: ordens.filter(o => o.status === 'cancelado').length,              color: '#EF4444' },
   ].filter(s => s.value > 0);
 
   // Produção mensal
@@ -636,9 +642,10 @@ function TabProducao({ ordens, allOrdens }) {
     const k = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
     mesesMap[k] = { mes: dt.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }), finalizadas: 0 };
   }
-  for (const op of allOrdens.filter(o => o.status === 'finalizado')) {
-    if (!op.data_finalizacao) continue;
-    const dt = new Date(op.data_finalizacao);
+  for (const op of allOrdens.filter(isOPFinalizada)) {
+    const df = dataFinalizacaoOP(op);
+    if (!df) continue;
+    const dt = new Date(df);
     const k = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
     if (mesesMap[k]) mesesMap[k].finalizadas += 1;
   }
@@ -658,8 +665,8 @@ function TabProducao({ ordens, allOrdens }) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard label="Total de OPs" value={ordens.length} icon={Factory} color="bg-slate-500" />
-        <KpiCard label="OPs Finalizadas" value={finalizadas.length} sub={`${ordens.length > 0 ? ((finalizadas.length / ordens.length) * 100).toFixed(0) : 0}% do total`} icon={Package} color="bg-purple-500" />
+        <KpiCard label="Total de OPs" value={opsAtivas.length} sub={ordens.length !== opsAtivas.length ? `+${ordens.length - opsAtivas.length} canceladas` : undefined} icon={Factory} color="bg-slate-500" />
+        <KpiCard label="OPs Finalizadas" value={finalizadas.length} sub={`${opsAtivas.length > 0 ? ((finalizadas.length / opsAtivas.length) * 100).toFixed(0) : 0}% do total`} icon={Package} color="bg-purple-500" />
         <KpiCard label="OPs Atrasadas" value={opsAtrasadas.length} icon={AlertTriangle} color={opsAtrasadas.length > 0 ? 'bg-red-500' : 'bg-green-500'} />
         <KpiCard label="Unidades Produzidas" value={fmt(totalProduzido)} icon={TrendingUp} color="bg-green-500" />
       </div>
@@ -718,7 +725,7 @@ function TabProducao({ ordens, allOrdens }) {
             rows={ordens.map(o => ({
               numero: o.numero, produto: o.produto_nome || `Pedido ${o.pedido_numero}`,
               qtd: o.itens?.length > 0 ? o.itens.reduce((s, i) => s + (i.quantidade || 0), 0) : (o.quantidade || 0),
-              status: { a_produzir: 'A Produzir', em_producao: 'Em Produção', produzido: 'Produzido', em_embalagem: 'Embalagem', finalizado: 'Finalizado' }[o.status] || o.status,
+              status: OP_STATUS_LABEL[o.status] || o.status,
               lote: o.lote || '—',
             }))}
           />
@@ -733,7 +740,7 @@ function TabProducao({ ordens, allOrdens }) {
             <tbody>
               {ordens.slice(0, 30).map(o => {
                 const qtd = o.itens?.length > 0 ? o.itens.reduce((s, i) => s + (i.quantidade || 0), 0) : (o.quantidade || 0);
-                const SC = { a_produzir: 'bg-slate-100 text-slate-600', em_producao: 'bg-sky-100 text-sky-700', produzido: 'bg-green-100 text-green-700', em_embalagem: 'bg-amber-100 text-amber-700', finalizado: 'bg-purple-100 text-purple-700' };
+                const SC = { a_produzir: 'bg-slate-100 text-slate-600', producao_planejada: 'bg-teal-100 text-teal-700', em_producao: 'bg-sky-100 text-sky-700', aguardando_finalizacao: 'bg-orange-100 text-orange-700', produzido: 'bg-green-100 text-green-700', em_embalagem: 'bg-amber-100 text-amber-700', em_separacao: 'bg-blue-100 text-blue-700', producao_finalizada: 'bg-green-100 text-green-700', finalizado: 'bg-purple-100 text-purple-700', cancelado: 'bg-red-100 text-red-700' };
                 return (
                   <tr key={o.id} className="border-b border-border/50 hover:bg-muted/20">
                     <td className="py-2 pr-4 font-mono text-xs">{o.numero}</td>
@@ -742,7 +749,7 @@ function TabProducao({ ordens, allOrdens }) {
                     <td className="py-2 pr-4 font-semibold">{qtd}</td>
                     <td className="py-2 pr-4">
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${SC[o.status] || 'bg-muted text-muted-foreground'}`}>
-                        {{ a_produzir: 'A Produzir', em_producao: 'Em Produção', produzido: 'Produzido', em_embalagem: 'Embalagem', finalizado: 'Finalizado' }[o.status] || o.status}
+                        {OP_STATUS_LABEL[o.status] || o.status}
                       </span>
                     </td>
                     <td className="py-2 pr-4 font-mono text-xs text-muted-foreground">{o.lote || '—'}</td>
@@ -760,7 +767,7 @@ function TabProducao({ ordens, allOrdens }) {
 
 /* ── PRODUTIVIDADE ────────────────────────────────────────────────────────── */
 function TabProdutividade({ ordens, produtos }) {
-  const finalizadas = ordens.filter(o => o.status === 'finalizado');
+  const finalizadas = ordens.filter(isOPFinalizada);
   const mediaHorasProd = (() => {
     const v = finalizadas.filter(o => o.data_inicio && o.data_fim_producao);
     if (!v.length) return null;

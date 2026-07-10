@@ -4,6 +4,7 @@ import {
   ShoppingCart, Factory, CheckCircle, Truck, AlertTriangle,
   TrendingUp, Users, Package, Tag, DollarSign, ArrowUpRight, ArrowDownRight, Minus
 } from 'lucide-react';
+import { isOPFinalizada } from '@/lib/opStatus';
 
 function isInRange(dateStr, from, to) {
   if (!dateStr) return true;
@@ -87,8 +88,8 @@ export default function DashboardKpis({ rawData, loading, period, ocultarValores
       .reduce((s, p) => s + (p.valor_total || 0), 0);
 
     const totalProduzido = ordens
-      .filter(o => o.status === 'finalizado')
-      .reduce((s, o) => s + (o.quantidade || 0), 0);
+      .filter(isOPFinalizada)
+      .reduce((s, o) => s + (o.itens?.length > 0 ? o.itens.reduce((a, i) => a + (i.quantidade || 0), 0) : (o.quantidade || 0)), 0);
 
     const ticketMedio = faturados > 0
       ? pedidos.filter(p => p.status === 'expedido').reduce((s, p) => s + (p.valor_total || 0), 0) / faturados
