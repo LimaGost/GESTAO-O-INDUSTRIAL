@@ -299,7 +299,13 @@ export default function Kanban() {
     // ── Finalizado: marca pedido como "separado" para liberar expedição em Pedidos ──
     if (acaoProximo === 'finalizar_expedicao') {
       updates.data_finalizacao = agora;
-      if (ordem.pedido_id) {
+      // Alocação parcial: mescla as quantidades produzidas na Separação que aguardava produção
+      const { concluirProducaoParaSeparacao } = await import('@/lib/alocacaoPedido');
+      const mesclou = await concluirProducaoParaSeparacao(ordem).catch(() => false);
+      if (mesclou && ordem.pedido_id) {
+        await base44.entities.Pedido.update(ordem.pedido_id, { status: 'separacao' }).catch(() => {});
+        await registrarLog('Pedido', ordem.pedido_id, 'STATUS', `Produção da OP ${ordem.numero} concluída — pedido completo e pronto para separação.`);
+      } else if (ordem.pedido_id) {
         const todosPedidos = await base44.entities.Pedido.list();
         const ped = todosPedidos.find((p) => p.id === ordem.pedido_id);
         if (ped) {

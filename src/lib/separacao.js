@@ -60,6 +60,7 @@ export async function criarSeparacaoFromPedido(pedido, statusInicial = 'aguardan
     white_label_marca: pedido.white_label_marca || null,
     itens,
     ...calcularTotais(itens),
+    estoque_ja_reservado: true, // estoque é baixado na criação do pedido
     destino_tipo: pedido.destino_tipo || null,
     destino_transportadora: pedido.destino_transportadora || null,
     destino_unidade: pedido.destino_unidade || null,
@@ -96,6 +97,7 @@ export async function criarSeparacaoFromGrupo(grupo, pedidos, statusInicial = 'a
     white_label_marca: primeiro.white_label_marca || null,
     itens,
     ...calcularTotais(itens),
+    estoque_ja_reservado: true, // estoque é baixado na criação dos pedidos do grupo
     destino_tipo: primeiro.destino_tipo || null,
     destino_transportadora: primeiro.destino_transportadora || null,
     destino_unidade: primeiro.destino_unidade || null,

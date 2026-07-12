@@ -1,6 +1,7 @@
-import { ArrowRight, User, Tag, Package, Truck, MapPin, Calendar, Flag, CheckCircle, Hash, ClipboardList, Home } from 'lucide-react';
+import { ArrowRight, User, Tag, Package, Truck, MapPin, Calendar, Flag, CheckCircle, Hash, ClipboardList, Home, Clock } from 'lucide-react';
 
 const STATUS_ACCENT = {
+  aguardando_producao: '#F59E0B',
   aguardando_separacao: '#64748B',
   em_separacao: '#0EA5E9',
   separado: '#22C55E',
@@ -41,7 +42,11 @@ export default function SeparacaoCard({ separacao, onAvancar, loading, labelBota
         {/* Header */}
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex items-center gap-1.5 flex-1 min-w-0 flex-wrap">
-            <span className="text-xs font-bold text-foreground truncate">{separacao.numero}</span>
+            <span className="text-xs font-bold text-foreground truncate">
+              {separacao.cliente_nome && separacao.pedido_numero
+                ? `${separacao.cliente_nome} • ${separacao.pedido_numero}`
+                : separacao.numero}
+            </span>
             {separacao.ordem_producao_numero && (
               <span className="text-[10px] bg-green-50 text-green-600 px-1.5 py-0.5 rounded font-medium flex-shrink-0">🏭 {separacao.ordem_producao_numero}</span>
             )}
@@ -62,6 +67,19 @@ export default function SeparacaoCard({ separacao, onAvancar, loading, labelBota
           <div className="flex items-center gap-1 text-[10px] font-bold mb-1.5 px-2 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-200">
             <ClipboardList size={10} className="flex-shrink-0" />
             <span className="truncate">Pedido {separacao.pedido_numero}</span>
+          </div>
+        )}
+
+        {/* Aguardando produção (alocação parcial) */}
+        {separacao.status === 'aguardando_producao' && (
+          <div className="text-[10px] font-semibold mb-1.5 px-2 py-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 space-y-0.5">
+            <p>🟡 Aguardando Produção — {separacao.quantidade_pendente_producao || 0} un em produção</p>
+            <p className="text-green-600">🟢 {separacao.quantidade_total || 0} un já reservadas</p>
+          </div>
+        )}
+        {separacao.producao_concluida && separacao.status === 'aguardando_separacao' && (
+          <div className="flex items-center gap-1 text-[10px] font-semibold mb-1.5 px-2 py-1 rounded-lg bg-green-50 text-green-700 border border-green-200">
+            <CheckCircle size={10} /> Pedido completo — Pronto para Separação
           </div>
         )}
 
@@ -147,7 +165,11 @@ export default function SeparacaoCard({ separacao, onAvancar, loading, labelBota
 
       {/* Botão */}
       <div className="px-3 pb-3">
-        {separacao.status === 'liberado_expedicao' ? (
+        {separacao.status === 'aguardando_producao' ? (
+          <div className="flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-amber-600 bg-amber-50 rounded-xl">
+            <Clock size={12} /> Aguardando Produção
+          </div>
+        ) : separacao.status === 'liberado_expedicao' ? (
           <div className="flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-teal-600 bg-teal-50 rounded-xl">
             <CheckCircle size={12} /> Liberado p/ Expedição
           </div>

@@ -55,7 +55,7 @@ export default function PedidoKanbanCard({
                 </span>
               )}
             </div>
-            <p className="text-sm font-bold text-foreground mt-0.5 truncate">{pedido.cliente_nome}</p>
+            <p className="text-sm font-bold text-foreground mt-0.5 truncate">{pedido.cliente_nome}{pedido.numero ? ` • ${pedido.numero}` : ''}</p>
             {pedido.white_label && pedido.white_label_marca && (
               <p className="text-[10px] text-purple-600 font-medium truncate">→ {pedido.white_label_marca}</p>
             )}

@@ -12,6 +12,7 @@ import ModalDetalhesPedido from '@/components/pedidos/ModalDetalhesPedido';
 import ModalSincronizarBling from '@/components/pedidos/ModalSincronizarBling';
 import { gerarNumero, gerarLote } from '@/lib/numeracao';
 import { registrarLog } from '@/lib/audit';
+import { alocarPedido } from '@/lib/alocacaoPedido';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 
 
@@ -152,67 +153,19 @@ export default function Pedidos() {
     }
     const itensAgrupados = Object.values(mapaItens);
 
-    const itensParaReserva = [];
-    const itensSemEstoque = [];
-    for (const item of itensAgrupados) {
-      const p = produtos.find(pr => pr.id === item.produto_id);
-      if (!p) continue;
-      const disponivelAtual = p.estoque_atual || 0;
-      const qtdReservar = Math.min(disponivelAtual, item.quantidade);
-      const qtdFalta = item.quantidade - qtdReservar;
-      if (qtdReservar > 0) itensParaReserva.push({ ...item, produto: p, qtdReservar });
-      if (qtdFalta > 0) itensSemEstoque.push({ ...item, produto: p, quantidadeFalta: qtdFalta });
-    }
-
-    const precisaProducao = itensSemEstoque.length > 0;
     const numero = gerarNumero('PED');
     const valorTotal = form.itens.reduce((s, i) => s + (i.total || 0), 0);
-    const status = precisaProducao ? 'aguardando_estoque' : 'separacao';
 
     const pedido = await base44.entities.Pedido.create({
       ...form,
       numero,
-      status,
+      status: 'rascunho',
       valor_total: valorTotal,
       ordens_producao_ids: [],
     });
 
-    const idsOrdens = [];
-
-    // Reserva (baixa) todo o estoque disponível imediatamente
-    for (const item of itensParaReserva) {
-      const novoEstoque = (item.produto.estoque_atual || 0) - item.qtdReservar;
-      await base44.entities.Produto.update(item.produto_id, { estoque_atual: novoEstoque });
-      await registrarLog('Produto', item.produto_id, 'RESERVA_ESTOQUE', `Reserva de ${item.qtdReservar} para pedido ${numero}`);
-    }
-
-    if (precisaProducao) {
-      // Só cria OP se houver itens que precisam de produção
-      const itensParaProducao = itensSemEstoque.map(i => ({
-        produto_id: i.produto_id,
-        produto_nome: i.produto_nome,
-        quantidade: i.quantidadeFalta,
-        disponivel: false,
-      }));
-
-      const opData = {
-        numero: gerarNumero('OP'),
-        produto_nome: `Pedido ${numero}`,
-        quantidade: itensParaProducao.reduce((s, i) => s + i.quantidade, 0),
-        itens: itensParaProducao,
-        status: 'a_produzir',
-        pedido_id: pedido.id,
-        pedido_numero: numero,
-        origem: 'pedido',
-        observacoes: form.observacoes || '',
-      };
-      const ordem = await base44.entities.OrdemProducao.create(opData);
-      idsOrdens.push(ordem.id);
-      await registrarLog('OrdemProducao', ordem.id, 'CRIACAO_AUTOMATICA',
-        `OP para pedido ${numero} — ${itensSemEstoque.length} item(s) para produção`);
-      await base44.entities.Pedido.update(pedido.id, { ordens_producao_ids: idsOrdens });
-
-    }
+    // Alocação inteligente: reserva estoque, cria Separação e OP (parcial) se necessário
+    const { status } = await alocarPedido({ pedido, itens: itensAgrupados, produtos, origem: 'pedido' });
 
     await registrarLog('Pedido', pedido.id, 'CRIACAO', `Pedido ${numero} criado. Status: ${status}`);
     setShowForm(false);
@@ -239,53 +192,11 @@ export default function Pedidos() {
     }
     const itensAgrupados = Object.values(mapaItens);
 
-    const itensParaReservaBling = [];
-    const itensSemEstoque = [];
-    for (const item of itensAgrupados) {
-      const p = produtos.find(pr => pr.id === item.produto_id);
-      if (!p) continue;
-      const disponivelAtual = p.estoque_atual || 0;
-      const qtdReservar = Math.min(disponivelAtual, item.quantidade);
-      const qtdFalta = item.quantidade - qtdReservar;
-      if (qtdReservar > 0) itensParaReservaBling.push({ ...item, produto: p, qtdReservar });
-      if (qtdFalta > 0) itensSemEstoque.push({ ...item, produto: p, quantidadeFalta: qtdFalta });
-    }
-
-    const precisaProducao = itensSemEstoque.length > 0;
-    const status = precisaProducao ? 'aguardando_estoque' : 'separacao';
     const numero = pedido.numero || gerarNumero('PED');
+    await base44.entities.Pedido.update(pedido.id, { itens: itensVinculados, numero });
 
-    await base44.entities.Pedido.update(pedido.id, { itens: itensVinculados, status, numero });
-
-    for (const item of itensParaReservaBling) {
-      const novoEstoque = (item.produto.estoque_atual || 0) - item.qtdReservar;
-      await base44.entities.Produto.update(item.produto_id, { estoque_atual: novoEstoque });
-      await registrarLog('Produto', item.produto_id, 'RESERVA_ESTOQUE', `Reserva de ${item.qtdReservar} para pedido Bling ${numero}`);
-    }
-
-    if (precisaProducao) {
-      const itensParaProducao = itensSemEstoque.map(i => ({
-        produto_id: i.produto_id,
-        produto_nome: i.produto_nome,
-        quantidade: i.quantidadeFalta,
-        disponivel: false,
-      }));
-      const opData = {
-        numero: gerarNumero('OP'),
-        produto_nome: `Pedido ${numero}`,
-        quantidade: itensParaProducao.reduce((s, i) => s + i.quantidade, 0),
-        itens: itensParaProducao,
-        status: 'a_produzir',
-        pedido_id: pedido.id,
-        pedido_numero: numero,
-        origem: 'bling',
-        observacoes: pedido.observacoes || '',
-      };
-      const ordem = await base44.entities.OrdemProducao.create(opData);
-      await base44.entities.Pedido.update(pedido.id, { ordens_producao_ids: [ordem.id] });
-      await registrarLog('OrdemProducao', ordem.id, 'CRIACAO_AUTOMATICA',
-        `OP Bling para pedido ${numero} — ${itensSemEstoque.length} item(s) para produção`);
-    }
+    // Alocação inteligente: reserva estoque, cria Separação e OP (parcial) se necessário
+    const { status } = await alocarPedido({ pedido: { ...pedido, numero, itens: itensVinculados }, itens: itensAgrupados, produtos, origem: 'bling' });
     await registrarLog('Pedido', pedido.id, 'PROCESSAMENTO_BLING', `Pedido Bling ${numero} processado. Status: ${status}`);
 
     setProcessandoBling(false);
@@ -299,54 +210,11 @@ export default function Pedidos() {
     const pedido = pedidoPortalProcessar;
     setProcessandoPortal(true);
 
-    const itensParaReservaPortal = [];
-    const itensSemEstoque = [];
-    for (const item of itensVinculados) {
-      if (!item.produto_id) continue;
-      const p = produtos.find(pr => pr.id === item.produto_id);
-      if (!p) continue;
-      const disponivelAtual = p.estoque_atual || 0;
-      const qtdReservar = Math.min(disponivelAtual, item.quantidade);
-      const qtdFalta = item.quantidade - qtdReservar;
-      if (qtdReservar > 0) itensParaReservaPortal.push({ ...item, produto: p, qtdReservar });
-      if (qtdFalta > 0) itensSemEstoque.push({ ...item, produto: p, quantidadeFalta: qtdFalta });
-    }
-
-    const precisaProducao = itensSemEstoque.length > 0;
-    const status = precisaProducao ? 'aguardando_estoque' : 'separacao';
     const numero = pedido.numero;
+    await base44.entities.Pedido.update(pedido.id, { itens: itensVinculados });
 
-    await base44.entities.Pedido.update(pedido.id, { itens: itensVinculados, status });
-
-    for (const item of itensParaReservaPortal) {
-      const novoEstoque = (item.produto.estoque_atual || 0) - item.qtdReservar;
-      await base44.entities.Produto.update(item.produto_id, { estoque_atual: novoEstoque });
-      await registrarLog('Produto', item.produto_id, 'RESERVA_ESTOQUE', `Reserva de ${item.qtdReservar} para pedido Portal ${numero}`);
-    }
-
-    if (precisaProducao) {
-      const itensParaProducao = itensSemEstoque.map(i => ({
-        produto_id: i.produto_id,
-        produto_nome: i.produto_nome,
-        quantidade: i.quantidadeFalta,
-        disponivel: false,
-      }));
-      const opData = {
-        numero: gerarNumero('OP'),
-        produto_nome: `Pedido ${numero}`,
-        quantidade: itensParaProducao.reduce((s, i) => s + i.quantidade, 0),
-        itens: itensParaProducao,
-        status: 'a_produzir',
-        pedido_id: pedido.id,
-        pedido_numero: numero,
-        origem: 'portal',
-        observacoes: pedido.observacoes || '',
-      };
-      const ordem = await base44.entities.OrdemProducao.create(opData);
-      await base44.entities.Pedido.update(pedido.id, { ordens_producao_ids: [ordem.id] });
-      await registrarLog('OrdemProducao', ordem.id, 'CRIACAO_AUTOMATICA',
-        `OP Portal para pedido ${numero} — ${itensSemEstoque.length} item(s) para produção`);
-    }
+    // Alocação inteligente: reserva estoque, cria Separação e OP (parcial) se necessário
+    const { status } = await alocarPedido({ pedido: { ...pedido, itens: itensVinculados }, itens: itensVinculados.filter(i => i.produto_id), produtos, origem: 'portal' });
     await registrarLog('Pedido', pedido.id, 'PROCESSAMENTO_PORTAL', `Pedido Portal ${numero} processado. Status: ${status}`);
 
     setProcessandoPortal(false);

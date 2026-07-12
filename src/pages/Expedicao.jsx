@@ -154,7 +154,7 @@ function ExpedicaoCard({ exp, coluna, onAvancar, onImprimirNF, onImprimirEtiquet
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">NF {exp.numero_nf}</p>
               {isWL && <span className="text-[9px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-bold">WL</span>}
             </div>
-            <p className="text-sm font-bold text-foreground leading-tight truncate">{exp.cliente_nome}</p>
+            <p className="text-sm font-bold text-foreground leading-tight truncate">{exp.cliente_nome}{exp.pedido_numero ? ` • ${exp.pedido_numero}` : ''}</p>
             {exp.pedido_numero && (
               <p className="text-xs text-muted-foreground mt-0.5">Pedido <span className="font-semibold text-foreground">#{exp.pedido_numero}</span></p>
             )}
@@ -309,6 +309,7 @@ export default function Expedicao() {
     const pm = {};
     for (const p of pedidos) pm[p.id] = {
       nome: p.cliente_nome,
+      status: p.status,
       cliente_id: p.cliente_id,
       itens: p.itens,
       valor_total: p.valor_total,
@@ -384,24 +385,68 @@ export default function Expedicao() {
     setEmitindoOpId(null);
   };
 
-  const criarExpedicao = async ({ pedidoId, transportadora, observacoes }) => {
+  const criarExpedicao = async ({ pedidoId, transportadora, observacoes, itens, expedicaoExistenteId }) => {
     const pedInfo = pedidoMap[pedidoId];
     if (!pedInfo) return;
     setLoadingForm(true);
-    const numero_nf = gerarNumero('NF');
+    const itensExp = (itens && itens.length > 0) ? itens : (pedInfo.itens || []);
     const hoje = new Date().toISOString().split('T')[0];
 
-    const expedicao = await base44.entities.Expedicao.create({
-      numero_nf, pedido_id: pedidoId,
-      pedido_numero: pedInfo.numero,
-      cliente_nome: pedInfo.nome,
-      itens: pedInfo.itens || [],
-      status: 'emitida', data_emissao: hoje,
-      transportadora, valor_total: pedInfo.valor_total || 0, observacoes,
-    });
+    // Quantidades já expedidas anteriormente + as desta emissão
+    const jaExpedido = {};
+    for (const e of expedicoes.filter(e => e.pedido_id === pedidoId)) {
+      for (const i of (e.itens || [])) {
+        const k = i.produto_id || i.produto_nome;
+        jaExpedido[k] = (jaExpedido[k] || 0) + (i.quantidade || 0);
+      }
+    }
+    for (const i of itensExp) {
+      const k = i.produto_id || i.produto_nome;
+      jaExpedido[k] = (jaExpedido[k] || 0) + (i.quantidade || 0);
+    }
+    const completo = (pedInfo.itens || []).every(i => (jaExpedido[i.produto_id || i.produto_nome] || 0) >= (i.quantidade || 0));
 
-    await base44.entities.Pedido.update(pedidoId, { status: 'expedido' });
-    await registrarLog('Expedicao', expedicao.id, 'EMISSAO', `NF ${numero_nf} emitida manualmente`);
+    // Valor proporcional aos itens expedidos
+    const precoUnit = {};
+    for (const i of (pedInfo.itens || [])) {
+      const k = i.produto_id || i.produto_nome;
+      precoUnit[k] = i.preco_unitario || i.valor_unitario || (i.total && i.quantidade ? i.total / i.quantidade : 0);
+    }
+    const valorExp = itensExp.reduce((s, i) => s + (i.quantidade || 0) * (precoUnit[i.produto_id || i.produto_nome] || 0), 0);
+
+    if (expedicaoExistenteId) {
+      // Vincula os itens a uma NF já existente
+      const expExist = expedicoes.find(e => e.id === expedicaoExistenteId);
+      if (expExist) {
+        const merged = (expExist.itens || []).map(m => ({ ...m }));
+        for (const it of itensExp) {
+          const ex = merged.find(m => (m.produto_id || m.produto_nome) === (it.produto_id || it.produto_nome));
+          if (ex) ex.quantidade = (ex.quantidade || 0) + (it.quantidade || 0);
+          else merged.push({ produto_id: it.produto_id, produto_nome: it.produto_nome, quantidade: it.quantidade });
+        }
+        await base44.entities.Expedicao.update(expExist.id, {
+          itens: merged,
+          valor_total: (expExist.valor_total || 0) + valorExp,
+          observacoes: [expExist.observacoes, observacoes].filter(Boolean).join(' | '),
+        });
+        await registrarLog('Expedicao', expExist.id, 'VINCULO_ITENS', `Itens do pedido ${pedInfo.numero} vinculados à NF ${expExist.numero_nf}`);
+      }
+    } else {
+      const numero_nf = gerarNumero('NF');
+      const expedicao = await base44.entities.Expedicao.create({
+        numero_nf, pedido_id: pedidoId,
+        pedido_numero: pedInfo.numero,
+        cliente_id: pedInfo.cliente_id || '',
+        cliente_nome: pedInfo.nome,
+        itens: itensExp,
+        status: 'emitida', data_emissao: hoje,
+        transportadora, valor_total: valorExp || pedInfo.valor_total || 0, observacoes,
+      });
+      await registrarLog('Expedicao', expedicao.id, 'EMISSAO', `NF ${numero_nf} emitida${completo ? '' : ' (expedição parcial)'} — pedido ${pedInfo.numero}`);
+    }
+
+    await base44.entities.Pedido.update(pedidoId, { status: completo ? 'expedido' : 'separado' });
+    if (!completo) await registrarLog('Pedido', pedidoId, 'EXPEDICAO_PARCIAL', `Expedição parcial do pedido ${pedInfo.numero} — quantidades restantes pendentes`);
     await load();
     setLoadingForm(false);
     setShowForm(false);
@@ -532,7 +577,7 @@ export default function Expedicao() {
   }, {});
 
   const pedidosDisponiveis = Object.entries(pedidoMap)
-    .filter(([id]) => !expedicoes.some(e => e.pedido_id === id))
+    .filter(([id, info]) => info.status === 'separado' || !expedicoes.some(e => e.pedido_id === id))
     .map(([id, info]) => ({ id, ...info }));
 
   const renderCardKanban = (coluna, card) => coluna.key === 'a_expedir' ? (
@@ -781,6 +826,7 @@ export default function Expedicao() {
       {showForm && (
         <NovaExpedicaoModal
           pedidos={pedidosDisponiveis}
+          expedicoes={expedicoes}
           loading={loadingForm}
           onCriar={criarExpedicao}
           onClose={() => setShowForm(false)}

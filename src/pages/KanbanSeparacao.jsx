@@ -70,6 +70,7 @@ export default function KanbanSeparacao() {
   }, []);
 
   const avancar = async (sep) => {
+    if (sep.status === 'aguardando_producao') return; // bloqueado até a produção concluir
     const proximo = colunas.find(c => c.key === sep.status)?.proximo;
     if (!proximo) return;
     setSeparacoes(prev => prev.map(s => s.id === sep.id ? { ...s, status: proximo } : s));
@@ -102,7 +103,8 @@ export default function KanbanSeparacao() {
       }
 
       // Ao finalizar a separação: baixa o estoque — quantidade reservada ao pedido
-      if (proximo === 'liberado_expedicao' && sep.itens?.length > 0) {
+      // (exceto quando o estoque já foi reservado/baixado na criação do pedido)
+      if (proximo === 'liberado_expedicao' && sep.itens?.length > 0 && !sep.estoque_ja_reservado) {
         const produtos = await base44.entities.Produto.list();
         await Promise.all((sep.itens || []).map(async (item) => {
           const prod = produtos.find(p => p.id === item.produto_id);
@@ -167,6 +169,9 @@ export default function KanbanSeparacao() {
     }
   };
 
+  // Cards aguardando produção (alocação parcial) aparecem na primeira coluna, bloqueados
+  const statusColuna = (s) => s.status === 'aguardando_producao' ? (colunas[0]?.key || 'aguardando_separacao') : s.status;
+
   const separacoesFiltradas = separacoes.filter(s => {
     if (!busca) return true;
     const q = busca.toLowerCase();
@@ -226,7 +231,7 @@ export default function KanbanSeparacao() {
         {/* Progress bars */}
         <div className={`mt-4 grid gap-2 ${isMobile ? 'grid-cols-3 md:grid-cols-6' : 'grid-cols-6'}`}>
           {colunas.map((col) => {
-            const count = separacoes.filter(s => s.status === col.key).length;
+            const count = separacoes.filter(s => statusColuna(s) === col.key).length;
             const pct = separacoes.length > 0 ? Math.round(count / separacoes.length * 100) : 0;
             return (
               <div key={col.key} className="text-center">
@@ -244,8 +249,8 @@ export default function KanbanSeparacao() {
       {/* Colunas */}
       <div className={`flex gap-3 overflow-x-auto pb-4 flex-1 min-h-0 items-start ${isMobile ? 'snap-x snap-mandatory' : ''}`}>
         {colunas.map(({ key, label, icon: Icon, accent, bg, border, dot, proximo, proximoLabel }) => {
-          const colSeps = separacoesFiltradas.filter(s => s.status === key);
-          const total = separacoes.filter(s => s.status === key).length;
+          const colSeps = separacoesFiltradas.filter(s => statusColuna(s) === key);
+          const total = separacoes.filter(s => statusColuna(s) === key).length;
           const labelBotao = proximo ? proximoLabel : null;
 
           return (

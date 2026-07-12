@@ -5,6 +5,7 @@ import {
   Flag, AlertTriangle, Pencil, Save, ExternalLink, RefreshCw, Link2, Layers, Edit2, Tag, ShoppingBag
 } from 'lucide-react';
 import SeletorProdutos from './SeletorProdutos';
+import RastreioQuantidades from './RastreioQuantidades';
 import { DestinoForm, DestinoBadge, getDestinoLabel } from './DestinoPedido';
 
 const VALOR_OCULTO = '••••••';
@@ -60,6 +61,8 @@ export default function ModalDetalhesPedido({
 }) {
   const [ordens, setOrdens] = useState([]);
   const [expedicao, setExpedicao] = useState(null);
+  const [separacoes, setSeparacoes] = useState([]);
+  const [expedicoesPedido, setExpedicoesPedido] = useState([]);
   const [loadingExtra, setLoadingExtra] = useState(true);
   const [precosEditados, setPrecosEditados] = useState({});
   const [salvando, setSalvando] = useState(false);
@@ -86,14 +89,17 @@ export default function ModalDetalhesPedido({
 
   const carregarExtra = async () => {
     setLoadingExtra(true);
-    const [todasOrdens, todasExps] = await Promise.all([
+    const [todasOrdens, todasExps, todasSeps] = await Promise.all([
       base44.entities.OrdemProducao.list('-created_date'),
       base44.entities.Expedicao.list('-created_date'),
+      base44.entities.Separacao.list('-created_date').catch(() => []),
     ]);
     const opsVinculadas = todasOrdens.filter(o => o.pedido_id === pedido.id && o.status !== 'cancelado');
-    const expVinculada = todasExps.find(e => e.pedido_id === pedido.id) || null;
+    const expsVinculadas = todasExps.filter(e => e.pedido_id === pedido.id);
     setOrdens(opsVinculadas);
-    setExpedicao(expVinculada);
+    setExpedicao(expsVinculadas[0] || null);
+    setExpedicoesPedido(expsVinculadas);
+    setSeparacoes(todasSeps.filter(s => s.pedido_id === pedido.id));
     setLoadingExtra(false);
   };
 
@@ -387,6 +393,9 @@ export default function ModalDetalhesPedido({
                       );
                     })}
                   </div>
+
+                  {/* Quantidades por etapa */}
+                  <RastreioQuantidades pedido={pedido} ordens={ordens} separacoes={separacoes} expedicoes={expedicoesPedido} />
 
                   {/* OPs no Kanban */}
                   {ordens.length === 0 ? (
