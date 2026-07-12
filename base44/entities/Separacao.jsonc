@@ -63,6 +63,21 @@
       "default": 0,
       "description": "Soma das quantidades"
     },
+    "quantidade_pendente_producao": {
+      "type": "number",
+      "default": 0,
+      "description": "Quantidade aguardando conclus\u00e3o de produ\u00e7\u00e3o (aloca\u00e7\u00e3o parcial)"
+    },
+    "producao_concluida": {
+      "type": "boolean",
+      "default": false,
+      "description": "Indica que a produ\u00e7\u00e3o pendente foi conclu\u00edda e as quantidades mescladas"
+    },
+    "estoque_ja_reservado": {
+      "type": "boolean",
+      "default": false,
+      "description": "Estoque j\u00e1 foi baixado na reserva do pedido \u2014 n\u00e3o baixar novamente na libera\u00e7\u00e3o"
+    },
     "destino_tipo": {
       "type": "string",
       "enum": [
@@ -98,6 +113,7 @@
     "status": {
       "type": "string",
       "enum": [
+        "aguardando_producao",
         "aguardando_separacao",
         "em_separacao",
         "separado",
@@ -211,6 +227,11 @@
         {
           "user_condition": {
             "role": "embalador"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "maquinista"
           }
         }
       ]
