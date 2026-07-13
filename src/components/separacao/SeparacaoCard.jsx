@@ -1,4 +1,4 @@
-import { ArrowRight, User, Tag, Package, Truck, MapPin, Calendar, Flag, CheckCircle, Hash, ClipboardList, Home, Clock } from 'lucide-react';
+import { ArrowRight, User, Tag, Package, Truck, MapPin, Calendar, Flag, CheckCircle, Hash, ClipboardList, Home, Clock, ExternalLink } from 'lucide-react';
 
 const STATUS_ACCENT = {
   aguardando_producao: '#F59E0B',
@@ -28,7 +28,7 @@ function fmtData(iso) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
 
-export default function SeparacaoCard({ separacao, onAvancar, loading, labelBotao, readonly }) {
+export default function SeparacaoCard({ separacao, onAvancar, loading, labelBotao, readonly, onOpenModal }) {
   const accent = STATUS_ACCENT[separacao.status] || '#64748B';
   const origem = ORIGEM_CONFIG[separacao.origem] || ORIGEM_CONFIG.ordem_producao;
   const atrasada = separacao.data_prevista && separacao.status !== 'liberado_expedicao' &&
@@ -163,8 +163,15 @@ export default function SeparacaoCard({ separacao, onAvancar, loading, labelBota
         )}
       </div>
 
-      {/* Botão */}
-      <div className="px-3 pb-3">
+      {/* Botões */}
+      <div className="px-3 pb-3 space-y-1.5">
+        {onOpenModal && (
+          <button
+            onClick={onOpenModal}
+            className="w-full py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 border border-border text-muted-foreground hover:bg-muted hover:text-foreground">
+            <ExternalLink size={11} /> Ver Detalhes
+          </button>
+        )}
         {separacao.status === 'aguardando_producao' ? (
           <div className="flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-amber-600 bg-amber-50 rounded-xl">
             <Clock size={12} /> Aguardando Produção

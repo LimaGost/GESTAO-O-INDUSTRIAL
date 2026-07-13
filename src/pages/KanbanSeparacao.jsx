@@ -7,6 +7,7 @@ import { criarSeparacaoFromPedido, criarSeparacaoFromGrupo } from '@/lib/separac
 import { buildColunas, readStagesLocal } from '@/lib/kanbanFluxo';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 import SeparacaoCard from '@/components/separacao/SeparacaoCard';
+import SeparacaoCardModal from '@/components/separacao/SeparacaoCardModal';
 import SeparacaoKpis from '@/components/separacao/SeparacaoKpis';
 import { ClipboardCheck, Plus, X, Search, RefreshCw } from 'lucide-react';
 
@@ -29,6 +30,7 @@ export default function KanbanSeparacao() {
   const [criando, setCriando] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [colunas, setColunas] = useState(buildSepColunas);
+  const [sepSelecionada, setSepSelecionada] = useState(null);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -284,6 +286,7 @@ export default function KanbanSeparacao() {
                       loading={loadingId === sep.id}
                       labelBotao={labelBotao}
                       readonly={readonly}
+                      onOpenModal={() => setSepSelecionada(sep)}
                     />
                   ))
                 )}
@@ -292,6 +295,18 @@ export default function KanbanSeparacao() {
           );
         })}
       </div>
+
+      {/* Modal Detalhes da Separação */}
+      {sepSelecionada && (
+        <SeparacaoCardModal
+          separacao={separacoes.find(s => s.id === sepSelecionada.id) || sepSelecionada}
+          colunas={colunas}
+          onAvancar={readonly ? null : async (sep) => { await avancar(sep); setSepSelecionada(null); }}
+          loading={loadingId === sepSelecionada.id}
+          labelBotao={colunas.find(c => c.key === sepSelecionada.status)?.proximoLabel || null}
+          onClose={() => setSepSelecionada(null)}
+        />
+      )}
 
       {/* Modal Nova Separação */}
       {showNova && (
