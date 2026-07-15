@@ -10,7 +10,12 @@ function getPrinterConfig() {
 
 function getDimensoes(config) {
   if (config.tamanho === 'custom') {
-    return { w: Number(config.largura_custom) || 100, h: Number(config.altura_custom) || 50, colunas: 1, gap: 2 };
+    return {
+      w: Number(config.largura_custom) || 100,
+      h: Number(config.altura_custom) || 50,
+      colunas: Number(config.colunas_custom) || 1,
+      gap: config.gap_custom !== undefined ? Number(config.gap_custom) : 2,
+    };
   }
   const TAMANHOS = {
     '30x15_3col': { w: 30, h: 15, colunas: 3, gap: 2.5 },
@@ -341,7 +346,7 @@ function imprimirHTML({ produto_nome, quantidade, lote, data_producao, codigo_ba
 export function getConfigEtiqueta() {
   const config = getPrinterConfig();
   const dim = getDimensoes(config);
-  return { ...dim, linguagem: config.linguagem || 'html', copias: config.copias || 1 };
+  return { ...dim, linguagem: config.linguagem || 'html', copias: config.copias || 1, modelo_descricao: config.modelo_descricao || null };
 }
 
 export function imprimirEtiquetaProduto({ produto_nome, quantidade, lote, data_producao, codigo_barras, num_volumes = 1 }) {

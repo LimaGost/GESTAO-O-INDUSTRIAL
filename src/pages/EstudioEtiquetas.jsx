@@ -6,6 +6,8 @@ import { hojeData } from '@/lib/brasilia';
 import EstudioPreview from '@/components/etiquetas/EstudioPreview';
 import EstudioConfigBar from '@/components/etiquetas/EstudioConfigBar';
 import HistoricoImpressao from '@/components/etiquetas/HistoricoImpressao';
+import ModelosEtiqueta from '@/components/etiquetas/ModelosEtiqueta';
+import ModeloEtiquetaForm from '@/components/etiquetas/ModeloEtiquetaForm';
 import { Tag, Printer, Search, X, Wand2, Minus, Plus } from 'lucide-react';
 
 export default function EstudioEtiquetas() {
@@ -21,6 +23,8 @@ export default function EstudioEtiquetas() {
   });
   const [quantidade, setQuantidade] = useState(1);
   const [historicoKey, setHistoricoKey] = useState(0);
+  const [telaModelo, setTelaModelo] = useState(null); // null | { modelo }
+  const [modelosKey, setModelosKey] = useState(0);
 
   useEffect(() => {
     base44.entities.Produto.list().then(setProdutos).catch(() => {});
@@ -60,6 +64,18 @@ export default function EstudioEtiquetas() {
         (p.codigo || '').toString().toLowerCase().includes(buscaProduto.toLowerCase()))
     : produtos;
 
+  if (telaModelo) {
+    return (
+      <div className="max-w-5xl mx-auto">
+        <ModeloEtiquetaForm
+          modelo={telaModelo.modelo}
+          onVoltar={() => setTelaModelo(null)}
+          onSalvo={() => { setTelaModelo(null); setModelosKey(k => k + 1); }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 max-w-5xl mx-auto">
       {/* Header */}
@@ -74,6 +90,12 @@ export default function EstudioEtiquetas() {
       </div>
 
       <EstudioConfigBar config={config} />
+
+      <ModelosEtiqueta
+        refreshKey={modelosKey}
+        onNovo={() => setTelaModelo({ modelo: null })}
+        onEditar={(m) => setTelaModelo({ modelo: m })}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
         {/* ── Editor ── */}

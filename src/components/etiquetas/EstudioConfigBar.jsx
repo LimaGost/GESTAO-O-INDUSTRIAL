@@ -10,7 +10,7 @@ const LINGUAGEM_LABEL = {
 };
 
 export default function EstudioConfigBar({ config }) {
-  const { w, h, colunas, linguagem } = config;
+  const { w, h, colunas, linguagem, modelo_descricao } = config;
   return (
     <div className="bg-teal-dark/5 border border-teal-dark/15 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
       <div className="flex items-center gap-3 min-w-0">
@@ -19,7 +19,7 @@ export default function EstudioConfigBar({ config }) {
         </div>
         <div className="min-w-0">
           <p className="text-xs font-bold text-foreground">
-            {w}×{h} mm{colunas > 1 ? ` · ${colunas} colunas` : ''} — {LINGUAGEM_LABEL[linguagem] || 'Impressão HTML'}
+            {modelo_descricao ? `${modelo_descricao} — ` : ''}{Number(w).toFixed(1).replace('.0', '')}×{h} mm{colunas > 1 ? ` · ${colunas} colunas` : ''} — {LINGUAGEM_LABEL[linguagem] || 'Impressão HTML'}
           </p>
           <p className="text-[10px] text-muted-foreground">Configuração ativa da impressora de etiquetas</p>
         </div>

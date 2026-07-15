@@ -1,0 +1,113 @@
+{
+  "name": "ModeloEtiqueta",
+  "type": "object",
+  "properties": {
+    "descricao": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o do modelo de etiqueta"
+    },
+    "linguagem": {
+      "type": "string",
+      "enum": [
+        "pplb",
+        "zpl",
+        "tspl",
+        "epl",
+        "html"
+      ],
+      "default": "pplb",
+      "description": "Modelo/linguagem da impressora"
+    },
+    "temperatura": {
+      "type": "number",
+      "default": 10,
+      "description": "Temperatura de impress\u00e3o"
+    },
+    "tipo_papel": {
+      "type": "string",
+      "enum": [
+        "com_espacamento",
+        "continuo",
+        "linha_tracejada"
+      ],
+      "default": "com_espacamento"
+    },
+    "colunas": {
+      "type": "number",
+      "default": 1,
+      "description": "Quantidade de colunas"
+    },
+    "largura_papel_mm": {
+      "type": "number",
+      "default": 112,
+      "description": "Largura do papel/bobina em mm"
+    },
+    "altura_etiqueta_mm": {
+      "type": "number",
+      "default": 21,
+      "description": "Altura da etiqueta em mm"
+    },
+    "espaco_mm": {
+      "type": "number",
+      "default": 3,
+      "description": "Espa\u00e7o entre etiquetas em mm"
+    },
+    "copias": {
+      "type": "number",
+      "default": 1,
+      "description": "C\u00f3pias por impress\u00e3o"
+    },
+    "ativa": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "descricao"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "gerente_producao"
+          }
+        }
+      ]
+    },
+    "read": null,
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "gerente_producao"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "gerente_producao"
+          }
+        }
+      ]
+    }
+  }
+}
