@@ -1,7 +1,20 @@
 import { useEffect, useState } from 'react';
-import { Zap, Plus, Trash2, Save } from 'lucide-react';
+import { Zap, Plus, Trash2, Save, Lock } from 'lucide-react';
 import { loadConfig, saveConfig } from '@/lib/appConfig';
-import { KANBANS } from '@/lib/kanbanFluxo';
+import { KANBANS, ACOES_ETAPA } from '@/lib/kanbanFluxo';
+
+// Consolida as ações padrão do sistema: uma linha por ação, com os kanbans onde existe
+function acoesSistema() {
+  const map = {};
+  for (const k of KANBANS) {
+    for (const a of (ACOES_ETAPA[k.key] || [])) {
+      if (a.key === 'nenhuma') continue;
+      if (!map[a.key]) map[a.key] = { key: a.key, label: a.label, kanbans: [] };
+      map[a.key].kanbans.push(k.key);
+    }
+  }
+  return Object.values(map);
+}
 
 // Gerenciador de ações customizadas de etapa — salvas em AppConfig 'acoes_etapa_custom'
 export default function AbaAcoes() {
@@ -71,6 +84,33 @@ export default function AbaAcoes() {
         </div>
 
         <div className="px-6 py-5 space-y-3">
+          {/* Ações padrão do sistema (fixas) */}
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Ações do sistema</p>
+          <div className="space-y-1.5">
+            {acoesSistema().map(acao => (
+              <div key={acao.key} className="flex items-center gap-2.5 bg-muted/50 rounded-xl px-3.5 py-2.5 border border-border/50">
+                <div className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                  <Lock size={12} className="text-muted-foreground" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{acao.label}</p>
+                </div>
+                <div className="flex items-center gap-1 flex-wrap justify-end">
+                  {acao.kanbans.map(kk => {
+                    const k = KANBANS.find(x => x.key === kk);
+                    return (
+                      <span key={kk} className="text-[10px] px-2 py-0.5 rounded-full font-medium text-white"
+                        style={{ background: k?.cor || '#64748B' }}>
+                        {k?.label.replace('Kanban de ', '') || kk}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground pt-2">Ações personalizadas</p>
           {acoes.length === 0 ? (
             <div className="flex flex-col items-center py-8 text-muted-foreground/60 bg-muted/30 rounded-xl">
               <Zap size={24} className="mb-2 opacity-40" />
