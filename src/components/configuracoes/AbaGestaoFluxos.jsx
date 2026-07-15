@@ -4,8 +4,9 @@ import {
   ArrowRight, Settings2, Users,
 } from 'lucide-react';
 import {
-  KANBANS, CORES, ROLES, TRIGGERS, ACOES, ACOES_ETAPA,
+  KANBANS, CORES, ROLES, TRIGGERS, ACOES,
   getIcon, loadKanbanFluxo, saveKanbanFluxo, DEFAULTS,
+  loadAcoesCustom, getAcoesEtapa,
 } from '@/lib/kanbanFluxo';
 import IconPicker from './IconPicker';
 
@@ -15,14 +16,26 @@ export default function AbaGestaoFluxos() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [acoesCustom, setAcoesCustom] = useState([]);
 
   // Carrega todos os kanbans uma vez
   useEffect(() => {
     (async () => {
-      const entries = await Promise.all(KANBANS.map(async k => [k.key, await loadKanbanFluxo(k.key)]));
+      const [entries, custom] = await Promise.all([
+        Promise.all(KANBANS.map(async k => [k.key, await loadKanbanFluxo(k.key)])),
+        loadAcoesCustom(),
+      ]);
       setConfigs(Object.fromEntries(entries));
+      setAcoesCustom(custom);
       setLoading(false);
     })();
+  }, []);
+
+  // Atualiza a lista quando novas ações são criadas em Configurações > Ações
+  useEffect(() => {
+    const onAcoes = () => loadAcoesCustom().then(setAcoesCustom);
+    window.addEventListener('acoes:saved', onAcoes);
+    return () => window.removeEventListener('acoes:saved', onAcoes);
   }, []);
 
   const cfg = configs[kanbanAtivo] || DEFAULTS[kanbanAtivo];
@@ -196,15 +209,13 @@ export default function AbaGestaoFluxos() {
                     </div>
 
                     {/* Ação automática da etapa */}
-                    {ACOES_ETAPA[kanbanAtivo] && (
-                      <div className="mt-2.5 pl-1 flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[10px] text-muted-foreground flex items-center gap-1"><Zap size={10} /> Ação ao entrar:</span>
-                        <select value={stage.acao || 'nenhuma'} onChange={e => updateStage(idx, 'acao', e.target.value)}
-                          className="border border-border rounded-lg px-2 py-1 text-[11px] bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
-                          {ACOES_ETAPA[kanbanAtivo].map(a => <option key={a.key} value={a.key}>{a.label}</option>)}
-                        </select>
-                      </div>
-                    )}
+                    <div className="mt-2.5 pl-1 flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[10px] text-muted-foreground flex items-center gap-1"><Zap size={10} /> Ação ao entrar:</span>
+                      <select value={stage.acao || 'nenhuma'} onChange={e => updateStage(idx, 'acao', e.target.value)}
+                        className="border border-border rounded-lg px-2 py-1 text-[11px] bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
+                        {getAcoesEtapa(kanbanAtivo, acoesCustom).map(a => <option key={a.key} value={a.key}>{a.label}</option>)}
+                      </select>
+                    </div>
 
                     {/* Responsáveis */}
                     <div className="mt-2.5 pl-1 flex items-center gap-1.5 flex-wrap">

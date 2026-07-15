@@ -141,8 +141,11 @@ export const ACOES = {
   ],
 };
 
-// Ações automáticas executadas quando um card ENTRA na etapa (usadas pelo Kanban de Produção)
+// Ações automáticas executadas quando um card ENTRA na etapa
 export const ACOES_ETAPA = {
+  pedidos: [
+    { key: 'nenhuma', label: 'Nenhuma ação' },
+  ],
   producao: [
     { key: 'nenhuma', label: 'Nenhuma ação' },
     { key: 'registrar_data_inicio', label: 'Registrar início da produção' },
@@ -152,7 +155,31 @@ export const ACOES_ETAPA = {
     { key: 'saida_estoque', label: 'Saída de estoque + gerar etiquetas' },
     { key: 'finalizar_expedicao', label: 'Finalizar (pedido pronto p/ expedir)' },
   ],
+  separacao: [
+    { key: 'nenhuma', label: 'Nenhuma ação' },
+    { key: 'gerar_etiquetas', label: 'Gerar etiquetas dos itens' },
+    { key: 'saida_estoque', label: 'Dar saída no estoque' },
+  ],
+  expedicao: [
+    { key: 'nenhuma', label: 'Nenhuma ação' },
+    { key: 'notificar_cliente', label: 'Notificar cliente' },
+  ],
 };
+
+// Carrega as ações customizadas criadas em Configurações > Ações
+export async function loadAcoesCustom() {
+  const val = await loadConfig('acoes_etapa_custom');
+  return Array.isArray(val?.acoes) ? val.acoes : [];
+}
+
+// Ações disponíveis para um kanban: base + customizadas do usuário
+export function getAcoesEtapa(kanbanKey, acoesCustom = []) {
+  const base = ACOES_ETAPA[kanbanKey] || [{ key: 'nenhuma', label: 'Nenhuma ação' }];
+  const custom = acoesCustom
+    .filter(a => (a.kanbans || []).includes(kanbanKey) && (a.label || '').trim())
+    .map(a => ({ key: a.key, label: a.label }));
+  return [...base, ...custom];
+}
 
 const LS_KEYS = {
   pedidos: 'pedidos_colunas_config',

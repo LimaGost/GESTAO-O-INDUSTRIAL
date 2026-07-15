@@ -3,13 +3,14 @@ import { base44 } from '@/api/base44Client';
 import {
   Plus, Trash2, Save, CheckSquare, ChevronDown,
   Settings2, GripVertical, Shield, Search,
-  RefreshCw, User, LogOut, Tag, Activity, AlertTriangle, Users, Factory, Paintbrush, Printer, Database, Columns, MessageCircle, Truck, Link2
+  RefreshCw, User, LogOut, Tag, Activity, AlertTriangle, Users, Factory, Paintbrush, Printer, Database, Columns, MessageCircle, Truck, Link2, Zap
 } from 'lucide-react';
 import SupabaseSchemas from '@/pages/SupabaseSchemas';
 import AbaUsuarios from '@/components/configuracoes/AbaUsuarios';
 import AbaPersonalizacao from '@/components/configuracoes/AbaPersonalizacao.jsx';
 import AbaEtiquetas from '@/components/configuracoes/AbaEtiquetas.jsx';
 import AbaGestaoFluxos from '@/components/configuracoes/AbaGestaoFluxos.jsx';
+import AbaAcoes from '@/components/configuracoes/AbaAcoes.jsx';
 import AbaWhatsapp from '@/components/configuracoes/AbaWhatsapp.jsx';
 import AbaBling from '@/components/configuracoes/AbaBling';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
@@ -679,6 +680,7 @@ const TAB_GROUPS = [
     label: 'Sistema',
     items: [
       { key: 'gestao_fluxos',  label: 'Gestão de Fluxos / Kanbans', icon: Columns,      desc: 'Etapas, automações e fluxo integrado' },
+      { key: 'acoes',          label: 'Ações',           icon: Zap,         desc: 'Ações de etapa dos Kanbans' },
       { key: 'personalizacao', label: 'Personalização', icon: Paintbrush,  desc: 'Logo, empresa e visual' },
       { key: 'producao',       label: 'Produção',        icon: Factory,     desc: 'Capacidade semanal' },
       { key: 'checklists',     label: 'Checklists',      icon: CheckSquare, desc: 'Etapas do Kanban' },
@@ -787,6 +789,7 @@ export default function Configuracoes() {
 
           {aba === 'personalizacao'  && <AbaPersonalizacao />}
           {aba === 'gestao_fluxos'   && <AbaGestaoFluxos />}
+          {aba === 'acoes'           && <AbaAcoes />}
           {aba === 'checklists'     && <AbaChecklists />}
           {aba === 'producao'       && <AbaProducao />}
           {aba === 'etiquetas'      && <AbaEtiquetas />}
