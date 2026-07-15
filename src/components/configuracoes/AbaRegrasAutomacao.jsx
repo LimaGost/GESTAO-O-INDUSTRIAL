@@ -1,109 +1,109 @@
 import { useEffect, useState } from 'react';
-import { Save, Radio, Play } from 'lucide-react';
-import { saveConfig } from '@/lib/appConfig';
-import { loadRegrasConfig, getTriggersSistema, getAcoesAutoSistema } from '@/lib/kanbanFluxo';
-import SecaoRegrasLista from './SecaoRegrasLista';
+import { Plus, Zap } from 'lucide-react';
+import { loadConfig, saveConfig } from '@/lib/appConfig';
+import { KANBANS, loadKanbanFluxo } from '@/lib/kanbanFluxo';
+import RuleBuilder from './regras/RuleBuilder';
+import RegraCard from './regras/RegraCard';
 
-// Gerenciador central de regras de automação — gatilhos (Quando) e ações (Executar)
-// Salvo em AppConfig 'regras_automacao_custom'
+// Regras de Automação — construtor estilo Trello, salvo em AppConfig 'regras_automacao_v2'
 export default function AbaRegrasAutomacao() {
-  const [triggers, setTriggers] = useState([]);
-  const [acoes, setAcoes] = useState([]);
-  const [triggerOverrides, setTriggerOverrides] = useState({});
-  const [acaoOverrides, setAcaoOverrides] = useState({});
-  const [triggerKanbans, setTriggerKanbans] = useState({});
-  const [acaoKanbans, setAcaoKanbans] = useState({});
+  const [regras, setRegras] = useState([]);
+  const [etapasPorKanban, setEtapasPorKanban] = useState({});
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [builder, setBuilder] = useState(null); // null | { regra?, index? }
 
   useEffect(() => {
-    loadRegrasConfig().then(cfg => {
-      setTriggers(cfg.triggers);
-      setAcoes(cfg.acoes);
-      setTriggerOverrides(cfg.trigger_overrides);
-      setAcaoOverrides(cfg.acao_overrides);
-      setTriggerKanbans(cfg.trigger_kanbans);
-      setAcaoKanbans(cfg.acao_kanbans);
+    (async () => {
+      const [cfg, entries] = await Promise.all([
+        loadConfig('regras_automacao_v2'),
+        Promise.all(KANBANS.map(async k => [k.key, (await loadKanbanFluxo(k.key)).stages])),
+      ]);
+      setRegras(Array.isArray(cfg?.regras) ? cfg.regras : []);
+      setEtapasPorKanban(Object.fromEntries(entries));
       setLoading(false);
-    });
+    })();
   }, []);
 
-  // Remove overrides iguais ao padrão e atribuições de kanban idênticas ao default
-  const limpar = (overrides, kanbansMap, sistema) => {
-    const defaults = Object.fromEntries(sistema.map(a => [a.key, a.label]));
-    const kanbansDefault = Object.fromEntries(sistema.map(a => [a.key, [...a.kanbans].sort().join(',')]));
-    const ov = {};
-    for (const [k, v] of Object.entries(overrides)) {
-      const t = (v || '').trim();
-      if (t && t !== defaults[k]) ov[k] = t;
-    }
-    const km = {};
-    for (const [k, v] of Object.entries(kanbansMap)) {
-      if (Array.isArray(v) && [...v].sort().join(',') !== kanbansDefault[k]) km[k] = v;
-    }
-    return { ov, km };
+  const persistir = async (novas) => {
+    setRegras(novas);
+    await saveConfig('regras_automacao_v2', { regras: novas });
+    window.dispatchEvent(new Event('regras:saved'));
   };
 
-  const salvar = async () => {
-    setSaving(true);
-    const triggersValidos = triggers.filter(t => (t.label || '').trim());
-    const acoesValidas = acoes.filter(a => (a.label || '').trim());
-    const t = limpar(triggerOverrides, triggerKanbans, getTriggersSistema());
-    const a = limpar(acaoOverrides, acaoKanbans, getAcoesAutoSistema());
-    await saveConfig('regras_automacao_custom', {
-      triggers: triggersValidos,
-      acoes: acoesValidas,
-      trigger_overrides: t.ov,
-      acao_overrides: a.ov,
-      trigger_kanbans: t.km,
-      acao_kanbans: a.km,
-    });
-    setTriggers(triggersValidos);
-    setAcoes(acoesValidas);
-    setTriggerOverrides(t.ov);
-    setAcaoOverrides(a.ov);
-    setTriggerKanbans(t.km);
-    setAcaoKanbans(a.km);
-    window.dispatchEvent(new Event('regras:saved'));
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  const salvarRegra = (regra) => {
+    const novas = builder?.index !== undefined && builder.index !== null
+      ? regras.map((r, i) => i === builder.index ? regra : r)
+      : [...regras, regra];
+    persistir(novas);
+    setBuilder(null);
+  };
+
+  const duplicar = (idx) => {
+    const orig = regras[idx];
+    persistir([...regras, { ...orig, id: `regra_${Date.now().toString(36)}`, nome: `${orig.nome} (cópia)` }]);
+  };
+
+  const excluir = (idx) => {
+    if (!confirm(`Excluir a regra "${regras[idx].nome}"?`)) return;
+    persistir(regras.filter((_, i) => i !== idx));
+  };
+
+  const toggle = (idx) => {
+    persistir(regras.map((r, i) => i === idx ? { ...r, ativo: !r.ativo } : r));
   };
 
   if (loading) return <div className="h-40 flex items-center justify-center text-muted-foreground text-sm">Carregando regras...</div>;
 
+  if (builder) {
+    return (
+      <RuleBuilder
+        regraInicial={builder.regra || null}
+        etapasPorKanban={etapasPorKanban}
+        onSave={salvarRegra}
+        onCancel={() => setBuilder(null)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <SecaoRegrasLista
-        titulo="Gatilhos (Quando)"
-        subtitulo="Eventos que disparam uma regra de automação na Gestão de Fluxos."
-        Icone={Radio}
-        sistema={getTriggersSistema()}
-        custom={triggers} setCustom={setTriggers}
-        overrides={triggerOverrides} setOverrides={setTriggerOverrides}
-        kanbansMap={triggerKanbans} setKanbansMap={setTriggerKanbans}
-        placeholder="Nome do gatilho (ex: Pedido aprovado, Estoque baixo...)"
-      />
-
-      <SecaoRegrasLista
-        titulo="Ações de Automação (Executar)"
-        subtitulo="O que a regra executa quando o gatilho acontece."
-        Icone={Play}
-        sistema={getAcoesAutoSistema()}
-        custom={acoes} setCustom={setAcoes}
-        overrides={acaoOverrides} setOverrides={setAcaoOverrides}
-        kanbansMap={acaoKanbans} setKanbansMap={setAcaoKanbans}
-        placeholder="Nome da ação (ex: Avisar gerente, Gerar relatório...)"
-      />
-
-      <div className="bg-card border border-border rounded-2xl px-6 py-4 flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">Gatilhos e ações ficam disponíveis nas Regras de Automação de cada kanban na Gestão de Fluxos.</p>
-        <button onClick={salvar} disabled={saving}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${saved ? 'bg-green-500 text-white' : 'bg-primary text-primary-foreground hover:opacity-90'} disabled:opacity-50`}>
-          <Save size={14} /> {saved ? 'Salvo!' : saving ? 'Salvando...' : 'Salvar Regras'}
+      <div className="flex items-center justify-between">
+        <h3 className="font-bold text-lg text-foreground">Regras</h3>
+        <button onClick={() => setBuilder({})}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors">
+          <Plus size={14} /> Criar automação
         </button>
       </div>
+
+      {regras.length === 0 ? (
+        <div className="bg-card border border-border rounded-2xl flex flex-col items-center py-14 text-center px-6">
+          <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
+            <Zap size={22} className="text-primary" />
+          </div>
+          <p className="font-bold text-foreground mb-1">Nenhuma regra criada</p>
+          <p className="text-xs text-muted-foreground max-w-sm mb-4">
+            Crie regras do tipo "quando isso acontecer, faça aquilo" — igual às automações do Trello. Ex: quando um card for movido para "Em Produção", enviar WhatsApp para o cliente.
+          </p>
+          <button onClick={() => setBuilder({})}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors">
+            <Plus size={14} /> Criar automação
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {regras.map((regra, idx) => (
+            <RegraCard
+              key={regra.id}
+              regra={regra}
+              etapas={etapasPorKanban[regra.kanban] || []}
+              onEditar={() => setBuilder({ regra, index: idx })}
+              onDuplicar={() => duplicar(idx)}
+              onExcluir={() => excluir(idx)}
+              onToggle={() => toggle(idx)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
