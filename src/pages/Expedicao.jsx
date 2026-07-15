@@ -98,7 +98,7 @@ function OPFinalizadaCard({ op, clienteNome, onEmitirNF, emitindo, onVerPedido }
           )}
         </div>
         <div className="text-right flex-shrink-0">
-          <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-semibold">{op._origem === 'pedido' ? 'Separado' : 'Finalizado'}</span>
+          <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-semibold">{op._origem === 'galpao' ? 'Galpão' : op._origem === 'pedido' ? 'Separado' : 'Finalizado'}</span>
           <p className="text-xs text-muted-foreground mt-1">{qtdTotal} un</p>
         </div>
       </div>
@@ -289,10 +289,11 @@ export default function Expedicao() {
   }, []);
 
   const load = async () => {
-    const [exps, ordens, pedidos] = await Promise.all([
+    const [exps, ordens, pedidos, sepsGalpao] = await Promise.all([
       base44.entities.Expedicao.list('-created_date'),
       base44.entities.OrdemProducao.list('-created_date'),
       base44.entities.Pedido.list(),
+      base44.entities.SeparacaoGalpao.list('-created_date').catch(() => []),
     ]);
     setExpedicoes(exps);
 
@@ -319,7 +320,21 @@ export default function Expedicao() {
       quantidade: (p.itens || []).reduce((s, i) => s + (i.quantidade || 0), 0),
     }));
 
-    setOpsFinalizadas([...finalizadas, ...pedidosSeparadosParaExpedir]);
+    // Separações do Galpão liberadas para expedição, ainda sem NF emitida
+    const galpaoParaExpedir = sepsGalpao.filter(s =>
+      s.status === 'liberado_expedicao' && !s.expedicao_id
+    ).map(s => ({
+      _origem: 'galpao',
+      _galpao_id: s.id,
+      id: `gal_${s.id}`,
+      numero: s.numero,
+      produto_nome: s.cliente_nome || s.numero,
+      itens: s.itens || [],
+      data_finalizacao: s.data_liberacao,
+      quantidade: (s.itens || []).reduce((sum, i) => sum + (i.quantidade || 0), 0),
+    }));
+
+    setOpsFinalizadas([...finalizadas, ...pedidosSeparadosParaExpedir, ...galpaoParaExpedir]);
 
     const pm = {};
     for (const p of pedidos) pm[p.id] = {
@@ -362,7 +377,7 @@ export default function Expedicao() {
       pedido_id: op.pedido_id || '',
       pedido_numero: pedInfo?.numero || op.pedido_numero || '',
       cliente_nome: pedInfo?.nome || op.produto_nome,
-      ordem_producao_id: op._origem === 'pedido' ? '' : op.id,
+      ordem_producao_id: ['pedido', 'galpao'].includes(op._origem) ? '' : op.id,
       itens: pedInfo?.itens || op.itens || [{ produto_nome: op.produto_nome, quantidade: op.quantidade }],
       status: 'emitida',
       data_emissao: hoje,
@@ -371,6 +386,11 @@ export default function Expedicao() {
 
     if (op.pedido_id) {
       await base44.entities.Pedido.update(op.pedido_id, { status: 'expedido' });
+    }
+
+    // Vincula a separação do Galpão à expedição criada
+    if (op._origem === 'galpao' && op._galpao_id) {
+      await base44.entities.SeparacaoGalpao.update(op._galpao_id, { expedicao_id: expedicao.id }).catch(() => {});
     }
 
     await registrarLog('Expedicao', expedicao.id, 'EXPEDICAO_CRIADA', `NF ${numero_nf} emitida manualmente da OP ${op.numero}`);
