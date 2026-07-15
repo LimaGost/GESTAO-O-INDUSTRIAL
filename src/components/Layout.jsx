@@ -5,7 +5,7 @@ import {
   LayoutDashboard, ShoppingCart, Factory, Package,
   Truck, Settings, ChevronLeft, ChevronRight, ChevronUp,
   Bell, Tag, Users, Archive, SlidersHorizontal, BarChart2,
-  Database, MoreHorizontal, RefreshCw, Trash2, MessageCircle, LogOut, User, AlertTriangle, HeadphonesIcon, ClipboardCheck
+  Database, MoreHorizontal, RefreshCw, Trash2, MessageCircle, LogOut, User, AlertTriangle, HeadphonesIcon, ClipboardCheck, Printer
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
@@ -36,6 +36,7 @@ const navGroups = [
     label: 'OPERACIONAL',
     items: [
       { path: '/Etiquetas',       label: 'Etiquetas',  icon: Tag },
+      { path: '/EstudioEtiquetas', label: 'Estúdio Etiquetas', icon: Printer },
       { path: '/Expedicao',       label: 'Expedição',  icon: Truck },
       { path: '/Clientes',        label: 'Clientes',   icon: Users },
       { path: '/Produtos',        label: 'Produtos',   icon: Settings },
@@ -67,6 +68,7 @@ const allNavItems = [
   { path: '/KanbanSeparacao', label: 'Separação',        icon: ClipboardCheck },
   { path: '/Estoque',        label: 'Estoque',           icon: Archive },
   { path: '/Etiquetas',      label: 'Etiquetas',         icon: Tag },
+  { path: '/EstudioEtiquetas', label: 'Estúdio Etiquetas', icon: Printer },
   { path: '/Expedicao',      label: 'Expedição',         icon: Truck },
   { path: '/Clientes',       label: 'Clientes',          icon: Users },
   { path: '/Produtos',       label: 'Produtos',          icon: Settings },
@@ -87,6 +89,7 @@ const PATH_MODULO = {
   '/Estoque':      'Estoque',
   '/Embalagem':    'Embalagem',
   '/Etiquetas':    'Etiquetas',
+  '/EstudioEtiquetas': 'Etiquetas',
   '/Expedicao':    'Expedicao',
   '/CRM':                  'Clientes',
   '/Clientes':     'Clientes',

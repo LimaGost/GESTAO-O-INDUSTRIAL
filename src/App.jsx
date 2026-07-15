@@ -14,6 +14,7 @@ import KanbanSeparacao from './pages/KanbanSeparacao.jsx';
 import Estoque from './pages/Estoque';
 import Embalagem from './pages/Embalagem';
 import Etiquetas from './pages/Etiquetas';
+import EstudioEtiquetas from './pages/EstudioEtiquetas';
 import Expedicao from './pages/Expedicao';
 import Clientes from './pages/Clientes';
 import Produtos from './pages/Produtos';
@@ -83,6 +84,7 @@ const AuthenticatedApp = () => {
           <Route path="/Estoque"        element={<RotaProtegida modulo="Estoque">        <Estoque />        </RotaProtegida>} />
           <Route path="/Embalagem"      element={<RotaProtegida modulo="Embalagem">      <Embalagem />      </RotaProtegida>} />
           <Route path="/Etiquetas"      element={<RotaProtegida modulo="Etiquetas">      <Etiquetas />      </RotaProtegida>} />
+          <Route path="/EstudioEtiquetas" element={<RotaProtegida modulo="Etiquetas">   <EstudioEtiquetas /> </RotaProtegida>} />
           <Route path="/Expedicao"      element={<RotaProtegida modulo="Expedicao">      <Expedicao />      </RotaProtegida>} />
           <Route path="/Clientes"       element={<RotaProtegida modulo="Clientes">       <Clientes />       </RotaProtegida>} />
           <Route path="/Produtos"       element={<RotaProtegida modulo="Produtos">       <Produtos />       </RotaProtegida>} />

@@ -337,6 +337,13 @@ function imprimirHTML({ produto_nome, quantidade, lote, data_producao, codigo_ba
   win.document.close();
 }
 
+// Configuração ativa da impressora (para preview/estúdio de etiquetas)
+export function getConfigEtiqueta() {
+  const config = getPrinterConfig();
+  const dim = getDimensoes(config);
+  return { ...dim, linguagem: config.linguagem || 'html', copias: config.copias || 1 };
+}
+
 export function imprimirEtiquetaProduto({ produto_nome, quantidade, lote, data_producao, codigo_barras, num_volumes = 1 }) {
   const config = getPrinterConfig();
   const { w, h, colunas, gap } = getDimensoes(config);
