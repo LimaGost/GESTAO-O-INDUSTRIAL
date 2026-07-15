@@ -6,7 +6,7 @@ import {
 import {
   KANBANS, CORES, ROLES, TRIGGERS, ACOES,
   getIcon, loadKanbanFluxo, saveKanbanFluxo, DEFAULTS,
-  loadAcoesCustom, loadAcoesOverrides, getAcoesEtapa,
+  loadAcoesConfig, getAcoesEtapa,
 } from '@/lib/kanbanFluxo';
 import IconPicker from './IconPicker';
 
@@ -16,30 +16,24 @@ export default function AbaGestaoFluxos() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [acoesCustom, setAcoesCustom] = useState([]);
-  const [acoesOverrides, setAcoesOverrides] = useState({});
+  const [acoesCfg, setAcoesCfg] = useState({ acoes: [], overrides: {}, sistema_kanbans: {} });
 
   // Carrega todos os kanbans uma vez
   useEffect(() => {
     (async () => {
-      const [entries, custom, overrides] = await Promise.all([
+      const [entries, cfg] = await Promise.all([
         Promise.all(KANBANS.map(async k => [k.key, await loadKanbanFluxo(k.key)])),
-        loadAcoesCustom(),
-        loadAcoesOverrides(),
+        loadAcoesConfig(),
       ]);
       setConfigs(Object.fromEntries(entries));
-      setAcoesCustom(custom);
-      setAcoesOverrides(overrides);
+      setAcoesCfg(cfg);
       setLoading(false);
     })();
   }, []);
 
   // Atualiza a lista quando ações são criadas/editadas em Configurações > Ações
   useEffect(() => {
-    const onAcoes = () => {
-      loadAcoesCustom().then(setAcoesCustom);
-      loadAcoesOverrides().then(setAcoesOverrides);
-    };
+    const onAcoes = () => loadAcoesConfig().then(setAcoesCfg);
     window.addEventListener('acoes:saved', onAcoes);
     return () => window.removeEventListener('acoes:saved', onAcoes);
   }, []);
@@ -220,7 +214,7 @@ export default function AbaGestaoFluxos() {
 
                     {/* Ações automáticas da etapa (múltiplas) */}
                     {(() => {
-                      const opcoes = getAcoesEtapa(kanbanAtivo, acoesCustom, acoesOverrides).filter(a => a.key !== 'nenhuma');
+                      const opcoes = getAcoesEtapa(kanbanAtivo, acoesCfg).filter(a => a.key !== 'nenhuma');
                       const selecionadas = Array.isArray(stage.acoes) && stage.acoes.length > 0
                         ? stage.acoes
                         : (stage.acao && stage.acao !== 'nenhuma' ? [stage.acao] : []);

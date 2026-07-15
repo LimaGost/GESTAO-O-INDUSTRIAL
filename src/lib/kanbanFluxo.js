@@ -166,26 +166,48 @@ export const ACOES_ETAPA = {
   ],
 };
 
-// Carrega as ações customizadas criadas em Configurações > Ações
+// Consolida todas as ações do sistema: uma entrada por ação, com os kanbans padrão onde existe
+export function getAcoesSistema() {
+  const map = {};
+  for (const k of KANBANS) {
+    for (const a of (ACOES_ETAPA[k.key] || [])) {
+      if (a.key === 'nenhuma') continue;
+      if (!map[a.key]) map[a.key] = { key: a.key, label: a.label, kanbans: [] };
+      map[a.key].kanbans.push(k.key);
+    }
+  }
+  return Object.values(map);
+}
+
+// Configuração completa de ações (Configurações > Ações):
+// acoes = personalizadas · overrides = renomeações do sistema · sistema_kanbans = kanbans habilitados por ação do sistema
+export async function loadAcoesConfig() {
+  const val = await loadConfig('acoes_etapa_custom');
+  return {
+    acoes: Array.isArray(val?.acoes) ? val.acoes : [],
+    overrides: val?.overrides && typeof val.overrides === 'object' ? val.overrides : {},
+    sistema_kanbans: val?.sistema_kanbans && typeof val.sistema_kanbans === 'object' ? val.sistema_kanbans : {},
+  };
+}
+
+// Compat: retorna apenas as ações personalizadas
 export async function loadAcoesCustom() {
-  const val = await loadConfig('acoes_etapa_custom');
-  return Array.isArray(val?.acoes) ? val.acoes : [];
+  const cfg = await loadAcoesConfig();
+  return cfg.acoes;
 }
 
-// Renomeações das ações do sistema feitas pelo usuário (Configurações > Ações)
-export async function loadAcoesOverrides() {
-  const val = await loadConfig('acoes_etapa_custom');
-  return val?.overrides && typeof val.overrides === 'object' ? val.overrides : {};
-}
-
-// Ações disponíveis para um kanban: base (com nomes personalizados) + customizadas do usuário
-export function getAcoesEtapa(kanbanKey, acoesCustom = [], overrides = {}) {
-  const base = (ACOES_ETAPA[kanbanKey] || [{ key: 'nenhuma', label: 'Nenhuma ação' }])
-    .map(a => ({ ...a, label: overrides[a.key] || a.label }));
-  const custom = acoesCustom
+// Ações disponíveis para um kanban: sistema (respeitando kanbans habilitados + renomeações) + personalizadas
+export function getAcoesEtapa(kanbanKey, cfg = {}) {
+  // Compat: chamadas antigas passavam o array de ações custom diretamente
+  const conf = Array.isArray(cfg) ? { acoes: cfg } : cfg;
+  const { acoes = [], overrides = {}, sistema_kanbans = {} } = conf;
+  const base = getAcoesSistema()
+    .filter(a => (sistema_kanbans[a.key] || a.kanbans).includes(kanbanKey))
+    .map(a => ({ key: a.key, label: overrides[a.key] || a.label }));
+  const custom = acoes
     .filter(a => (a.kanbans || []).includes(kanbanKey) && (a.label || '').trim())
     .map(a => ({ key: a.key, label: a.label }));
-  return [...base, ...custom];
+  return [{ key: 'nenhuma', label: 'Nenhuma ação' }, ...base, ...custom];
 }
 
 const LS_KEYS = {

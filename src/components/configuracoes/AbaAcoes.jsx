@@ -1,25 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Zap, Plus, Trash2, Save, Lock, RotateCcw } from 'lucide-react';
 import { loadConfig, saveConfig } from '@/lib/appConfig';
-import { KANBANS, ACOES_ETAPA } from '@/lib/kanbanFluxo';
-
-// Consolida as ações padrão do sistema: uma linha por ação, com os kanbans onde existe
-function acoesSistema() {
-  const map = {};
-  for (const k of KANBANS) {
-    for (const a of (ACOES_ETAPA[k.key] || [])) {
-      if (a.key === 'nenhuma') continue;
-      if (!map[a.key]) map[a.key] = { key: a.key, label: a.label, kanbans: [] };
-      map[a.key].kanbans.push(k.key);
-    }
-  }
-  return Object.values(map);
-}
+import { KANBANS, getAcoesSistema } from '@/lib/kanbanFluxo';
 
 // Gerenciador de ações customizadas de etapa — salvas em AppConfig 'acoes_etapa_custom'
 export default function AbaAcoes() {
   const [acoes, setAcoes] = useState([]);
   const [overrides, setOverrides] = useState({});
+  const [sistemaKanbans, setSistemaKanbans] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -28,9 +16,20 @@ export default function AbaAcoes() {
     loadConfig('acoes_etapa_custom').then(val => {
       setAcoes(Array.isArray(val?.acoes) ? val.acoes : []);
       setOverrides(val?.overrides && typeof val.overrides === 'object' ? val.overrides : {});
+      setSistemaKanbans(val?.sistema_kanbans && typeof val.sistema_kanbans === 'object' ? val.sistema_kanbans : {});
       setLoading(false);
     });
   }, []);
+
+  // Alterna a disponibilidade de uma ação do sistema em um kanban
+  const toggleSistemaKanban = (acaoKey, defaultKanbans, kanbanKey) => {
+    setSistemaKanbans(prev => {
+      const atual = prev[acaoKey] || defaultKanbans;
+      const set = new Set(atual);
+      set.has(kanbanKey) ? set.delete(kanbanKey) : set.add(kanbanKey);
+      return { ...prev, [acaoKey]: [...set] };
+    });
+  };
 
   const addAcao = () => {
     setAcoes(prev => [...prev, {
@@ -57,15 +56,23 @@ export default function AbaAcoes() {
     setSaving(true);
     const validas = acoes.filter(a => (a.label || '').trim());
     // Mantém apenas renomeações que diferem do nome padrão
-    const defaults = Object.fromEntries(acoesSistema().map(a => [a.key, a.label]));
+    const sistema = getAcoesSistema();
+    const defaults = Object.fromEntries(sistema.map(a => [a.key, a.label]));
     const ovLimpo = {};
     for (const [k, v] of Object.entries(overrides)) {
       const t = (v || '').trim();
       if (t && t !== defaults[k]) ovLimpo[k] = t;
     }
-    await saveConfig('acoes_etapa_custom', { acoes: validas, overrides: ovLimpo });
+    // Mantém apenas atribuições de kanban que diferem do padrão
+    const kanbansDefault = Object.fromEntries(sistema.map(a => [a.key, [...a.kanbans].sort().join(',')]));
+    const skLimpo = {};
+    for (const [k, v] of Object.entries(sistemaKanbans)) {
+      if (Array.isArray(v) && [...v].sort().join(',') !== kanbansDefault[k]) skLimpo[k] = v;
+    }
+    await saveConfig('acoes_etapa_custom', { acoes: validas, overrides: ovLimpo, sistema_kanbans: skLimpo });
     setAcoes(validas);
     setOverrides(ovLimpo);
+    setSistemaKanbans(skLimpo);
     window.dispatchEvent(new Event('acoes:saved'));
     setSaving(false);
     setSaved(true);
@@ -97,7 +104,7 @@ export default function AbaAcoes() {
           {/* Ações padrão do sistema (fixas) */}
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Ações do sistema <span className="normal-case font-normal tracking-normal">— o comportamento é fixo, mas você pode renomear</span></p>
           <div className="space-y-1.5">
-            {acoesSistema().map(acao => (
+            {getAcoesSistema().map(acao => (
               <div key={acao.key} className="flex items-center gap-2.5 bg-muted/50 rounded-xl px-3.5 py-2.5 border border-border/50">
                 <div className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
                   <Lock size={12} className="text-muted-foreground" />
@@ -116,13 +123,15 @@ export default function AbaAcoes() {
                   )}
                 </div>
                 <div className="flex items-center gap-1 flex-wrap justify-end">
-                  {acao.kanbans.map(kk => {
-                    const k = KANBANS.find(x => x.key === kk);
+                  {KANBANS.map(k => {
+                    const ativos = sistemaKanbans[acao.key] || acao.kanbans;
+                    const on = ativos.includes(k.key);
                     return (
-                      <span key={kk} className="text-[10px] px-2 py-0.5 rounded-full font-medium text-white"
-                        style={{ background: k?.cor || '#64748B' }}>
-                        {k?.label.replace('Kanban de ', '') || kk}
-                      </span>
+                      <button key={k.key} onClick={() => toggleSistemaKanban(acao.key, acao.kanbans, k.key)}
+                        className={`text-[10px] px-2 py-0.5 rounded-full border font-medium transition-all ${on ? 'text-white border-transparent' : 'bg-background text-muted-foreground border-border hover:bg-muted'}`}
+                        style={on ? { background: k.cor } : {}}>
+                        {k.label.replace('Kanban de ', '')}
+                      </button>
                     );
                   })}
                 </div>
