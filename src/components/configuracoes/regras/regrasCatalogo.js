@@ -72,7 +72,12 @@ export const CATEGORIAS_ACAO = [
 export const ACOES = [
   {
     key: 'mover_card', categoria: 'movimentacao',
-    partes: [{ chip: 'mover' }, 'o card para a etapa', { param: 'etapa', tipo: 'etapa', placeholder: 'Etapa' }],
+    partes: [{ chip: 'mover' }, 'o card para a etapa', { param: 'etapa', tipo: 'etapa', placeholder: 'Etapa' }, 'do kanban', { param: 'kanban', tipo: 'kanban' }],
+    descricao: 'Escolha o kanban para ver as etapas dele. Deixe no mesmo kanban para mover dentro do fluxo atual.',
+  },
+  {
+    key: 'criar_card_kanban', categoria: 'movimentacao',
+    partes: [{ chip: 'criar' }, 'um card no kanban', { param: 'kanban', tipo: 'kanban' }, 'na etapa', { param: 'etapa', tipo: 'etapa', placeholder: 'Etapa' }],
   },
   {
     key: 'cancelar_card', categoria: 'movimentacao',
@@ -111,17 +116,25 @@ export const ACOES = [
   },
 ];
 
+const KANBANS_LABELS = {
+  pedidos: 'Pedidos', producao: 'Produção', separacao: 'Separação', expedicao: 'Expedição',
+};
+
 export const gatilhoByKey = (k) => GATILHOS.find(g => g.key === k);
 export const acaoByKey = (k) => ACOES.find(a => a.key === k);
 
 // Monta a frase completa de um template com os parâmetros preenchidos
-export function montarFrase(template, params = {}, etapas = []) {
+export function montarFrase(template, params = {}, etapas = [], etapasPorKanban = {}) {
   if (!template) return '';
   return template.partes.map(p => {
     if (typeof p === 'string') return p;
     if (p.chip) return p.chip;
     const v = params?.[p.param] ?? p.default;
-    if (p.tipo === 'etapa') return `"${(etapas.find(e => e.key === v) || {}).label || v || '—'}"`;
+    if (p.tipo === 'kanban') return `"${(KANBANS_LABELS[v] || v || 'atual')}"`;
+    if (p.tipo === 'etapa') {
+      const lista = params?.kanban && etapasPorKanban[params.kanban] ? etapasPorKanban[params.kanban] : etapas;
+      return `"${(lista.find(e => e.key === v) || {}).label || v || '—'}"`;
+    }
     if (p.tipo === 'opcoes') return `"${((p.opcoes || []).find(o => o.v === v) || {}).l || v || '—'}"`;
     return `"${v ?? '—'}"`;
   }).join(' ');

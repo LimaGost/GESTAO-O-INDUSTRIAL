@@ -3,8 +3,11 @@ import { Plus } from 'lucide-react';
 import ParamInput from './ParamInput';
 
 // Linha de template (frase montável) com botão "+" para adicionar — estilo Trello
-export default function TemplateRow({ template, etapas, onAdd }) {
+export default function TemplateRow({ template, etapas, etapasPorKanban = {}, onAdd }) {
   const [params, setParams] = useState({});
+
+  // Se o template tem seletor de kanban, as etapas exibidas seguem o kanban escolhido
+  const etapasRow = params.kanban && etapasPorKanban[params.kanban] ? etapasPorKanban[params.kanban] : etapas;
 
   const adicionar = () => {
     // Preenche defaults dos parâmetros não tocados
@@ -30,7 +33,7 @@ export default function TemplateRow({ template, etapas, onAdd }) {
               </span>
             );
             return (
-              <ParamInput key={i} def={p} etapas={etapas}
+              <ParamInput key={i} def={p} etapas={etapasRow}
                 value={params[p.param]}
                 onChange={v => setParams(prev => ({ ...prev, [p.param]: v }))} />
             );

@@ -3,9 +3,9 @@ import { KANBANS } from '@/lib/kanbanFluxo';
 import { gatilhoByKey, acaoByKey, montarFrase } from './regrasCatalogo';
 
 // Card de regra salva — estilo Trello/Pluglead: nome, frase completa e toggle de ativação
-export default function RegraCard({ regra, etapas, onEditar, onDuplicar, onExcluir, onToggle }) {
+export default function RegraCard({ regra, etapas, etapasPorKanban = {}, onEditar, onDuplicar, onExcluir, onToggle }) {
   const fraseGatilho = montarFrase(gatilhoByKey(regra.gatilho?.key), regra.gatilho?.params, etapas);
-  const frasesAcoes = (regra.acoes || []).map(a => montarFrase(acaoByKey(a.key), a.params, etapas));
+  const frasesAcoes = (regra.acoes || []).map(a => montarFrase(acaoByKey(a.key), a.params, etapas, etapasPorKanban));
   const frase = `${fraseGatilho}, ${frasesAcoes.join(', e ')}`;
   const kanbanInfo = KANBANS.find(k => k.key === regra.kanban);
 

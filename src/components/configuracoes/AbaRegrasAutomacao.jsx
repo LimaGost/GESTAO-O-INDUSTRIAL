@@ -103,6 +103,7 @@ export default function AbaRegrasAutomacao() {
               key={regra.id}
               regra={regra}
               etapas={etapasPorKanban[regra.kanban] || []}
+              etapasPorKanban={etapasPorKanban}
               onEditar={() => setBuilder({ regra, index: idx })}
               onDuplicar={() => duplicar(idx)}
               onExcluir={() => excluir(idx)}

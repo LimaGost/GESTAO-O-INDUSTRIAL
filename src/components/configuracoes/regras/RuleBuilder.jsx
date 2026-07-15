@@ -142,7 +142,7 @@ export default function RuleBuilder({ regraInicial, etapasPorKanban, onSave, onC
             {abas(CATEGORIAS_ACAO, catA, setCatA)}
             <div className="space-y-2">
               {ACOES.filter(a => a.categoria === catA).map(a => (
-                <TemplateRow key={a.key} template={a} etapas={etapas}
+                <TemplateRow key={a.key} template={a} etapas={etapas} etapasPorKanban={etapasPorKanban}
                   onAdd={(params) => { setAcoes(prev => [...prev, { key: a.key, params }]); setStep(3); }} />
               ))}
             </div>
@@ -157,7 +157,7 @@ export default function RuleBuilder({ regraInicial, etapasPorKanban, onSave, onC
               {acoes.map((a, i) => (
                 <div key={i}>
                   {caixaSelecionada(
-                    montarFrase(acaoByKey(a.key), a.params, etapas),
+                    montarFrase(acaoByKey(a.key), a.params, etapas, etapasPorKanban),
                     () => {
                       const novas = acoes.filter((_, j) => j !== i);
                       setAcoes(novas);

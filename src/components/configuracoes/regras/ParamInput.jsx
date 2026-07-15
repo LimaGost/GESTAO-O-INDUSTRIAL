@@ -1,7 +1,17 @@
+import { KANBANS } from '@/lib/kanbanFluxo';
+
 // Campo inline de parâmetro dentro da frase da regra (estilo Trello)
 export default function ParamInput({ def, value, onChange, etapas }) {
   const cls = 'border border-border rounded-md px-2 py-1 text-xs bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary';
 
+  if (def.tipo === 'kanban') {
+    return (
+      <select value={value || ''} onChange={e => onChange(e.target.value)} className={cls}>
+        <option value="">Kanban atual</option>
+        {KANBANS.map(k => <option key={k.key} value={k.key}>{k.label.replace('Kanban de ', '')}</option>)}
+      </select>
+    );
+  }
   if (def.tipo === 'etapa') {
     return (
       <select value={value || ''} onChange={e => onChange(e.target.value)} className={cls}>
