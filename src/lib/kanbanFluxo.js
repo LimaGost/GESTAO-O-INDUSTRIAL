@@ -172,9 +172,16 @@ export async function loadAcoesCustom() {
   return Array.isArray(val?.acoes) ? val.acoes : [];
 }
 
-// Ações disponíveis para um kanban: base + customizadas do usuário
-export function getAcoesEtapa(kanbanKey, acoesCustom = []) {
-  const base = ACOES_ETAPA[kanbanKey] || [{ key: 'nenhuma', label: 'Nenhuma ação' }];
+// Renomeações das ações do sistema feitas pelo usuário (Configurações > Ações)
+export async function loadAcoesOverrides() {
+  const val = await loadConfig('acoes_etapa_custom');
+  return val?.overrides && typeof val.overrides === 'object' ? val.overrides : {};
+}
+
+// Ações disponíveis para um kanban: base (com nomes personalizados) + customizadas do usuário
+export function getAcoesEtapa(kanbanKey, acoesCustom = [], overrides = {}) {
+  const base = (ACOES_ETAPA[kanbanKey] || [{ key: 'nenhuma', label: 'Nenhuma ação' }])
+    .map(a => ({ ...a, label: overrides[a.key] || a.label }));
   const custom = acoesCustom
     .filter(a => (a.kanbans || []).includes(kanbanKey) && (a.label || '').trim())
     .map(a => ({ key: a.key, label: a.label }));
@@ -213,7 +220,7 @@ export async function saveKanbanFluxo(kanbanKey, data) {
     if (kanbanKey === 'producao') {
       localStorage.setItem(ls, JSON.stringify(data.stages.map(s => ({ key: s.key, label: s.label, cor: s.cor, icone: s.icone, acao: s.acao || 'nenhuma', acoes: Array.isArray(s.acoes) ? s.acoes : [] }))));
     } else if (kanbanKey === 'expedicao') {
-      localStorage.setItem(ls, JSON.stringify(data.stages.map(s => ({ key: s.key, label: s.label, cor: s.cor, desc: '', fixo: !!s.fixo }))));
+      localStorage.setItem(ls, JSON.stringify(data.stages.map(s => ({ key: s.key, label: s.label, cor: s.cor, desc: '', fixo: !!s.fixo, acao: s.acao || 'nenhuma', acoes: Array.isArray(s.acoes) ? s.acoes : [] }))));
     } else {
       localStorage.setItem(ls, JSON.stringify(data.stages));
     }
@@ -238,6 +245,8 @@ export function buildColunas(stages) {
       proximo: next ? next.key : null,
       proximoLabel: next ? `→ ${next.label}` : null,
       fixo: !!s.fixo,
+      acao: s.acao || 'nenhuma',
+      acoes: Array.isArray(s.acoes) && s.acoes.length > 0 ? s.acoes : (s.acao && s.acao !== 'nenhuma' ? [s.acao] : []),
     };
   });
 }

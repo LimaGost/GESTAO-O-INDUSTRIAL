@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Zap, Plus, Trash2, Save, Lock } from 'lucide-react';
+import { Zap, Plus, Trash2, Save, Lock, RotateCcw } from 'lucide-react';
 import { loadConfig, saveConfig } from '@/lib/appConfig';
 import { KANBANS, ACOES_ETAPA } from '@/lib/kanbanFluxo';
 
@@ -19,6 +19,7 @@ function acoesSistema() {
 // Gerenciador de ações customizadas de etapa — salvas em AppConfig 'acoes_etapa_custom'
 export default function AbaAcoes() {
   const [acoes, setAcoes] = useState([]);
+  const [overrides, setOverrides] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -26,6 +27,7 @@ export default function AbaAcoes() {
   useEffect(() => {
     loadConfig('acoes_etapa_custom').then(val => {
       setAcoes(Array.isArray(val?.acoes) ? val.acoes : []);
+      setOverrides(val?.overrides && typeof val.overrides === 'object' ? val.overrides : {});
       setLoading(false);
     });
   }, []);
@@ -54,8 +56,16 @@ export default function AbaAcoes() {
   const salvar = async () => {
     setSaving(true);
     const validas = acoes.filter(a => (a.label || '').trim());
-    await saveConfig('acoes_etapa_custom', { acoes: validas });
+    // Mantém apenas renomeações que diferem do nome padrão
+    const defaults = Object.fromEntries(acoesSistema().map(a => [a.key, a.label]));
+    const ovLimpo = {};
+    for (const [k, v] of Object.entries(overrides)) {
+      const t = (v || '').trim();
+      if (t && t !== defaults[k]) ovLimpo[k] = t;
+    }
+    await saveConfig('acoes_etapa_custom', { acoes: validas, overrides: ovLimpo });
     setAcoes(validas);
+    setOverrides(ovLimpo);
     window.dispatchEvent(new Event('acoes:saved'));
     setSaving(false);
     setSaved(true);
@@ -85,15 +95,25 @@ export default function AbaAcoes() {
 
         <div className="px-6 py-5 space-y-3">
           {/* Ações padrão do sistema (fixas) */}
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Ações do sistema</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Ações do sistema <span className="normal-case font-normal tracking-normal">— o comportamento é fixo, mas você pode renomear</span></p>
           <div className="space-y-1.5">
             {acoesSistema().map(acao => (
               <div key={acao.key} className="flex items-center gap-2.5 bg-muted/50 rounded-xl px-3.5 py-2.5 border border-border/50">
                 <div className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
                   <Lock size={12} className="text-muted-foreground" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{acao.label}</p>
+                <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                  <input
+                    value={overrides[acao.key] ?? acao.label}
+                    onChange={e => setOverrides(o => ({ ...o, [acao.key]: e.target.value }))}
+                    className="flex-1 min-w-0 border border-transparent hover:border-border focus:border-border rounded-lg px-2 py-1 text-sm bg-transparent focus:bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary transition-colors" />
+                  {overrides[acao.key] !== undefined && overrides[acao.key] !== acao.label && (
+                    <button onClick={() => setOverrides(o => { const n = { ...o }; delete n[acao.key]; return n; })}
+                      title="Restaurar nome padrão"
+                      className="p-1 text-muted-foreground hover:text-foreground rounded flex-shrink-0">
+                      <RotateCcw size={12} />
+                    </button>
+                  )}
                 </div>
                 <div className="flex items-center gap-1 flex-wrap justify-end">
                   {acao.kanbans.map(kk => {

@@ -6,7 +6,7 @@ import {
 import {
   KANBANS, CORES, ROLES, TRIGGERS, ACOES,
   getIcon, loadKanbanFluxo, saveKanbanFluxo, DEFAULTS,
-  loadAcoesCustom, getAcoesEtapa,
+  loadAcoesCustom, loadAcoesOverrides, getAcoesEtapa,
 } from '@/lib/kanbanFluxo';
 import IconPicker from './IconPicker';
 
@@ -17,23 +17,29 @@ export default function AbaGestaoFluxos() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [acoesCustom, setAcoesCustom] = useState([]);
+  const [acoesOverrides, setAcoesOverrides] = useState({});
 
   // Carrega todos os kanbans uma vez
   useEffect(() => {
     (async () => {
-      const [entries, custom] = await Promise.all([
+      const [entries, custom, overrides] = await Promise.all([
         Promise.all(KANBANS.map(async k => [k.key, await loadKanbanFluxo(k.key)])),
         loadAcoesCustom(),
+        loadAcoesOverrides(),
       ]);
       setConfigs(Object.fromEntries(entries));
       setAcoesCustom(custom);
+      setAcoesOverrides(overrides);
       setLoading(false);
     })();
   }, []);
 
-  // Atualiza a lista quando novas ações são criadas em Configurações > Ações
+  // Atualiza a lista quando ações são criadas/editadas em Configurações > Ações
   useEffect(() => {
-    const onAcoes = () => loadAcoesCustom().then(setAcoesCustom);
+    const onAcoes = () => {
+      loadAcoesCustom().then(setAcoesCustom);
+      loadAcoesOverrides().then(setAcoesOverrides);
+    };
     window.addEventListener('acoes:saved', onAcoes);
     return () => window.removeEventListener('acoes:saved', onAcoes);
   }, []);
@@ -214,7 +220,7 @@ export default function AbaGestaoFluxos() {
 
                     {/* Ações automáticas da etapa (múltiplas) */}
                     {(() => {
-                      const opcoes = getAcoesEtapa(kanbanAtivo, acoesCustom).filter(a => a.key !== 'nenhuma');
+                      const opcoes = getAcoesEtapa(kanbanAtivo, acoesCustom, acoesOverrides).filter(a => a.key !== 'nenhuma');
                       const selecionadas = Array.isArray(stage.acoes) && stage.acoes.length > 0
                         ? stage.acoes
                         : (stage.acao && stage.acao !== 'nenhuma' ? [stage.acao] : []);

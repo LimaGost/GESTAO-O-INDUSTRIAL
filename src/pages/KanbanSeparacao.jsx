@@ -84,9 +84,17 @@ export default function KanbanSeparacao() {
     if (proximo === 'em_conferencia') updates.data_conferencia = agora;
     if (proximo === 'liberado_expedicao') updates.data_liberacao = agora;
 
+    // Ações configuradas na etapa (Gestão de Fluxos); fallback para o comportamento padrão por status
+    const colProx = colunas.find(c => c.key === proximo);
+    const acoesProx = Array.isArray(colProx?.acoes) && colProx.acoes.length > 0
+      ? colProx.acoes
+      : (proximo === 'separado' ? ['gerar_etiquetas']
+        : proximo === 'liberado_expedicao' ? ['saida_estoque', 'marcar_pedido_separado'] : []);
+    const temAcao = (a) => acoesProx.includes(a);
+
     try {
-      // Ao separar: gera etiquetas dos itens
-      if (proximo === 'separado' && sep.itens?.length > 0) {
+      // Gerar etiquetas dos itens
+      if (temAcao('gerar_etiquetas') && sep.itens?.length > 0) {
         const produtos = await base44.entities.Produto.list();
         const lote = gerarLote(sep.id);
         const dataProducao = hojeData();
@@ -104,9 +112,9 @@ export default function KanbanSeparacao() {
         }));
       }
 
-      // Ao finalizar a separação: baixa o estoque — quantidade reservada ao pedido
+      // Saída de estoque — quantidade reservada ao pedido
       // (exceto quando o estoque já foi reservado/baixado na criação do pedido)
-      if (proximo === 'liberado_expedicao' && sep.itens?.length > 0 && !sep.estoque_ja_reservado) {
+      if (temAcao('saida_estoque') && sep.itens?.length > 0 && !sep.estoque_ja_reservado) {
         const produtos = await base44.entities.Produto.list();
         await Promise.all((sep.itens || []).map(async (item) => {
           const prod = produtos.find(p => p.id === item.produto_id);
@@ -121,10 +129,10 @@ export default function KanbanSeparacao() {
       const labelProximo = colunas.find(c => c.key === proximo)?.label || proximo;
       registrarLog('Separacao', sep.id, 'AVANCO_STATUS', `Separação ${sep.numero} avançou para "${labelProximo}"`).catch(() => {});
 
-      // Liberação → marcar pedido como separado quando todas as separações do pedido estiverem liberadas
-      if (proximo === 'liberado_expedicao' && sep.pedido_id) {
+      // Marcar pedido como separado quando todas as separações do pedido estiverem nesta etapa
+      if (temAcao('marcar_pedido_separado') && sep.pedido_id) {
         const todas = await base44.entities.Separacao.filter({ pedido_id: sep.pedido_id });
-        const todasLiberadas = todas.every(s => s.id === sep.id ? true : s.status === 'liberado_expedicao');
+        const todasLiberadas = todas.every(s => s.id === sep.id ? true : s.status === proximo);
         if (todasLiberadas) {
           const peds = await base44.entities.Pedido.filter({ id: sep.pedido_id });
           if (peds[0]) {
