@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
+import { gerarNumero } from '@/lib/numeracao';
+import { registrarLog } from '@/lib/audit';
 import { Store, RefreshCw, Clock, CheckCircle, Package, FileText, XCircle } from 'lucide-react';
 import FranqueadoCard from '@/components/galpao/FranqueadoCard';
 import FranqueadosKpis from '@/components/galpao/FranqueadosKpis';
@@ -34,6 +36,42 @@ export default function KanbanFranqueados() {
   const [dataInicial, setDataInicial] = useState(inicioMesStr);
   const [dataFinal, setDataFinal] = useState(hojeStr);
   const [pedidoSelecionado, setPedidoSelecionado] = useState(null);
+  const [enviados, setEnviados] = useState(new Set());
+  const [enviandoId, setEnviandoId] = useState(null);
+
+  // Pedidos já enviados para o Kanban de Separação Galpão
+  useEffect(() => {
+    base44.entities.SeparacaoGalpao.list()
+      .then(seps => setEnviados(new Set(seps.map(s => s.pedido_franqueado_numero).filter(Boolean))))
+      .catch(() => {});
+  }, []);
+
+  const enviarParaSeparacao = async (ped) => {
+    setEnviandoId(ped.id);
+    try {
+      const itens = (ped.itens || []).map(i => ({
+        produto_id: String(i.cod_produto || ''),
+        produto_nome: nomesProdutos[i.cod_produto] || `Produto ${i.cod_produto}`,
+        quantidade: i.quantidade || 0,
+      }));
+      const sep = await base44.entities.SeparacaoGalpao.create({
+        numero: gerarNumero('SGP'),
+        cliente_nome: ped.franqueado,
+        pedido_franqueado_numero: String(ped.numero),
+        itens,
+        quantidade_itens: itens.length,
+        quantidade_total: itens.reduce((s, i) => s + (i.quantidade || 0), 0),
+        status: 'aguardando_separacao',
+        observacoes: `Pedido de franqueado #${ped.numero} (Microvix)`,
+      });
+      setEnviados(prev => new Set([...prev, String(ped.numero)]));
+      registrarLog('SeparacaoGalpao', sep.id, 'CRIACAO', `Separação ${sep.numero} criada a partir do pedido de franqueado #${ped.numero} (${ped.franqueado})`).catch(() => {});
+    } catch (e) {
+      alert('Erro ao enviar para separação: ' + e.message);
+    } finally {
+      setEnviandoId(null);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -153,7 +191,11 @@ export default function KanbanFranqueados() {
                   </div>
                 ) : (
                   colPedidos.map(ped => (
-                    <FranqueadoCard key={ped.id} pedido={ped} accent={accent} onClick={() => setPedidoSelecionado(ped)} />
+                    <FranqueadoCard key={ped.id} pedido={ped} accent={accent}
+                      onClick={() => setPedidoSelecionado(ped)}
+                      onEnviarSeparacao={key !== 'cancelado' ? enviarParaSeparacao : null}
+                      enviado={enviados.has(String(ped.numero))}
+                      enviando={enviandoId === ped.id} />
                   ))
                 )}
               </div>

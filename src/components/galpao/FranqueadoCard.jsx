@@ -1,10 +1,12 @@
+import { RefreshCw, PackagePlus, Check } from 'lucide-react';
+
 const fmtR = (v) => `R$ ${(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 const fmtD = (d) => d ? new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
 
-export default function FranqueadoCard({ pedido, accent, onClick }) {
+export default function FranqueadoCard({ pedido, accent, onClick, onEnviarSeparacao, enviado, enviando }) {
   return (
-    <button onClick={onClick}
-      className="w-full text-left bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+    <div onClick={onClick} role="button"
+      className="w-full text-left bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden cursor-pointer"
       style={{ border: `1.5px solid ${accent}55`, borderLeft: `4px solid ${accent}` }}>
       <div className="px-3.5 py-3 space-y-1">
         <div className="flex items-start justify-between gap-2">
@@ -23,6 +25,25 @@ export default function FranqueadoCard({ pedido, accent, onClick }) {
         </div>
         <p className="text-sm font-bold" style={{ color: accent }}>{fmtR(pedido.valor_total)}</p>
       </div>
-    </button>
+
+      {onEnviarSeparacao && (
+        <div className="border-t border-border px-3.5 py-2">
+          {enviado ? (
+            <span className="flex items-center justify-center gap-1.5 text-xs font-semibold text-teal-600 py-1">
+              <Check size={12} /> Enviado p/ Separação
+            </span>
+          ) : (
+            <button
+              onClick={(e) => { e.stopPropagation(); onEnviarSeparacao(pedido); }}
+              disabled={enviando}
+              className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg text-white transition-all disabled:opacity-50"
+              style={{ background: '#14B8A6' }}>
+              {enviando ? <RefreshCw size={11} className="animate-spin" /> : <PackagePlus size={12} />}
+              Enviar p/ Separação
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
