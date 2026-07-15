@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Store, RefreshCw, Clock, CheckCircle, Package, FileText, XCircle } from 'lucide-react';
 import FranqueadoCard from '@/components/galpao/FranqueadoCard';
+import FranqueadosKpis from '@/components/galpao/FranqueadosKpis';
 import ModalPedidoFranqueado from '@/components/galpao/ModalPedidoFranqueado';
 
 const COLUNAS = [
@@ -95,6 +96,26 @@ export default function KanbanFranqueados() {
             Erro ao consultar a Microvix: {erro}
           </p>
         )}
+
+        {/* KPIs */}
+        {!loading && <div className="mt-4"><FranqueadosKpis pedidos={pedidosFiltrados} /></div>}
+
+        {/* Progress bars */}
+        <div className="mt-4 grid gap-2 grid-cols-3 md:grid-cols-5">
+          {COLUNAS.map((col) => {
+            const count = pedidosFiltrados.filter(p => p.status === col.key).length;
+            const pct = pedidosFiltrados.length > 0 ? Math.round(count / pedidosFiltrados.length * 100) : 0;
+            return (
+              <div key={col.key} className="text-center">
+                <div className="h-1.5 rounded-full mb-1.5 overflow-hidden bg-muted">
+                  <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: col.accent }} />
+                </div>
+                <p className="text-base md:text-lg font-bold text-foreground">{count}</p>
+                <p className="text-[9px] md:text-[10px] text-muted-foreground leading-tight hidden sm:block">{col.label.replace(/^\S+\s/, '')}</p>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Colunas */}
