@@ -1,21 +1,30 @@
 // getPrinterConfig: lê do localStorage (sincronizado pelo banco via AbaEtiquetas)
 function getPrinterConfig() {
-  try { return JSON.parse(localStorage.getItem('printer_config') || '{}'); } catch { return {}; }
+  try {
+    return JSON.parse(
+      localStorage.getItem('etiqueta_impressora_config') ||
+      localStorage.getItem('printer_config') || '{}'
+    );
+  } catch { return {}; }
 }
 
 function getDimensoes(config) {
   if (config.tamanho === 'custom') {
-    return { w: config.largura_custom || 100, h: config.altura_custom || 50 };
+    return { w: Number(config.largura_custom) || 100, h: Number(config.altura_custom) || 50, colunas: 1, gap: 2 };
   }
   const TAMANHOS = {
+    '30x15_3col': { w: 30, h: 15, colunas: 3, gap: 2.5 },
     '100x150': { w: 100, h: 150 },
+    '100x100': { w: 100, h: 100 },
+    '100x75':  { w: 100, h: 75 },
     '100x50':  { w: 100, h: 50 },
     '100x30':  { w: 100, h: 30 },
     '80x40':   { w: 80,  h: 40 },
     '60x40':   { w: 60,  h: 40 },
     '58x40':   { w: 58,  h: 40 },
   };
-  return TAMANHOS[config.tamanho] || { w: 100, h: 50 };
+  const t = TAMANHOS[config.tamanho] || { w: 100, h: 50 };
+  return { colunas: 1, gap: 2, ...t };
 }
 
 function gerarZPL({ produto_nome, quantidade, lote, data_producao, codigo_barras, w, h, copias, volume, total_volumes }) {
@@ -75,6 +84,144 @@ A10,40,0,2,1,1,N,"Lote: ${lote || '—'}"
 A10,60,0,2,1,1,N,"Qtd: ${quantidade} un  Data: ${data_producao || '—'}"
 ${volLine}B10,${bcY},0,1,2,2,60,B,"${cod}"
 P${copias || 1}`;
+}
+
+// ── Etiqueta pequena multi-coluna (ex.: 30×15mm, 3 colunas — Elgin L42 Pro) ──
+// PPLB é compatível com EPL2. 203dpi = 8 dots/mm.
+function gerarMultiColunaPPLB({ produto_nome, lote, data_producao, codigo_barras, w, h, gap, colunas, qtd }) {
+  const pitch = Math.round((w + gap) * 8);              // distância entre colunas
+  const totalW = pitch * colunas - Math.round(gap * 8); // largura total da bobina
+  const alturaDots = Math.round(h * 8);
+  const gapDots = Math.round(gap * 8);
+  const cod = (codigo_barras || '').slice(0, 20);
+  const nome = produto_nome.slice(0, 20);
+
+  const coluna = (x) => [
+    `A${x + 8},4,0,1,1,1,N,"${nome}"`,
+    `A${x + 8},22,0,1,1,1,N,"L:${(lote || '-').slice(0, 12)} ${(data_producao || '').slice(0, 10)}"`,
+    cod ? `B${x + 8},42,0,1,2,2,64,N,"${cod}"` : '',
+  ].filter(Boolean).join('\n');
+
+  const formHeader = `q${totalW}\nQ${alturaDots},${gapDots}\nN`;
+  const fullRows = Math.floor(qtd / colunas);
+  const resto = qtd % colunas;
+  const blocos = [];
+
+  if (fullRows > 0) {
+    const cols = Array.from({ length: colunas }, (_, c) => coluna(c * pitch)).join('\n');
+    blocos.push(`${formHeader}\n${cols}\nP${fullRows}`);
+  }
+  if (resto > 0) {
+    const cols = Array.from({ length: resto }, (_, c) => coluna(c * pitch)).join('\n');
+    blocos.push(`${formHeader}\n${cols}\nP1`);
+  }
+  return blocos.join('\n');
+}
+
+function gerarMultiColunaTSPL({ produto_nome, lote, data_producao, codigo_barras, w, h, gap, colunas, qtd }) {
+  const pitch = Math.round((w + gap) * 8);
+  const totalWmm = (w + gap) * colunas - gap;
+  const cod = (codigo_barras || '').slice(0, 20);
+  const nome = produto_nome.slice(0, 20);
+
+  const coluna = (x) => [
+    `TEXT ${x + 8},4,"1",0,1,1,"${nome}"`,
+    `TEXT ${x + 8},22,"1",0,1,1,"L:${(lote || '-').slice(0, 12)} ${(data_producao || '').slice(0, 10)}"`,
+    cod ? `BARCODE ${x + 8},42,"128",64,0,0,2,2,"${cod}"` : '',
+  ].filter(Boolean).join('\n');
+
+  const header = `SIZE ${totalWmm.toFixed(1)} mm, ${h} mm\nGAP ${gap} mm, 0 mm\nCLS`;
+  const fullRows = Math.floor(qtd / colunas);
+  const resto = qtd % colunas;
+  const blocos = [];
+
+  if (fullRows > 0) {
+    const cols = Array.from({ length: colunas }, (_, c) => coluna(c * pitch)).join('\n');
+    blocos.push(`${header}\n${cols}\nPRINT ${fullRows}`);
+  }
+  if (resto > 0) {
+    const cols = Array.from({ length: resto }, (_, c) => coluna(c * pitch)).join('\n');
+    blocos.push(`${header}\n${cols}\nPRINT 1`);
+  }
+  return blocos.join('\n');
+}
+
+function gerarMultiColunaZPL({ produto_nome, lote, data_producao, codigo_barras, w, h, gap, colunas, qtd }) {
+  const pitch = Math.round((w + gap) * 8);
+  const totalW = pitch * colunas - Math.round(gap * 8);
+  const cod = (codigo_barras || '').slice(0, 20);
+  const nome = produto_nome.slice(0, 20);
+
+  const coluna = (x) => [
+    `^FO${x + 8},4^ADN,12,6^FD${nome}^FS`,
+    `^FO${x + 8},22^ADN,10,5^FDL:${(lote || '-').slice(0, 12)} ${(data_producao || '').slice(0, 10)}^FS`,
+    cod ? `^FO${x + 8},42^BY1^BCN,60,N,N,N^FD${cod}^FS` : '',
+  ].filter(Boolean).join('\n');
+
+  const header = `^XA\n^PW${totalW}\n^LL${Math.round(h * 8)}`;
+  const fullRows = Math.floor(qtd / colunas);
+  const resto = qtd % colunas;
+  const blocos = [];
+
+  if (fullRows > 0) {
+    const cols = Array.from({ length: colunas }, (_, c) => coluna(c * pitch)).join('\n');
+    blocos.push(`${header}\n${cols}\n^PQ${fullRows}\n^XZ`);
+  }
+  if (resto > 0) {
+    const cols = Array.from({ length: resto }, (_, c) => coluna(c * pitch)).join('\n');
+    blocos.push(`${header}\n${cols}\n^PQ1\n^XZ`);
+  }
+  return blocos.join('\n');
+}
+
+function imprimirHTMLMultiColuna({ produto_nome, lote, data_producao, codigo_barras, w, h, gap, colunas, qtd }) {
+  const win = window.open('', '_blank', 'width=500,height=600');
+  if (!win) return;
+  const cod = codigo_barras || '';
+  const totalWmm = (w + gap) * colunas - gap;
+
+  const etiquetas = Array.from({ length: qtd }).map((_, i) => `
+    <div class="lbl">
+      <div class="nome">${produto_nome.slice(0, 22)}</div>
+      <div class="sub">L:${lote || '-'} ${data_producao || ''}</div>
+      ${cod ? `<svg id="bc${i}"></svg>` : ''}
+    </div>`).join('');
+
+  const barcodeInit = cod ? Array.from({ length: qtd }).map((_, i) =>
+    `JsBarcode("#bc${i}", "${cod}", { format: "CODE128", width: 1, height: 18, displayValue: false, margin: 0 });`
+  ).join('\n') : '';
+
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8" />
+<title>Etiquetas 30x15 — ${produto_nome}</title>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  @page { size: ${totalWmm}mm ${h}mm; margin: 0; }
+  body { font-family: Arial, sans-serif; }
+  .grid { display: flex; flex-wrap: wrap; width: ${totalWmm}mm; }
+  .lbl {
+    width: ${w}mm; height: ${h}mm;
+    margin-right: ${gap}mm;
+    padding: 0.5mm 1mm;
+    overflow: hidden;
+    display: flex; flex-direction: column; justify-content: flex-start;
+  }
+  .lbl:nth-child(${colunas}n) { margin-right: 0; }
+  .nome { font-size: 6.5pt; font-weight: bold; white-space: nowrap; overflow: hidden; }
+  .sub { font-size: 5.5pt; white-space: nowrap; overflow: hidden; }
+  svg { width: ${w - 2}mm; height: 6mm; margin-top: 0.5mm; }
+  @media screen { .lbl { outline: 1px dashed #ccc; } }
+</style></head>
+<body>
+  <div class="grid">${etiquetas}</div>
+  <script>
+    window.onload = function() {
+      ${barcodeInit}
+      setTimeout(() => window.print(), 500);
+    };
+  <\/script>
+</body></html>`);
+  win.document.close();
 }
 
 function downloadPRN(conteudo, nome) {
@@ -192,9 +339,25 @@ function imprimirHTML({ produto_nome, quantidade, lote, data_producao, codigo_ba
 
 export function imprimirEtiquetaProduto({ produto_nome, quantidade, lote, data_producao, codigo_barras, num_volumes = 1 }) {
   const config = getPrinterConfig();
-  const { w, h } = getDimensoes(config);
+  const { w, h, colunas, gap } = getDimensoes(config);
   const copias = config.copias || 1;
   const nome_arquivo = `etiqueta_${produto_nome.replace(/\s+/g, '_')}`;
+
+  // ── Bobina multi-coluna (ex.: 30×15mm 3 colunas — Elgin L42 Pro) ──
+  if (colunas > 1) {
+    const qtd = Math.max(1, (num_volumes || 1) * copias);
+    const params = { produto_nome, lote, data_producao, codigo_barras, w, h, gap, colunas, qtd };
+    if (config.linguagem === 'zpl') {
+      downloadPRN(gerarMultiColunaZPL(params), `${nome_arquivo}.prn`);
+    } else if (config.linguagem === 'tspl') {
+      downloadPRN(gerarMultiColunaTSPL(params), `${nome_arquivo}.prn`);
+    } else if (config.linguagem === 'epl' || config.linguagem === 'pplb') {
+      downloadPRN(gerarMultiColunaPPLB(params), `${nome_arquivo}.prn`);
+    } else {
+      imprimirHTMLMultiColuna(params);
+    }
+    return;
+  }
 
   if (config.linguagem === 'zpl') {
     const labels = Array.from({ length: num_volumes }, (_, i) =>
@@ -206,7 +369,7 @@ export function imprimirEtiquetaProduto({ produto_nome, quantidade, lote, data_p
       gerarTSPL({ produto_nome, quantidade, lote, data_producao, codigo_barras, w, h, copias, volume: i + 1, total_volumes: num_volumes })
     );
     downloadPRN(labels.join('\n'), `${nome_arquivo}.prn`);
-  } else if (config.linguagem === 'epl') {
+  } else if (config.linguagem === 'epl' || config.linguagem === 'pplb') {
     const labels = Array.from({ length: num_volumes }, (_, i) =>
       gerarEPL({ produto_nome, quantidade, lote, data_producao, codigo_barras, w, h, copias, volume: i + 1, total_volumes: num_volumes })
     );

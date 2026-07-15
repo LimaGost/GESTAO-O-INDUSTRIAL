@@ -3,6 +3,7 @@ import { Save, Printer } from 'lucide-react';
 import { loadConfig, saveConfig } from '@/lib/appConfig';
 
 const TAMANHOS = [
+  { key: '30x15_3col', label: '30 × 15 mm — 3 colunas (Elgin L42 Pro)' },
   { key: '100x50',  label: '100 × 50 mm' },
   { key: '100x75',  label: '100 × 75 mm' },
   { key: '100x100', label: '100 × 100 mm' },
@@ -11,6 +12,7 @@ const TAMANHOS = [
 
 const LINGUAGENS = [
   { key: 'html',  label: 'Impressão HTML (padrão)' },
+  { key: 'pplb',  label: 'PPLB (Elgin L42 Pro / Bematech / Argox)' },
   { key: 'zpl',   label: 'ZPL (Zebra)' },
   { key: 'tspl',  label: 'TSPL (TSC)' },
   { key: 'epl',   label: 'EPL (Zebra legado)' },
@@ -80,6 +82,13 @@ export default function AbaEtiquetas() {
               className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
               {TAMANHOS.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
             </select>
+            {cfg.tamanho === '30x15_3col' && (
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2">
+                🖨️ Bobina de 3 colunas (30×15mm cada, ~97mm de largura total). Para a Elgin/Bematech L42 Pro,
+                selecione a linguagem <strong>PPLB</strong> acima e envie o arquivo .prn gerado direto para a impressora
+                (ou use Impressão HTML pelo driver do Windows com página de 97×15mm).
+              </p>
+            )}
           </div>
 
           {cfg.tamanho === 'custom' && (
