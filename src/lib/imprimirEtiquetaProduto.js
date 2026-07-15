@@ -349,9 +349,15 @@ export function getConfigEtiqueta() {
   return { ...dim, linguagem: config.linguagem || 'html', copias: config.copias || 1, modelo_descricao: config.modelo_descricao || null };
 }
 
-export function imprimirEtiquetaProduto({ produto_nome, quantidade, lote, data_producao, codigo_barras, num_volumes = 1 }) {
-  const config = getPrinterConfig();
-  const { w, h, colunas, gap } = getDimensoes(config);
+// configOverride (opcional): { w, h, colunas, gap, linguagem, copias } — usado para impressão de teste de modelos
+export function imprimirEtiquetaProduto({ produto_nome, quantidade, lote, data_producao, codigo_barras, num_volumes = 1 }, configOverride = null) {
+  const config = configOverride || getPrinterConfig();
+  const { w, h, colunas, gap } = configOverride ? {
+    w: Number(configOverride.w) || 100,
+    h: Number(configOverride.h) || 50,
+    colunas: Number(configOverride.colunas) || 1,
+    gap: Number(configOverride.gap) || 0,
+  } : getDimensoes(config);
   const copias = config.copias || 1;
   const nome_arquivo = `etiqueta_${produto_nome.replace(/\s+/g, '_')}`;
 

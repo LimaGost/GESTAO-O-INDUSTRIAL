@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import EstudioPreview from '@/components/etiquetas/EstudioPreview';
-import { ArrowLeft, Info, Save } from 'lucide-react';
+import { ArrowLeft, Info, Save, Printer } from 'lucide-react';
+import { imprimirEtiquetaProduto } from '@/lib/imprimirEtiquetaProduto';
 
 const LINGUAGENS = [
   { v: 'pplb', l: '1 - PPLB (Elgin L42 Pro / Argox)' },
@@ -92,6 +93,17 @@ export default function ModeloEtiquetaForm({ modelo, onVoltar, onSalvo }) {
           <h3 className="font-bold text-foreground">{modelo?.id ? 'Editar Etiqueta' : 'Cadastro de Etiqueta'}</h3>
           <p className="text-xs text-muted-foreground">Crie um modelo de etiqueta configurando das opções de impressão até o papel. Após salvar, o modelo estará disponível como opção de impressão.</p>
         </div>
+        <button onClick={() => imprimirEtiquetaProduto({
+            produto_nome: 'TESTE DE IMPRESSAO',
+            quantidade: 1,
+            lote: 'TESTE001',
+            data_producao: new Date().toLocaleDateString('pt-BR'),
+            codigo_barras: '7891234567890',
+            num_volumes: colunas,
+          }, { w: larguraEtiqueta, h: Number(form.altura_etiqueta_mm) || 15, colunas, gap, linguagem: form.linguagem, copias: 1 })}
+          className="flex items-center gap-2 border border-teal-dark/25 text-teal-dark px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-teal-dark/10 transition-colors flex-shrink-0">
+          <Printer size={14} /> Imprimir teste
+        </button>
         <button onClick={salvar} disabled={salvando}
           className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl text-sm font-bold hover:opacity-90 disabled:opacity-50 transition-opacity flex-shrink-0">
           <Save size={14} /> {salvando ? 'Salvando...' : 'Salvar'}

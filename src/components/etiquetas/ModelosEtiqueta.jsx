@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { calcLarguraEtiqueta } from '@/components/etiquetas/ModeloEtiquetaForm';
-import { Layers, Plus, Pencil, Trash2, CheckCircle2 } from 'lucide-react';
+import { Layers, Plus, Pencil, Trash2, CheckCircle2, Printer } from 'lucide-react';
+import { imprimirEtiquetaProduto } from '@/lib/imprimirEtiquetaProduto';
 
 const LINGUAGEM_LABEL = { pplb: 'PPLB', zpl: 'ZPL', tspl: 'TSPL', epl: 'EPL', html: 'HTML' };
 
@@ -38,6 +39,18 @@ export default function ModelosEtiqueta({ onEditar, onNovo, refreshKey }) {
     localStorage.setItem('etiqueta_impressora_config', JSON.stringify(nova));
     setAtivoId(m.id);
     window.dispatchEvent(new Event('settings:saved'));
+  };
+
+  const imprimirTeste = (m) => {
+    const gap = m.tipo_papel === 'com_espacamento' ? (m.espaco_mm || 0) : 0;
+    imprimirEtiquetaProduto({
+      produto_nome: 'TESTE DE IMPRESSAO',
+      quantidade: 1,
+      lote: 'TESTE001',
+      data_producao: new Date().toLocaleDateString('pt-BR'),
+      codigo_barras: '7891234567890',
+      num_volumes: m.colunas || 1,
+    }, { w: calcLarguraEtiqueta(m), h: m.altura_etiqueta_mm, colunas: m.colunas || 1, gap, linguagem: m.linguagem, copias: 1 });
   };
 
   const excluir = async (m) => {
@@ -88,6 +101,10 @@ export default function ModelosEtiqueta({ onEditar, onNovo, refreshKey }) {
                     Usar
                   </button>
                 )}
+                <button onClick={() => imprimirTeste(m)} title="Imprimir teste"
+                  className="p-1.5 text-muted-foreground hover:text-teal-dark hover:bg-muted rounded-lg transition-colors flex-shrink-0">
+                  <Printer size={13} />
+                </button>
                 <button onClick={() => onEditar(m)} title="Editar"
                   className="p-1.5 text-muted-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors flex-shrink-0">
                   <Pencil size={13} />
