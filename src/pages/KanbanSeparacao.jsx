@@ -126,6 +126,11 @@ export default function KanbanSeparacao() {
       }
 
       await base44.entities.Separacao.update(sep.id, updates);
+
+      // Regras de Automação (Configurações > Regras de Automação) — fire-and-forget
+      import('@/lib/regrasAutomacao').then(({ executarRegrasCardMovido }) =>
+        executarRegrasCardMovido('separacao', { ...sep, ...updates }, proximo).catch(() => {}));
+
       const labelProximo = colunas.find(c => c.key === proximo)?.label || proximo;
       registrarLog('Separacao', sep.id, 'AVANCO_STATUS', `Separação ${sep.numero} avançou para "${labelProximo}"`).catch(() => {});
 

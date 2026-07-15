@@ -330,6 +330,10 @@ export default function Kanban() {
       // ── Chamada à API (otimistic já aconteceu acima) ──
       await base44.entities.OrdemProducao.update(ordem.id, updates);
 
+      // Regras de Automação (Configurações > Regras de Automação) — fire-and-forget
+      import('@/lib/regrasAutomacao').then(({ executarRegrasCardMovido }) =>
+        executarRegrasCardMovido('producao', { ...ordem, ...updates }, proximo).catch(() => {}));
+
       // ── Sincronização de status do Pedido (configurada em Configurações > Kanban) ──
       const statusPedidoConfigurado = colunaProximo?.status_pedido;
       if (statusPedidoConfigurado && ordem.pedido_id && !temAcao('finalizar_expedicao')) {

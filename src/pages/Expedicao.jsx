@@ -460,6 +460,13 @@ export default function Expedicao() {
     await base44.entities.Expedicao.update(id, updates);
     await registrarLog('Expedicao', id, 'STATUS', `Status atualizado para ${status}`);
 
+    // Regras de Automação (Configurações > Regras de Automação) — fire-and-forget
+    const expParaRegras = expedicoes.find(e => e.id === id);
+    if (expParaRegras) {
+      import('@/lib/regrasAutomacao').then(({ executarRegrasCardMovido }) =>
+        executarRegrasCardMovido('expedicao', { ...expParaRegras, ...updates }, status).catch(() => {}));
+    }
+
     const waCfg = getWhatsappExpedicaoConfig();
     const waKanban = getWhatsappKanbanConfig();
     if (waCfg.etapas_notificar.includes(status)) {
