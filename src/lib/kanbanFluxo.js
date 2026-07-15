@@ -211,7 +211,7 @@ export async function saveKanbanFluxo(kanbanKey, data) {
   if (ls) {
     // Para produção/expedição, mantém o formato legado esperado pelas páginas
     if (kanbanKey === 'producao') {
-      localStorage.setItem(ls, JSON.stringify(data.stages.map(s => ({ key: s.key, label: s.label, cor: s.cor, icone: s.icone, acao: s.acao || 'nenhuma' }))));
+      localStorage.setItem(ls, JSON.stringify(data.stages.map(s => ({ key: s.key, label: s.label, cor: s.cor, icone: s.icone, acao: s.acao || 'nenhuma', acoes: Array.isArray(s.acoes) ? s.acoes : [] }))));
     } else if (kanbanKey === 'expedicao') {
       localStorage.setItem(ls, JSON.stringify(data.stages.map(s => ({ key: s.key, label: s.label, cor: s.cor, desc: '', fixo: !!s.fixo }))));
     } else {
@@ -258,6 +258,7 @@ export function readStagesLocal(kanbanKey) {
         responsaveis: s.responsaveis || [],
         fixo: !!s.fixo,
         acao: s.acao || 'nenhuma',
+        acoes: Array.isArray(s.acoes) && s.acoes.length > 0 ? s.acoes : (s.acao && s.acao !== 'nenhuma' ? [s.acao] : []),
       }));
     }
   } catch {}

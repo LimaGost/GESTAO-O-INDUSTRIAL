@@ -133,7 +133,7 @@ export default function Kanban() {
   useEffect(() => {
     loadKanbanFluxo('producao').then(({ stages }) => {
       localStorage.setItem('kanban_colunas_config', JSON.stringify(
-        stages.map((s) => ({ key: s.key, label: s.label, cor: s.cor, icone: s.icone, acao: s.acao || 'nenhuma' }))
+        stages.map((s) => ({ key: s.key, label: s.label, cor: s.cor, icone: s.icone, acao: s.acao || 'nenhuma', acoes: Array.isArray(s.acoes) ? s.acoes : [] }))
       ));
       const novas = buildColunas();
       setKanbanColunas(novas);
@@ -225,13 +225,18 @@ export default function Kanban() {
     try {const me = await base44.auth.me();usuarioAtual = me?.email || me?.full_name || 'sistema';} catch {}
 
     const colunaProximo = kanbanColunas.find((c) => c.key === proximo);
-    const acaoProximo = colunaProximo?.acao || '';
+    // Suporta múltiplas ações por etapa (campo `acoes`), com fallback para `acao` legado
+    const acoesProximo = Array.isArray(colunaProximo?.acoes) && colunaProximo.acoes.length > 0
+      ? colunaProximo.acoes
+      : (colunaProximo?.acao && colunaProximo.acao !== 'nenhuma' ? [colunaProximo.acao] : []);
+    const temAcao = (a) => acoesProximo.includes(a);
+    const acaoProximo = acoesProximo[0] || '';
 
     // ── Registrar data de início ────────────────────────────────────────────
-    if (acaoProximo === 'registrar_data_inicio') updates.data_inicio = agora;
+    if (temAcao('registrar_data_inicio')) updates.data_inicio = agora;
 
     // ── Produzido: finaliza produção + entrada no estoque ──────────────────
-    if (acaoProximo === 'registrar_data_fim_producao' || acaoProximo === 'finalizar_producao') {
+    if (temAcao('registrar_data_fim_producao') || temAcao('finalizar_producao')) {
       updates.data_fim_producao = agora;
       updates.lote = ordem.lote || gerarLote(ordem.produto_id);
       cacheInvalidate('Produto');
@@ -252,17 +257,17 @@ export default function Kanban() {
     }
 
     // ── Produção Finalizada: envia automaticamente para o Kanban de Separação ──
-    if (acaoProximo === 'finalizar_producao') {
+    if (temAcao('finalizar_producao')) {
       import('@/lib/separacao').then(({ criarSeparacaoFromOP }) => {
         criarSeparacaoFromOP({ ...ordem, ...updates }).catch((e) => console.warn('Erro ao criar separação:', e.message));
       });
     }
 
     // ── Embalagem: registrar data ───────────────────────────────────────────
-    if (acaoProximo === 'registrar_data_embalagem') updates.data_embalagem = agora;
+    if (temAcao('registrar_data_embalagem')) updates.data_embalagem = agora;
 
     // ── Em Separação: gerar etiqueta + saída do estoque ────────────────────
-    if (acaoProximo === 'saida_estoque') {
+    if (temAcao('saida_estoque')) {
       const lote = ordem.lote || gerarLote(ordem.id);
       const dataProducao = hojeData();
       cacheInvalidate('Produto');
@@ -297,7 +302,7 @@ export default function Kanban() {
     }
 
     // ── Finalizado: marca pedido como "separado" para liberar expedição em Pedidos ──
-    if (acaoProximo === 'finalizar_expedicao') {
+    if (temAcao('finalizar_expedicao')) {
       updates.data_finalizacao = agora;
       // Alocação parcial: mescla as quantidades produzidas na Separação que aguardava produção
       const { concluirProducaoParaSeparacao } = await import('@/lib/alocacaoPedido');
@@ -327,7 +332,7 @@ export default function Kanban() {
 
       // ── Sincronização de status do Pedido (configurada em Configurações > Kanban) ──
       const statusPedidoConfigurado = colunaProximo?.status_pedido;
-      if (statusPedidoConfigurado && ordem.pedido_id && acaoProximo !== 'finalizar_expedicao') {
+      if (statusPedidoConfigurado && ordem.pedido_id && !temAcao('finalizar_expedicao')) {
         // finalizar_expedicao já cuida do status do pedido internamente
         base44.entities.Pedido.update(ordem.pedido_id, { status: statusPedidoConfigurado })
           .then(() => registrarLog('Pedido', ordem.pedido_id, 'STATUS',
@@ -338,7 +343,7 @@ export default function Kanban() {
       // Sincroniza status_op e quantidade_produzida no GrupoPedidos (fire-and-forget)
       if (ordem.grupo_id) {
         const grupoUpdates = { status_op: proximo };
-        if (acaoProximo === 'registrar_data_fim_producao') {
+        if (temAcao('registrar_data_fim_producao')) {
           // Quando OP produzida: atualizar quantidade_produzida no grupo
           const grupo = grupoMapById[ordem.grupo_id];
           if (grupo) {
@@ -481,7 +486,10 @@ export default function Kanban() {
     sortKey
   );
 
-  const colunasFinais = kanbanColunas.filter((c) => ['finalizar_producao', 'registrar_data_fim_producao', 'finalizar_expedicao', 'entrada_estoque'].includes(c.acao) || c.key === 'finalizado' || c.key === 'producao_finalizada').map((c) => c.key);
+  const colunasFinais = kanbanColunas.filter((c) => {
+    const acs = Array.isArray(c.acoes) && c.acoes.length > 0 ? c.acoes : [c.acao];
+    return ['finalizar_producao', 'registrar_data_fim_producao', 'finalizar_expedicao', 'entrada_estoque'].some((a) => acs.includes(a)) || c.key === 'finalizado' || c.key === 'producao_finalizada';
+  }).map((c) => c.key);
   const ativas = ordens.filter((o) => !colunasFinais.includes(o.status)).length;
   const finalizadas = ordens.filter((o) => colunasFinais.includes(o.status)).length;
   const filtrosAtivos = busca || filtroOrigem !== 'todas' || filtroCategoria !== 'todas' || sortKey !== 'urgencia';

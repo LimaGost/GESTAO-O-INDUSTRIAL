@@ -45,6 +45,10 @@ export default function AbaGestaoFluxos() {
   const updateStage = (idx, field, val) =>
     setCfg(c => ({ ...c, stages: c.stages.map((s, i) => i === idx ? { ...s, [field]: val } : s) }));
 
+  // Múltiplas ações por etapa — mantém `acao` (primeira) para compatibilidade
+  const setStageAcoes = (idx, acoes) =>
+    setCfg(c => ({ ...c, stages: c.stages.map((s, i) => i === idx ? { ...s, acoes, acao: acoes[0] || 'nenhuma' } : s) }));
+
   const addStage = () => {
     const novaKey = `etapa_${Date.now().toString(36)}`;
     setCfg(c => ({
@@ -208,14 +212,34 @@ export default function AbaGestaoFluxos() {
                       </button>
                     </div>
 
-                    {/* Ação automática da etapa */}
-                    <div className="mt-2.5 pl-1 flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[10px] text-muted-foreground flex items-center gap-1"><Zap size={10} /> Ação ao entrar:</span>
-                      <select value={stage.acao || 'nenhuma'} onChange={e => updateStage(idx, 'acao', e.target.value)}
-                        className="border border-border rounded-lg px-2 py-1 text-[11px] bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
-                        {getAcoesEtapa(kanbanAtivo, acoesCustom).map(a => <option key={a.key} value={a.key}>{a.label}</option>)}
-                      </select>
-                    </div>
+                    {/* Ações automáticas da etapa (múltiplas) */}
+                    {(() => {
+                      const opcoes = getAcoesEtapa(kanbanAtivo, acoesCustom).filter(a => a.key !== 'nenhuma');
+                      const selecionadas = Array.isArray(stage.acoes) && stage.acoes.length > 0
+                        ? stage.acoes
+                        : (stage.acao && stage.acao !== 'nenhuma' ? [stage.acao] : []);
+                      const disponiveis = opcoes.filter(o => !selecionadas.includes(o.key));
+                      return (
+                        <div className="mt-2.5 pl-1 flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] text-muted-foreground flex items-center gap-1"><Zap size={10} /> Ações ao entrar:</span>
+                          {selecionadas.length === 0 && <span className="text-[10px] text-muted-foreground/50 italic">Nenhuma</span>}
+                          {selecionadas.map(k => (
+                            <span key={k} className="inline-flex items-center gap-1 text-[10px] bg-primary/10 text-primary border border-primary/25 px-2 py-0.5 rounded-full font-medium">
+                              <Zap size={9} /> {opcoes.find(o => o.key === k)?.label || k}
+                              <button onClick={() => setStageAcoes(idx, selecionadas.filter(x => x !== k))}
+                                className="hover:text-destructive font-bold leading-none">×</button>
+                            </span>
+                          ))}
+                          {disponiveis.length > 0 && (
+                            <select value="" onChange={e => e.target.value && setStageAcoes(idx, [...selecionadas, e.target.value])}
+                              className="border border-dashed border-border rounded-lg px-2 py-1 text-[11px] bg-background text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary">
+                              <option value="">+ Adicionar ação</option>
+                              {disponiveis.map(a => <option key={a.key} value={a.key}>{a.label}</option>)}
+                            </select>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     {/* Responsáveis */}
                     <div className="mt-2.5 pl-1 flex items-center gap-1.5 flex-wrap">
