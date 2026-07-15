@@ -1,25 +1,32 @@
 import { useEffect, useState } from 'react';
-import { Plus, Zap } from 'lucide-react';
+import { Plus, Zap, ArrowRight, History } from 'lucide-react';
 import { loadConfig, saveConfig } from '@/lib/appConfig';
-import { KANBANS, loadKanbanFluxo } from '@/lib/kanbanFluxo';
+import { KANBANS, loadKanbanFluxo, getTriggersSistema, getAcoesAutoSistema } from '@/lib/kanbanFluxo';
 import RuleBuilder from './regras/RuleBuilder';
 import RegraCard from './regras/RegraCard';
 
 // Regras de Automação — construtor estilo Trello, salvo em AppConfig 'regras_automacao_v2'
 export default function AbaRegrasAutomacao() {
   const [regras, setRegras] = useState([]);
+  const [regrasLegado, setRegrasLegado] = useState([]);
   const [etapasPorKanban, setEtapasPorKanban] = useState({});
   const [loading, setLoading] = useState(true);
   const [builder, setBuilder] = useState(null); // null | { regra?, index? }
 
   useEffect(() => {
     (async () => {
-      const [cfg, entries] = await Promise.all([
+      const [cfg, fluxos] = await Promise.all([
         loadConfig('regras_automacao_v2'),
-        Promise.all(KANBANS.map(async k => [k.key, (await loadKanbanFluxo(k.key)).stages])),
+        Promise.all(KANBANS.map(async k => [k.key, await loadKanbanFluxo(k.key)])),
       ]);
       setRegras(Array.isArray(cfg?.regras) ? cfg.regras : []);
-      setEtapasPorKanban(Object.fromEntries(entries));
+      setEtapasPorKanban(Object.fromEntries(fluxos.map(([key, f]) => [key, f.stages])));
+      // Regras já existentes, salvas dentro de cada Kanban (Gestão de Fluxos)
+      const legado = [];
+      for (const [key, f] of fluxos) {
+        for (const a of (f.automacoes || [])) legado.push({ kanban: key, ...a });
+      }
+      setRegrasLegado(legado);
       setLoading(false);
     })();
   }, []);
@@ -102,6 +109,45 @@ export default function AbaRegrasAutomacao() {
               onToggle={() => toggle(idx)}
             />
           ))}
+        </div>
+      )}
+
+      {/* Regras já existentes nos Kanbans (Gestão de Fluxos) */}
+      {regrasLegado.length > 0 && (
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+          <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
+            <div className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center">
+              <History size={16} className="text-muted-foreground" />
+            </div>
+            <div>
+              <p className="font-bold text-sm text-foreground">Regras existentes dos Kanbans</p>
+              <p className="text-xs text-muted-foreground">Automações já configuradas em Gestão de Fluxos — edite-as por lá.</p>
+            </div>
+          </div>
+          <div className="px-5 py-4 space-y-2">
+            {regrasLegado.map((r, i) => {
+              const kanbanInfo = KANBANS.find(k => k.key === r.kanban);
+              const triggerLabel = (getTriggersSistema().find(t => t.key === r.trigger) || {}).label || r.trigger;
+              const acaoLabel = (getAcoesAutoSistema().find(a => a.key === r.acao) || {}).label || r.acao;
+              return (
+                <div key={i} className="flex items-center gap-2 flex-wrap bg-muted/50 border border-border/60 rounded-xl px-4 py-2.5 text-sm">
+                  {kanbanInfo && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold text-white flex-shrink-0" style={{ background: kanbanInfo.cor }}>
+                      {kanbanInfo.label.replace('Kanban de ', '')}
+                    </span>
+                  )}
+                  <span className="text-muted-foreground text-xs font-bold uppercase">Quando</span>
+                  <span className="text-foreground font-medium">{triggerLabel}</span>
+                  <ArrowRight size={13} className="text-muted-foreground/50" />
+                  <span className="text-muted-foreground text-xs font-bold uppercase">Executar</span>
+                  <span className="text-foreground font-medium">{acaoLabel}</span>
+                  <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-semibold ${r.ativo ? 'bg-emerald-100 text-emerald-700' : 'bg-muted text-muted-foreground'}`}>
+                    {r.ativo ? 'Ativa' : 'Inativa'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
