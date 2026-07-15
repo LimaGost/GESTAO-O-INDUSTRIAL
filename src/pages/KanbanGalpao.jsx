@@ -7,6 +7,7 @@ import { buildColunas } from '@/lib/kanbanFluxo';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 import GalpaoCard from '@/components/galpao/GalpaoCard';
 import ModalNovaGalpao from '@/components/galpao/ModalNovaGalpao';
+import KanbanFranqueados from '@/components/galpao/KanbanFranqueados';
 import { Warehouse, Plus, X, Search, RefreshCw } from 'lucide-react';
 
 // Kanban independente — mesma estrutura de etapas da Separação, sem ligação com outros kanbans
@@ -204,6 +205,9 @@ export default function KanbanGalpao() {
           );
         })}
       </div>
+
+      {/* Kanban de Pedidos de Franqueados (Microvix) */}
+      <KanbanFranqueados />
 
       {showNova && (
         <ModalNovaGalpao onCriar={criar} onClose={() => setShowNova(false)} criando={criando} />
