@@ -11,6 +11,7 @@ import AbaPersonalizacao from '@/components/configuracoes/AbaPersonalizacao.jsx'
 import AbaEtiquetas from '@/components/configuracoes/AbaEtiquetas.jsx';
 import AbaGestaoFluxos from '@/components/configuracoes/AbaGestaoFluxos.jsx';
 import AbaAcoes from '@/components/configuracoes/AbaAcoes.jsx';
+import AbaRegrasAutomacao from '@/components/configuracoes/AbaRegrasAutomacao.jsx';
 import AbaWhatsapp from '@/components/configuracoes/AbaWhatsapp.jsx';
 import AbaBling from '@/components/configuracoes/AbaBling';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
@@ -681,6 +682,7 @@ const TAB_GROUPS = [
     items: [
       { key: 'gestao_fluxos',  label: 'Gestão de Fluxos / Kanbans', icon: Columns,      desc: 'Etapas, automações e fluxo integrado' },
       { key: 'acoes',          label: 'Ações',           icon: Zap,         desc: 'Ações de etapa dos Kanbans' },
+      { key: 'regras',         label: 'Regras de Automação', icon: Activity, desc: 'Gatilhos e ações das automações' },
       { key: 'personalizacao', label: 'Personalização', icon: Paintbrush,  desc: 'Logo, empresa e visual' },
       { key: 'producao',       label: 'Produção',        icon: Factory,     desc: 'Capacidade semanal' },
       { key: 'checklists',     label: 'Checklists',      icon: CheckSquare, desc: 'Etapas do Kanban' },
@@ -790,6 +792,7 @@ export default function Configuracoes() {
           {aba === 'personalizacao'  && <AbaPersonalizacao />}
           {aba === 'gestao_fluxos'   && <AbaGestaoFluxos />}
           {aba === 'acoes'           && <AbaAcoes />}
+          {aba === 'regras'          && <AbaRegrasAutomacao />}
           {aba === 'checklists'     && <AbaChecklists />}
           {aba === 'producao'       && <AbaProducao />}
           {aba === 'etiquetas'      && <AbaEtiquetas />}

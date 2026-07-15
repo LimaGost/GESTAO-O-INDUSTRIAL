@@ -210,6 +210,70 @@ export function getAcoesEtapa(kanbanKey, cfg = {}) {
   return [{ key: 'nenhuma', label: 'Nenhuma ação' }, ...base, ...custom];
 }
 
+// ── Regras de Automação: gatilhos e ações do sistema consolidados + personalizados ──
+
+// Consolida todos os gatilhos do sistema: uma entrada por gatilho, com os kanbans padrão onde existe
+export function getTriggersSistema() {
+  const map = {};
+  for (const k of KANBANS) {
+    for (const t of (TRIGGERS[k.key] || [])) {
+      if (!map[t.key]) map[t.key] = { key: t.key, label: t.label, kanbans: [] };
+      map[t.key].kanbans.push(k.key);
+    }
+  }
+  return Object.values(map);
+}
+
+// Consolida todas as ações de automação do sistema
+export function getAcoesAutoSistema() {
+  const map = {};
+  for (const k of KANBANS) {
+    for (const a of (ACOES[k.key] || [])) {
+      if (!map[a.key]) map[a.key] = { key: a.key, label: a.label, kanbans: [] };
+      map[a.key].kanbans.push(k.key);
+    }
+  }
+  return Object.values(map);
+}
+
+// Configuração completa de regras de automação (Configurações > Regras de Automação)
+export async function loadRegrasConfig() {
+  const val = await loadConfig('regras_automacao_custom');
+  const obj = (v) => (v && typeof v === 'object' ? v : {});
+  return {
+    triggers: Array.isArray(val?.triggers) ? val.triggers : [],
+    acoes: Array.isArray(val?.acoes) ? val.acoes : [],
+    trigger_overrides: obj(val?.trigger_overrides),
+    acao_overrides: obj(val?.acao_overrides),
+    trigger_kanbans: obj(val?.trigger_kanbans),
+    acao_kanbans: obj(val?.acao_kanbans),
+  };
+}
+
+// Gatilhos disponíveis para um kanban: sistema (kanbans habilitados + renomeações) + personalizados
+export function getTriggersKanban(kanbanKey, cfg = {}) {
+  const { triggers = [], trigger_overrides = {}, trigger_kanbans = {} } = cfg;
+  const base = getTriggersSistema()
+    .filter(t => (trigger_kanbans[t.key] || t.kanbans).includes(kanbanKey))
+    .map(t => ({ key: t.key, label: trigger_overrides[t.key] || t.label }));
+  const custom = triggers
+    .filter(t => (t.kanbans || []).includes(kanbanKey) && (t.label || '').trim())
+    .map(t => ({ key: t.key, label: t.label }));
+  return [...base, ...custom];
+}
+
+// Ações de automação disponíveis para um kanban
+export function getAcoesAutomacao(kanbanKey, cfg = {}) {
+  const { acoes = [], acao_overrides = {}, acao_kanbans = {} } = cfg;
+  const base = getAcoesAutoSistema()
+    .filter(a => (acao_kanbans[a.key] || a.kanbans).includes(kanbanKey))
+    .map(a => ({ key: a.key, label: acao_overrides[a.key] || a.label }));
+  const custom = acoes
+    .filter(a => (a.kanbans || []).includes(kanbanKey) && (a.label || '').trim())
+    .map(a => ({ key: a.key, label: a.label }));
+  return [...base, ...custom];
+}
+
 const LS_KEYS = {
   pedidos: 'pedidos_colunas_config',
   producao: 'kanban_colunas_config',

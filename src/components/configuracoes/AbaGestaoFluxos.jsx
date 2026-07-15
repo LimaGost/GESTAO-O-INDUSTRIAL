@@ -4,9 +4,10 @@ import {
   ArrowRight, Settings2, Users,
 } from 'lucide-react';
 import {
-  KANBANS, CORES, ROLES, TRIGGERS, ACOES,
+  KANBANS, CORES, ROLES,
   getIcon, loadKanbanFluxo, saveKanbanFluxo, DEFAULTS,
   loadAcoesConfig, getAcoesEtapa,
+  loadRegrasConfig, getTriggersKanban, getAcoesAutomacao,
 } from '@/lib/kanbanFluxo';
 import IconPicker from './IconPicker';
 
@@ -17,25 +18,33 @@ export default function AbaGestaoFluxos() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [acoesCfg, setAcoesCfg] = useState({ acoes: [], overrides: {}, sistema_kanbans: {} });
+  const [regrasCfg, setRegrasCfg] = useState({ triggers: [], acoes: [], trigger_overrides: {}, acao_overrides: {}, trigger_kanbans: {}, acao_kanbans: {} });
 
   // Carrega todos os kanbans uma vez
   useEffect(() => {
     (async () => {
-      const [entries, cfg] = await Promise.all([
+      const [entries, cfg, regras] = await Promise.all([
         Promise.all(KANBANS.map(async k => [k.key, await loadKanbanFluxo(k.key)])),
         loadAcoesConfig(),
+        loadRegrasConfig(),
       ]);
       setConfigs(Object.fromEntries(entries));
       setAcoesCfg(cfg);
+      setRegrasCfg(regras);
       setLoading(false);
     })();
   }, []);
 
-  // Atualiza a lista quando ações são criadas/editadas em Configurações > Ações
+  // Atualiza as listas quando ações/regras são editadas em Configurações
   useEffect(() => {
     const onAcoes = () => loadAcoesConfig().then(setAcoesCfg);
+    const onRegras = () => loadRegrasConfig().then(setRegrasCfg);
     window.addEventListener('acoes:saved', onAcoes);
-    return () => window.removeEventListener('acoes:saved', onAcoes);
+    window.addEventListener('regras:saved', onRegras);
+    return () => {
+      window.removeEventListener('acoes:saved', onAcoes);
+      window.removeEventListener('regras:saved', onRegras);
+    };
   }, []);
 
   const cfg = configs[kanbanAtivo] || DEFAULTS[kanbanAtivo];
@@ -83,8 +92,11 @@ export default function AbaGestaoFluxos() {
   const updateAuto = (idx, field, val) =>
     setCfg(c => ({ ...c, automacoes: c.automacoes.map((a, i) => i === idx ? { ...a, [field]: val } : a) }));
 
-  const addAuto = () =>
-    setCfg(c => ({ ...c, automacoes: [...c.automacoes, { trigger: (TRIGGERS[kanbanAtivo][0] || {}).key, acao: (ACOES[kanbanAtivo][0] || {}).key, ativo: true }] }));
+  const addAuto = () => {
+    const ts = getTriggersKanban(kanbanAtivo, regrasCfg);
+    const as = getAcoesAutomacao(kanbanAtivo, regrasCfg);
+    setCfg(c => ({ ...c, automacoes: [...c.automacoes, { trigger: (ts[0] || {}).key, acao: (as[0] || {}).key, ativo: true }] }));
+  };
 
   const removeAuto = (idx) =>
     setCfg(c => ({ ...c, automacoes: c.automacoes.filter((_, i) => i !== idx) }));
@@ -281,13 +293,13 @@ export default function AbaGestaoFluxos() {
                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Quando</span>
                   <select value={auto.trigger} onChange={e => updateAuto(idx, 'trigger', e.target.value)}
                     className="border border-border rounded-lg px-2.5 py-1.5 text-xs bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
-                    {(TRIGGERS[kanbanAtivo] || []).map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
+                    {getTriggersKanban(kanbanAtivo, regrasCfg).map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
                   </select>
                   <ArrowRight size={13} className="text-muted-foreground/50" />
                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Executar</span>
                   <select value={auto.acao} onChange={e => updateAuto(idx, 'acao', e.target.value)}
                     className="border border-border rounded-lg px-2.5 py-1.5 text-xs bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary flex-1 min-w-[180px]">
-                    {(ACOES[kanbanAtivo] || []).map(a => <option key={a.key} value={a.key}>{a.label}</option>)}
+                    {getAcoesAutomacao(kanbanAtivo, regrasCfg).map(a => <option key={a.key} value={a.key}>{a.label}</option>)}
                   </select>
                   <button onClick={() => updateAuto(idx, 'ativo', !auto.ativo)}
                     className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${auto.ativo ? 'bg-green-100 text-green-700 border-green-300' : 'bg-muted text-muted-foreground border-border'}`}>
