@@ -51,12 +51,16 @@ function buildColunasFromConfig(config) {
   return config.map((c, i) => {
     const cores = CORES_MAP[c.cor] || CORES_MAP[0];
     const nextCol = config[i + 1];
+    const prevCol = config[i - 1];
+    const temVolta = prevCol && prevCol.key !== 'a_expedir' && c.key !== 'a_expedir';
     return {
       ...c,
       ...cores,
       icon: ICON_MAP[c.key] || Package,
       proximo: nextCol && c.key !== 'a_expedir' ? nextCol.key : null,
       proximoLabel: nextCol && c.key !== 'a_expedir' ? `→ ${nextCol.label}` : null,
+      anterior: temVolta ? prevCol.key : null,
+      anteriorLabel: temVolta ? `← ${prevCol.label}` : null,
     };
   });
 }
@@ -141,7 +145,7 @@ function OPFinalizadaCard({ op, clienteNome, onEmitirNF, emitindo, onVerPedido }
 }
 
 // Card para expedições existentes
-function ExpedicaoCard({ exp, coluna, onAvancar, onImprimirNF, onImprimirEtiqueta, onConfirmarRecebimento, advancing, onVerPedido, onImprimirDocTransporte }) {
+function ExpedicaoCard({ exp, coluna, onAvancar, onVoltar, onImprimirNF, onImprimirEtiqueta, onConfirmarRecebimento, advancing, onVerPedido, onImprimirDocTransporte }) {
   const totalItens = (exp.itens || []).reduce((s, i) => s + (i.quantidade || 0), 0);
   const isWL = exp._pedidoDestino?.white_label || exp.white_label;
 
@@ -236,6 +240,17 @@ function ExpedicaoCard({ exp, coluna, onAvancar, onImprimirNF, onImprimirEtiquet
             >
               {advancing ? <RefreshCw size={11} className="animate-spin" /> : <Send size={11} />}
               {coluna.proximoLabel}
+            </button>
+          )}
+
+          {coluna?.anterior && onVoltar && (
+            <button
+              onClick={() => onVoltar(exp.id, coluna.anterior)}
+              disabled={advancing}
+              className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border border-border text-muted-foreground hover:bg-muted transition-all disabled:opacity-50"
+            >
+              {advancing ? <RefreshCw size={11} className="animate-spin" /> : <ArrowRight size={11} className="rotate-180" />}
+              {coluna.anteriorLabel}
             </button>
           )}
         </div>
@@ -493,6 +508,19 @@ export default function Expedicao() {
     setAdvancingId(null);
   };
 
+  // Retorna o card para a etapa anterior (sem notificações), limpando as datas da etapa deixada
+  const voltarStatus = async (id, statusAnterior) => {
+    setAdvancingId(id);
+    const expAtual = expedicoes.find(e => e.id === id);
+    const updates = { status: statusAnterior };
+    if (expAtual?.status === 'entregue') updates.data_entrega = null;
+    if (expAtual?.status === 'enviada') updates.data_envio = null;
+    await base44.entities.Expedicao.update(id, updates);
+    await registrarLog('Expedicao', id, 'STATUS', `Card retornado para a etapa "${statusAnterior}"`);
+    await load();
+    setAdvancingId(null);
+  };
+
   const imprimirDANFE = (exp) => {
     const html = gerarDANFEHTML(exp, {
       nome: 'RAIO DO SOL',
@@ -603,6 +631,7 @@ export default function Expedicao() {
       coluna={coluna}
       advancing={advancingId === card.id}
       onAvancar={readonly ? null : atualizarStatus}
+      onVoltar={readonly ? null : voltarStatus}
       onImprimirNF={imprimirDANFE}
       onImprimirDocTransporte={imprimirDocumentoTransporte}
       onImprimirEtiqueta={readonly ? null : (exp) => setEtiquetaExpedicao(exp)}
