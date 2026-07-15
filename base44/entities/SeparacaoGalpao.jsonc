@@ -1,0 +1,200 @@
+{
+  "name": "SeparacaoGalpao",
+  "type": "object",
+  "properties": {
+    "numero": {
+      "type": "string",
+      "description": "N\u00famero da separa\u00e7\u00e3o do galp\u00e3o (ex: SGP-...)"
+    },
+    "cliente_nome": {
+      "type": "string"
+    },
+    "itens": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "default": []
+    },
+    "quantidade_itens": {
+      "type": "number",
+      "default": 0,
+      "description": "Quantidade de itens distintos"
+    },
+    "quantidade_total": {
+      "type": "number",
+      "default": 0,
+      "description": "Soma das quantidades"
+    },
+    "destino_tipo": {
+      "type": "string",
+      "enum": [
+        "retirada_fabrica",
+        "retirada_unidade",
+        "transportadora",
+        "entrega_cliente"
+      ]
+    },
+    "destino_transportadora": {
+      "type": "string"
+    },
+    "destino_unidade": {
+      "type": "string"
+    },
+    "destino_endereco": {
+      "type": "string"
+    },
+    "data_prevista": {
+      "type": "string",
+      "format": "date",
+      "description": "Data prevista de entrega"
+    },
+    "prioridade": {
+      "type": "string",
+      "enum": [
+        "baixa",
+        "normal",
+        "alta"
+      ],
+      "default": "normal"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "aguardando_separacao",
+        "em_separacao",
+        "separado",
+        "em_conferencia",
+        "conferido",
+        "liberado_expedicao"
+      ],
+      "default": "aguardando_separacao"
+    },
+    "data_inicio_separacao": {
+      "type": "string"
+    },
+    "data_separado": {
+      "type": "string"
+    },
+    "data_conferencia": {
+      "type": "string"
+    },
+    "data_liberacao": {
+      "type": "string"
+    },
+    "observacoes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "numero"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "gerente_producao"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "vendedor"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "gerente_producao"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "vendedor"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "maquinista"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "embalador"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "motorista"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "gerente_producao"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "embalador"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "maquinista"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "gerente_producao"
+          }
+        }
+      ]
+    }
+  }
+}
