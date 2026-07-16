@@ -5,7 +5,7 @@ import {
   LayoutDashboard, ShoppingCart, Factory, Package,
   Truck, Settings, ChevronLeft, ChevronRight, ChevronUp,
   Bell, Tag, Users, Archive, SlidersHorizontal, BarChart2,
-  Database, MoreHorizontal, RefreshCw, Trash2, MessageCircle, LogOut, User, AlertTriangle, HeadphonesIcon, ClipboardCheck, Printer
+  Database, MoreHorizontal, RefreshCw, Trash2, MessageCircle, LogOut, User, AlertTriangle, HeadphonesIcon, ClipboardCheck, Printer, Store
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
@@ -28,6 +28,7 @@ const navGroups = [
       { path: '/Dashboard',  label: 'Dashboard',       icon: LayoutDashboard },
       { path: '/Pedidos',    label: 'Pedidos',          icon: ShoppingCart },
       { path: '/Kanban',     label: 'Kanban Produção',  icon: Factory },
+      { path: '/PedidosFranqueados', label: 'Pedidos Franqueados', icon: Store },
       { path: '/KanbanSeparacao', label: 'Separação Industria',  icon: ClipboardCheck },
       { path: '/KanbanGalpao', label: 'Separação Galpão',  icon: ClipboardCheck },
       { path: '/Estoque',    label: 'Estoque',          icon: Archive },
@@ -66,6 +67,7 @@ const allNavItems = [
   { path: '/Dashboard',      label: 'Dashboard',        icon: LayoutDashboard },
   { path: '/Pedidos',        label: 'Pedidos',           icon: ShoppingCart },
   { path: '/Kanban',         label: 'Kanban Produção',   icon: Factory },
+  { path: '/PedidosFranqueados', label: 'Pedidos Franqueados', icon: Store },
   { path: '/KanbanSeparacao', label: 'Separação Industria', icon: ClipboardCheck },
   { path: '/KanbanGalpao', label: 'Separação Galpão', icon: ClipboardCheck },
   { path: '/Estoque',        label: 'Estoque',           icon: Archive },
@@ -89,6 +91,7 @@ const PATH_MODULO = {
   '/Kanban':       'Kanban',
   '/KanbanSeparacao': 'Separacao',
   '/KanbanGalpao': 'Separacao',
+  '/PedidosFranqueados': 'Separacao',
   '/Estoque':      'Estoque',
   '/Embalagem':    'Embalagem',
   '/Etiquetas':    'Etiquetas',

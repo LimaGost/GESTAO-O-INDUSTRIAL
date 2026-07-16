@@ -12,6 +12,7 @@ import Pedidos from './pages/Pedidos.jsx';
 import Kanban from './pages/Kanban.jsx';
 import KanbanSeparacao from './pages/KanbanSeparacao.jsx';
 import KanbanGalpao from './pages/KanbanGalpao.jsx';
+import PedidosFranqueados from './pages/PedidosFranqueados.jsx';
 import Estoque from './pages/Estoque';
 import Embalagem from './pages/Embalagem';
 import Etiquetas from './pages/Etiquetas';
@@ -83,6 +84,7 @@ const AuthenticatedApp = () => {
           <Route path="/Kanban"         element={<RotaProtegida modulo="Kanban">         <Kanban />         </RotaProtegida>} />
           <Route path="/KanbanSeparacao" element={<RotaProtegida modulo="Separacao">     <KanbanSeparacao /> </RotaProtegida>} />
           <Route path="/KanbanGalpao"    element={<RotaProtegida modulo="Separacao">     <KanbanGalpao />    </RotaProtegida>} />
+          <Route path="/PedidosFranqueados" element={<RotaProtegida modulo="Separacao">  <PedidosFranqueados /> </RotaProtegida>} />
           <Route path="/Estoque"        element={<RotaProtegida modulo="Estoque">        <Estoque />        </RotaProtegida>} />
           <Route path="/Embalagem"      element={<RotaProtegida modulo="Embalagem">      <Embalagem />      </RotaProtegida>} />
           <Route path="/Etiquetas"      element={<RotaProtegida modulo="Etiquetas">      <Etiquetas />      </RotaProtegida>} />
