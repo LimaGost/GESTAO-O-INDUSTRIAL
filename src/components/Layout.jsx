@@ -17,7 +17,7 @@ const bottomTabs = [
   { path: '/Dashboard',    label: 'Dashboard',  icon: LayoutDashboard },
   { path: '/Pedidos',      label: 'Pedidos',    icon: ShoppingCart },
   { path: '/Kanban',       label: 'Kanban',     icon: Factory },
-  { path: '/Estoque',      label: 'Estoque',    icon: Archive },
+  { path: '/Estoque',      label: 'Estoque',    icon: ShoppingCart },
   { path: '/Configuracoes',label: 'Config.',    icon: SlidersHorizontal },
 ];
 
@@ -29,7 +29,7 @@ const navGroups = [
       { path: '/Pedidos',    label: 'Pedidos',          icon: ShoppingCart },
       { path: '/Kanban',     label: 'Kanban Produção',  icon: Factory },
       { path: '/KanbanSeparacao', label: 'Separação Industria',  icon: ClipboardCheck },
-      { path: '/Estoque',    label: 'Estoque Industria', icon: Archive },
+      { path: '/Estoque',    label: 'Estoque Industria', icon: ShoppingCart },
       { path: '/PedidosFranqueados', label: 'Pedidos Franqueados', icon: Store },
       { path: '/KanbanGalpao', label: 'Separação Galpão',  icon: ClipboardCheck },
     ],
@@ -68,7 +68,7 @@ const allNavItems = [
   { path: '/Pedidos',        label: 'Pedidos',           icon: ShoppingCart },
   { path: '/Kanban',         label: 'Kanban Produção',   icon: Factory },
   { path: '/KanbanSeparacao', label: 'Separação Industria', icon: ClipboardCheck },
-  { path: '/Estoque',        label: 'Estoque Industria', icon: Archive },
+  { path: '/Estoque',        label: 'Estoque Industria', icon: ShoppingCart },
   { path: '/PedidosFranqueados', label: 'Pedidos Franqueados', icon: Store },
   { path: '/KanbanGalpao', label: 'Separação Galpão', icon: ClipboardCheck },
   { path: '/Etiquetas',      label: 'Etiquetas',         icon: Tag },
