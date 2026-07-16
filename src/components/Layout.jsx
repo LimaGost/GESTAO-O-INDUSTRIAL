@@ -31,7 +31,7 @@ const navGroups = [
       { path: '/KanbanSeparacao', label: 'Separação Industria',  icon: ClipboardCheck },
       { path: '/PedidosFranqueados', label: 'Pedidos Franqueados', icon: Store },
       { path: '/KanbanGalpao', label: 'Separação Galpão',  icon: ClipboardCheck },
-      { path: '/Estoque',    label: 'Estoque',          icon: Archive },
+      { path: '/Estoque',    label: 'Estoque Industria', icon: Archive },
     ],
   },
   {
@@ -70,7 +70,7 @@ const allNavItems = [
   { path: '/KanbanSeparacao', label: 'Separação Industria', icon: ClipboardCheck },
   { path: '/PedidosFranqueados', label: 'Pedidos Franqueados', icon: Store },
   { path: '/KanbanGalpao', label: 'Separação Galpão', icon: ClipboardCheck },
-  { path: '/Estoque',        label: 'Estoque',           icon: Archive },
+  { path: '/Estoque',        label: 'Estoque Industria', icon: Archive },
   { path: '/Etiquetas',      label: 'Etiquetas',         icon: Tag },
   { path: '/EstudioEtiquetas', label: 'Estúdio Etiquetas', icon: Printer },
   { path: '/Expedicao',      label: 'Expedição',         icon: Truck },
