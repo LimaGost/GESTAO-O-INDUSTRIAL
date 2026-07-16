@@ -216,7 +216,7 @@ export default function KanbanSeparacao() {
               <ClipboardCheck size={18} className="text-primary" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-base md:text-lg font-bold text-foreground truncate">Kanban de Separação</h2>
+              <h2 className="text-base md:text-lg font-bold text-foreground truncate">Separação Industria</h2>
               <p className="text-xs text-muted-foreground">Produção → Separação → Expedição</p>
             </div>
           </div>

@@ -40,10 +40,10 @@ export const ROLES = [
 ];
 
 export const KANBANS = [
-  { key: 'pedidos',   label: 'Kanban de Pedidos',   icon: 'ShoppingCart', entidade: 'Pedido',       cor: '#0EA5E9' },
-  { key: 'producao',  label: 'Kanban de Produção',  icon: 'Factory',       entidade: 'OrdemProducao',cor: '#F59E0B' },
-  { key: 'separacao', label: 'Kanban de Separação', icon: 'ClipboardCheck',entidade: 'Separacao',   cor: '#22C55E' },
-  { key: 'expedicao', label: 'Kanban de Expedição', icon: 'Truck',        entidade: 'Expedicao',    cor: '#A855F7' },
+  { key: 'pedidos',   label: 'Pedidos',             icon: 'ShoppingCart', entidade: 'Pedido',       cor: '#0EA5E9' },
+  { key: 'producao',  label: 'Kanban Produção',     icon: 'Factory',       entidade: 'OrdemProducao',cor: '#F59E0B' },
+  { key: 'separacao', label: 'Separação Industria', icon: 'ClipboardCheck',entidade: 'Separacao',   cor: '#22C55E' },
+  { key: 'expedicao', label: 'Expedição',           icon: 'Truck',        entidade: 'Expedicao',    cor: '#A855F7' },
 ];
 
 export const DEFAULTS = {
@@ -127,12 +127,12 @@ export const ACOES = {
     { key: 'finalizar_pedido', label: 'Finalizar Pedido' },
   ],
   producao: [
-    { key: 'criar_separacao', label: 'Criar card no Kanban de Separação' },
+    { key: 'criar_separacao', label: 'Criar card na Separação Industria' },
     { key: 'entrada_estoque', label: 'Dar entrada no estoque' },
   ],
   separacao: [
     { key: 'marcar_pedido_separado', label: 'Marcar pedido como separado' },
-    { key: 'criar_expedicao', label: 'Criar card no Kanban de Expedição' },
+    { key: 'criar_expedicao', label: 'Criar card na Expedição' },
     { key: 'saida_estoque', label: 'Dar saída no estoque' },
   ],
   expedicao: [
