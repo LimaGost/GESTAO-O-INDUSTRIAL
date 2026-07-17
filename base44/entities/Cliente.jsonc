@@ -45,6 +45,16 @@
           "user_condition": {
             "role": "vendedor"
           }
+        },
+        {
+          "user_condition": {
+            "role": "vendedor_industria"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "vendedor_loja"
+          }
         }
       ]
     },
@@ -64,6 +74,16 @@
           "user_condition": {
             "role": "gerente_producao"
           }
+        },
+        {
+          "user_condition": {
+            "role": "vendedor_industria"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "vendedor_loja"
+          }
         }
       ]
     },
@@ -77,6 +97,16 @@
         {
           "user_condition": {
             "role": "vendedor"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "vendedor_industria"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "vendedor_loja"
           }
         }
       ]
