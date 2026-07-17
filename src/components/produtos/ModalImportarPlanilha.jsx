@@ -256,7 +256,7 @@ export default function ModalImportarPlanilha({ onClose, onImportado }) {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-semibold text-foreground">
-                      ✅ {preview.total} SKU(s) · {preview.familiasList.length} famílias/grades encontradas
+                      ✅ {preview.total} SKU(s) encontrado(s) na planilha
                     </p>
                     <button onClick={() => { setPreview(null); setArquivo(null); }} className="text-xs text-muted-foreground hover:text-foreground">
                       Trocar arquivo
