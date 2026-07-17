@@ -7,6 +7,7 @@ import {
 import SeletorProdutos from './SeletorProdutos';
 import RastreioQuantidades from './RastreioQuantidades';
 import { DestinoForm, DestinoBadge, getDestinoLabel } from './DestinoPedido';
+import ComprovanteRecebimento from './ComprovanteRecebimento';
 
 const VALOR_OCULTO = '••••••';
 
@@ -353,6 +354,7 @@ export default function ModalDetalhesPedido({
                       )}
                     </div>
                   )}
+                  <ComprovanteRecebimento expedicao={expedicao} />
                 </div>
               )}
             </div>
@@ -501,11 +503,7 @@ export default function ModalDetalhesPedido({
                           {expedicao.data_envio && <span>📤 Enviada: {new Date(expedicao.data_envio + 'T12:00:00').toLocaleDateString('pt-BR')}</span>}
                           {expedicao.data_entrega && <span>✅ Entregue: {new Date(expedicao.data_entrega + 'T12:00:00').toLocaleDateString('pt-BR')}</span>}
                         </div>
-                        {expedicao.confirmado_pelo_cliente && (
-                          <p className="text-xs text-green-700 font-semibold bg-green-50 border border-green-200 rounded-lg px-2 py-1">
-                            ✅ Recebimento confirmado pelo cliente
-                          </p>
-                        )}
+                        <ComprovanteRecebimento expedicao={expedicao} />
                       </div>
                     )}
                   </div>
