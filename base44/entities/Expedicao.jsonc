@@ -139,14 +139,28 @@
           }
         },
         {
-          "user_condition": {
-            "role": "vendedor_industria"
-          }
+          "$and": [
+            {
+              "user_condition": {
+                "role": "vendedor_industria"
+              }
+            },
+            {
+              "created_by_id": "{{user.id}}"
+            }
+          ]
         },
         {
-          "user_condition": {
-            "role": "vendedor_loja"
-          }
+          "$and": [
+            {
+              "user_condition": {
+                "role": "vendedor_loja"
+              }
+            },
+            {
+              "created_by_id": "{{user.id}}"
+            }
+          ]
         },
         {
           "user_condition": {
