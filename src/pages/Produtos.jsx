@@ -400,6 +400,7 @@ export default function Produtos() {
                   className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
               </div>
             )}
+            {user?.role === 'admin' && (
             <div className="md:col-span-2">
               <label className="flex items-center gap-2.5 cursor-pointer bg-muted/40 border border-border rounded-xl px-3.5 py-2.5">
                 <input type="checkbox" checked={familia.controla_estoque}
@@ -409,6 +410,7 @@ export default function Produtos() {
                 <span className="text-xs text-muted-foreground">— desative para produtos sem controle de quantidade</span>
               </label>
             </div>
+            )}
             {(familia.controla_estoque
               ? [['estoque_inicial','Estoque Inicial','number'],['estoque_minimo','Estoque Mínimo','number'],['estoque_maximo','Estoque Máximo','number'],['preco_unitario','Preço Unitário','number'],['itens_por_caixa','Itens por Caixa','number']]
               : [['preco_unitario','Preço Unitário','number'],['itens_por_caixa','Itens por Caixa','number']]
@@ -629,6 +631,7 @@ export default function Produtos() {
       {editingSku && (
         <ModalEditarSku
           produto={editingSku}
+          isAdmin={user?.role === 'admin'}
           onClose={() => setEditingSku(null)}
           onSaved={(produtoAtualizado) => {
           setEditingSku(null);

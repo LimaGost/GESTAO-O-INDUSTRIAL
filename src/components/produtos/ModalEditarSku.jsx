@@ -21,7 +21,7 @@ const campos = [
   { key: 'profundidade_cm', label: 'Profundidade (cm)', type: 'number', col: 1 },
 ];
 
-export default function ModalEditarSku({ produto, onClose, onSaved }) {
+export default function ModalEditarSku({ produto, onClose, onSaved, isAdmin = false }) {
   const [form, setForm] = useState({
     nome: produto.nome || '',
     codigo: produto.codigo || '',
@@ -83,7 +83,8 @@ export default function ModalEditarSku({ produto, onClose, onSaved }) {
             />
           </div>
 
-          {/* Controle de estoque */}
+          {/* Controle de estoque — somente admin */}
+          {isAdmin && (
           <label className="flex items-center gap-2.5 cursor-pointer bg-muted/40 border border-border rounded-xl px-3.5 py-2.5">
             <input type="checkbox" checked={form.controla_estoque}
               onChange={e => set('controla_estoque', e.target.checked)}
@@ -93,6 +94,7 @@ export default function ModalEditarSku({ produto, onClose, onSaved }) {
               <p className="text-[11px] text-muted-foreground">Desative para produtos sem controle de quantidade — não exibirá estoque zerado nem alertas.</p>
             </div>
           </label>
+          )}
 
           {/* Campos em grid */}
           <div className="grid grid-cols-2 gap-3">
