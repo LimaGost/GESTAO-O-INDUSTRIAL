@@ -360,6 +360,12 @@ export default function Expedicao() {
 
   useEffect(() => { load(); }, []);
 
+  // Tempo real: cards liberados na Separação Galpão aparecem automaticamente
+  useEffect(() => {
+    const unsubscribe = base44.entities.SeparacaoGalpao.subscribe(() => { load(); });
+    return () => unsubscribe();
+  }, []);
+
   useEffect(() => {
     const onSettings = () => setColunasExp(buildColunasExp());
     window.addEventListener('expedicao:settings:saved', onSettings);
