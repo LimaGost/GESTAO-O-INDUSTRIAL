@@ -107,6 +107,21 @@
           "user_condition": {
             "role": "vendedor"
           }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista_industria"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "vendedor_industria"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "vendedor_loja"
+          }
         }
       ]
     },
@@ -140,6 +155,26 @@
         {
           "user_condition": {
             "role": "vendedor"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista_industria"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "vendedor_industria"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "vendedor_loja"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "conferente_industria"
           }
         }
       ]
