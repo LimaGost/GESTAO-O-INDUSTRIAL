@@ -137,6 +137,7 @@ Deno.serve(async (req) => {
         await base44.asServiceRole.entities.Pedido.create({
           numero,
           cliente_nome: clienteNome,
+          origem: 'bling',
           status: 'rascunho',
           data_pedido: dataPedido,
           itens,
