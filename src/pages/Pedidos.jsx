@@ -97,6 +97,25 @@ export default function Pedidos() {
     init();
   }, []);
 
+  // Tempo real: quando a entrega é confirmada no Kanban de Expedição, o card move para "Entregue" automaticamente
+  useEffect(() => {
+    const unsubscribe = base44.entities.Expedicao.subscribe(() => { load(); });
+    return () => unsubscribe();
+  }, []);
+
+  // Data de confirmação de entrega por pedido (para ordenar o quadro Entregue — mais recente no topo)
+  const dataEntregaPorPedido = useMemo(() => {
+    const m = {};
+    for (const e of expedicoes) {
+      if (!e.pedido_id) continue;
+      if (e.status === 'entregue' || e.confirmado_pelo_cliente) {
+        const d = e.data_confirmacao_cliente || e.data_entrega || e.updated_date || '';
+        if (!m[e.pedido_id] || d > m[e.pedido_id]) m[e.pedido_id] = d;
+      }
+    }
+    return m;
+  }, [expedicoes]);
+
   const podeEditarPrecos = user?.role === 'vendedor' || user?.role === 'admin';
 
   const sincronizarBling = async ({ dataInicio, dataFim }) => {
@@ -450,7 +469,12 @@ export default function Pedidos() {
       <div className="flex gap-4 overflow-x-auto pb-4 flex-1 items-start">
         {COLUNAS_KANBAN.filter(c => colunasVisiveis.includes(c.key)).map(coluna => {
           const Icon = coluna.icon;
-          const cardsDaColuna = pedidosFiltrados.filter(p => statusEfetivo(p) === coluna.key);
+          let cardsDaColuna = pedidosFiltrados.filter(p => statusEfetivo(p) === coluna.key);
+          if (coluna.key === 'entregue') {
+            cardsDaColuna = [...cardsDaColuna].sort((a, b) =>
+              (dataEntregaPorPedido[b.id] || '').localeCompare(dataEntregaPorPedido[a.id] || '')
+            );
+          }
           const count = totalPorStatus[coluna.key] || 0;
 
           return (
