@@ -165,6 +165,16 @@
           "user_condition": {
             "role": "vendedor"
           }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista_industria"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "vendedor_industria"
+          }
         }
       ]
     },
@@ -204,6 +214,21 @@
           "user_condition": {
             "role": "motorista"
           }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista_industria"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "vendedor_industria"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "conferente_industria"
+          }
         }
       ]
     },
@@ -232,6 +257,16 @@
         {
           "user_condition": {
             "role": "maquinista"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista_industria"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "conferente_industria"
           }
         }
       ]
