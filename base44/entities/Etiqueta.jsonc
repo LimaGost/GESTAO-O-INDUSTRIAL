@@ -18,6 +18,9 @@
     "lote": {
       "type": "string"
     },
+    "codigo_barras": {
+      "type": "string"
+    },
     "data_producao": {
       "type": "string",
       "format": "date"
@@ -52,6 +55,16 @@
           "user_condition": {
             "role": "estoquista"
           }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista_industria"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista_galpao"
+          }
         }
       ]
     },
@@ -76,6 +89,16 @@
           "user_condition": {
             "role": "estoquista"
           }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista_industria"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista_galpao"
+          }
         }
       ]
     },
@@ -99,6 +122,16 @@
         {
           "user_condition": {
             "role": "estoquista"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista_industria"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista_galpao"
           }
         }
       ]
