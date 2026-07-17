@@ -113,7 +113,7 @@ export default function AbaGestaoFluxos() {
   if (loading) return <div className="h-40 flex items-center justify-center text-muted-foreground text-sm">Carregando configurações...</div>;
 
   const fluxoInfo = FLUXOS.find(f => f.key === fluxoAtivo) || FLUXOS[0];
-  const kanbansFluxo = KANBANS.filter(k => fluxoInfo.kanbans.includes(k.key));
+  const kanbansFluxo = fluxoInfo.kanbans.map(key => KANBANS.find(k => k.key === key)).filter(Boolean);
   const kanbanInfo = KANBANS.find(k => k.key === kanbanAtivo);
 
   const trocarFluxo = (key) => {
