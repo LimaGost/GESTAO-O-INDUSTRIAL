@@ -9,6 +9,9 @@ export default function ComprovanteRecebimento({ expedicao }) {
         <CheckCircle size={12} /> Comprovante de Recebimento
       </p>
       <div className="space-y-1 text-xs text-green-800">
+        {!expedicao.nome_recebedor && !expedicao.assinatura_url && !expedicao.foto_recebedor_url && (
+          <p className="text-amber-700">⚠️ Entrega confirmada sem registro dos dados do recebedor.</p>
+        )}
         {expedicao.nome_recebedor && (
           <p className="flex items-center gap-1.5"><User size={11} /> Recebido por: <strong>{expedicao.nome_recebedor}</strong></p>
         )}
