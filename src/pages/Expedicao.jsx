@@ -98,7 +98,9 @@ function OPFinalizadaCard({ op, clienteNome, onEmitirNF, emitindo, onVerPedido }
           )}
         </div>
         <div className="text-right flex-shrink-0">
-          <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-semibold">{op._origem === 'galpao' ? 'Galpão' : op._origem === 'pedido' ? 'Separado' : 'Finalizado'}</span>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${op._origem === 'galpao' ? 'bg-amber-100 text-amber-700' : 'bg-teal-100 text-teal-700'}`}>
+            {op._origem === 'galpao' ? '🏪 Galpão' : '🏭 Industria'}
+          </span>
           <p className="text-xs text-muted-foreground mt-1">{qtdTotal} un</p>
         </div>
       </div>
@@ -156,6 +158,11 @@ function ExpedicaoCard({ exp, coluna, onAvancar, onVoltar, onImprimirNF, onImpri
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">NF {exp.numero_nf}</p>
+              {exp._fluxo && (
+                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${exp._fluxo === 'galpao' ? 'bg-amber-100 text-amber-700' : 'bg-teal-100 text-teal-700'}`}>
+                  {exp._fluxo === 'galpao' ? '🏪 Galpão' : '🏭 Industria'}
+                </span>
+              )}
               {isWL && <span className="text-[9px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-bold">WL</span>}
             </div>
             <p className="text-sm font-bold text-foreground leading-tight truncate">{exp.cliente_nome}{exp.pedido_numero ? ` • ${exp.pedido_numero}` : ''}</p>
@@ -278,6 +285,8 @@ export default function Expedicao() {
   const [aba, setAba] = useState('kanban'); // 'kanban' | 'rapida'
   const [pedidoDetalhes, setPedidoDetalhes] = useState(null);
   const [filtroDestino, setFiltroDestino] = useState('todos');
+  const [filtroOrigem, setFiltroOrigem] = useState('todos');
+  const [galpaoExpIds, setGalpaoExpIds] = useState(() => new Set());
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [etapaMobile, setEtapaMobile] = useState('a_expedir');
   const [headerAberto, setHeaderAberto] = useState(false);
@@ -296,6 +305,7 @@ export default function Expedicao() {
       base44.entities.SeparacaoGalpao.list('-created_date').catch(() => []),
     ]);
     setExpedicoes(exps);
+    setGalpaoExpIds(new Set(sepsGalpao.map(s => s.expedicao_id).filter(Boolean)));
 
     const expPedidoIds = new Set(exps.map(e => e.pedido_id).filter(Boolean));
 
@@ -600,6 +610,7 @@ export default function Expedicao() {
       const pm = e.pedido_id ? pedidoMap[e.pedido_id] : null;
       return {
         ...e,
+        _fluxo: galpaoExpIds.has(e.id) ? 'galpao' : 'industria',
         _pedidoDestino: pm?.destino_tipo
           ? { destino_tipo: pm.destino_tipo, destino_unidade: pm.destino_unidade, destino_transportadora: pm.destino_transportadora, destino_endereco: pm.destino_endereco, white_label: pm.white_label, data_entrega_prevista: pm.data_entrega_prevista }
           : null,
@@ -617,18 +628,25 @@ export default function Expedicao() {
     if (filtroDestino !== 'todos') {
       list = list.filter(e => pedidoMap[e.pedido_id]?.destino_tipo === filtroDestino);
     }
+    if (filtroOrigem !== 'todos') {
+      list = list.filter(e => e._fluxo === filtroOrigem);
+    }
     return list;
-  }, [expedicoes, busca, filtroDestino, pedidoMap]);
+  }, [expedicoes, busca, filtroDestino, filtroOrigem, pedidoMap, galpaoExpIds]);
 
   const opsFiltradas = useMemo(() => {
-    if (!busca) return opsFinalizadas;
+    let list = opsFinalizadas;
+    if (filtroOrigem !== 'todos') {
+      list = list.filter(o => (o._origem === 'galpao' ? 'galpao' : 'industria') === filtroOrigem);
+    }
+    if (!busca) return list;
     const b = busca.toLowerCase();
-    return opsFinalizadas.filter(o =>
+    return list.filter(o =>
       o.produto_nome?.toLowerCase().includes(b) ||
       o.numero?.toLowerCase().includes(b) ||
       o.pedido_numero?.toLowerCase().includes(b)
     );
-  }, [opsFinalizadas, busca]);
+  }, [opsFinalizadas, busca, filtroOrigem]);
 
   const counts = colunasExp.reduce((acc, col) => {
     acc[col.key] = col.key === 'a_expedir'
@@ -677,7 +695,7 @@ export default function Expedicao() {
           className="md:hidden w-full flex items-center justify-between py-1">
           <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
             <SlidersHorizontal size={14} className="text-primary" /> Busca e filtros
-            {(busca || filtroDestino !== 'todos') && <span className="w-2 h-2 rounded-full bg-primary inline-block" />}
+            {(busca || filtroDestino !== 'todos' || filtroOrigem !== 'todos') && <span className="w-2 h-2 rounded-full bg-primary inline-block" />}
           </span>
           <ChevronDown size={16} className={`text-muted-foreground transition-transform ${headerAberto ? 'rotate-180' : ''}`} />
         </button>
@@ -719,8 +737,22 @@ export default function Expedicao() {
           </div>
         </div>
 
-        {/* Filtro por destino */}
+        {/* Filtro por fluxo de origem */}
         <div className="mt-3 flex gap-2 overflow-x-auto pb-1 flex-nowrap md:flex-wrap">
+          {[
+            { k: 'todos', l: '🔀 Todos os fluxos' },
+            { k: 'industria', l: '🏭 Separação Industria' },
+            { k: 'galpao', l: '🏪 Separação Galpão' },
+          ].map(f => (
+            <button key={f.k} onClick={() => setFiltroOrigem(f.k)}
+              className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all flex-shrink-0 whitespace-nowrap border ${filtroOrigem === f.k ? 'bg-teal-dark text-white border-teal-dark' : 'bg-muted text-muted-foreground border-transparent hover:bg-border'}`}>
+              {f.l}
+            </button>
+          ))}
+        </div>
+
+        {/* Filtro por destino */}
+        <div className="mt-2 flex gap-2 overflow-x-auto pb-1 flex-nowrap md:flex-wrap">
           {[
             { k: 'todos', l: '📦 Todos' },
             { k: 'retirada_fabrica', l: '🏭 Retirada Fábrica' },
