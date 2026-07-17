@@ -59,6 +59,41 @@
           "user_condition": {
             "role": "gerente_producao"
           }
+        },
+        {
+          "user_condition": {
+            "role": "maquinista"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "embalador"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista_industria"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista_galpao"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "conferente_industria"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "conferente_galpao"
+          }
         }
       ]
     },
@@ -81,7 +116,32 @@
         },
         {
           "user_condition": {
+            "role": "embalador"
+          }
+        },
+        {
+          "user_condition": {
             "role": "estoquista"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista_industria"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista_galpao"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "conferente_industria"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "conferente_galpao"
           }
         }
       ]
