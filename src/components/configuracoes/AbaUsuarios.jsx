@@ -10,6 +10,12 @@ const ROLES = [
   { key: 'embalador',        label: 'Embalador',           color: 'bg-amber-100 text-amber-700 border-amber-300' },
   { key: 'estoquista',       label: 'Estoquista',          color: 'bg-green-100 text-green-700 border-green-300' },
   { key: 'motorista',        label: 'Motorista',           color: 'bg-muted text-muted-foreground border-border' },
+  { key: 'estoquista_industria', label: 'Estoquista Industria', color: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
+  { key: 'estoquista_galpao',    label: 'Estoquista Galpão',    color: 'bg-lime-100 text-lime-700 border-lime-300' },
+  { key: 'vendedor_industria',   label: 'Vendedor Industria',   color: 'bg-blue-100 text-blue-700 border-blue-300' },
+  { key: 'vendedor_loja',        label: 'Vendedor Loja',        color: 'bg-indigo-100 text-indigo-700 border-indigo-300' },
+  { key: 'conferente_industria', label: 'Conferente Industria', color: 'bg-cyan-100 text-cyan-700 border-cyan-300' },
+  { key: 'conferente_galpao',    label: 'Conferente Galpão',    color: 'bg-violet-100 text-violet-700 border-violet-300' },
 ];
 
 // Grupos de módulos
@@ -22,6 +28,8 @@ const GRUPOS = [
       { key: 'Dashboard',    label: 'Dashboard',         icon: '📊' },
       { key: 'Pedidos',      label: 'Pedidos',           icon: '🛒' },
       { key: 'Kanban',       label: 'Kanban / Produção', icon: '🏭' },
+      { key: 'Separacao',    label: 'Separação Industria', icon: '📋' },
+      { key: 'SeparacaoGalpao', label: 'Separação Galpão', icon: '🏪' },
       { key: 'Estoque',      label: 'Estoque',           icon: '📦' },
       { key: 'Embalagem',    label: 'Embalagem',         icon: '🎁' },
       { key: 'Etiquetas',    label: 'Etiquetas',         icon: '🏷️' },
@@ -57,12 +65,18 @@ const NIVEIS = [
 
 const DEFAULTS = {
   admin:            Object.fromEntries(TODOS_MODULOS.map(m => [m.key, 'full'])),
-  gerente_producao: { Dashboard: 'full', Pedidos: 'full', Kanban: 'full', Estoque: 'full', Embalagem: 'full', Etiquetas: 'full', Expedicao: 'full', Clientes: 'view', Produtos: 'full', Relatorios: 'full', Perdas: 'full', Faturamento: 'view', Precos: 'view', Auditoria: 'view', Configuracoes: 'none' },
-  vendedor:         { Dashboard: 'view', Pedidos: 'full', Kanban: 'view', Estoque: 'view', Embalagem: 'none', Etiquetas: 'none', Expedicao: 'view', Clientes: 'full', Produtos: 'view', Relatorios: 'none', Perdas: 'none', Faturamento: 'none', Precos: 'none', Auditoria: 'none', Configuracoes: 'none' },
-  maquinista:       { Dashboard: 'view', Pedidos: 'none', Kanban: 'full', Estoque: 'view', Embalagem: 'none', Etiquetas: 'none', Expedicao: 'none', Clientes: 'none', Produtos: 'none', Relatorios: 'none', Perdas: 'view', Faturamento: 'none', Precos: 'none', Auditoria: 'none', Configuracoes: 'none' },
-  embalador:        { Dashboard: 'view', Pedidos: 'none', Kanban: 'view', Estoque: 'view', Embalagem: 'full', Etiquetas: 'full', Expedicao: 'none', Clientes: 'none', Produtos: 'none', Relatorios: 'none', Perdas: 'view', Faturamento: 'none', Precos: 'none', Auditoria: 'none', Configuracoes: 'none' },
-  estoquista:       { Dashboard: 'view', Pedidos: 'view', Kanban: 'view', Estoque: 'full', Embalagem: 'none', Etiquetas: 'full', Expedicao: 'none', Clientes: 'none', Produtos: 'view', Relatorios: 'none', Perdas: 'view', Faturamento: 'none', Precos: 'none', Auditoria: 'none', Configuracoes: 'none' },
-  motorista:        { Dashboard: 'view', Pedidos: 'none', Kanban: 'none', Estoque: 'none', Embalagem: 'none', Etiquetas: 'none', Expedicao: 'full', Clientes: 'none', Produtos: 'none', Relatorios: 'none', Perdas: 'none', Faturamento: 'none', Precos: 'none', Auditoria: 'none', Configuracoes: 'none' },
+  gerente_producao: { Dashboard: 'full', Pedidos: 'full', Kanban: 'full', Separacao: 'full', SeparacaoGalpao: 'full', Estoque: 'full', Embalagem: 'full', Etiquetas: 'full', Expedicao: 'full', Clientes: 'view', Produtos: 'full', Relatorios: 'full', Perdas: 'full', Faturamento: 'view', Precos: 'view', Auditoria: 'view', Configuracoes: 'none' },
+  vendedor:         { Dashboard: 'view', Pedidos: 'full', Kanban: 'view', Separacao: 'view', SeparacaoGalpao: 'view', Estoque: 'view', Embalagem: 'none', Etiquetas: 'none', Expedicao: 'view', Clientes: 'full', Produtos: 'view', Relatorios: 'none', Perdas: 'none', Faturamento: 'none', Precos: 'none', Auditoria: 'none', Configuracoes: 'none' },
+  maquinista:       { Dashboard: 'view', Pedidos: 'none', Kanban: 'full', Separacao: 'none', SeparacaoGalpao: 'none', Estoque: 'view', Embalagem: 'none', Etiquetas: 'none', Expedicao: 'none', Clientes: 'none', Produtos: 'none', Relatorios: 'none', Perdas: 'view', Faturamento: 'none', Precos: 'none', Auditoria: 'none', Configuracoes: 'none' },
+  embalador:        { Dashboard: 'view', Pedidos: 'none', Kanban: 'view', Separacao: 'view', SeparacaoGalpao: 'view', Estoque: 'view', Embalagem: 'full', Etiquetas: 'full', Expedicao: 'none', Clientes: 'none', Produtos: 'none', Relatorios: 'none', Perdas: 'view', Faturamento: 'none', Precos: 'none', Auditoria: 'none', Configuracoes: 'none' },
+  estoquista:       { Dashboard: 'view', Pedidos: 'view', Kanban: 'view', Separacao: 'full', SeparacaoGalpao: 'full', Estoque: 'full', Embalagem: 'none', Etiquetas: 'full', Expedicao: 'none', Clientes: 'none', Produtos: 'view', Relatorios: 'none', Perdas: 'view', Faturamento: 'none', Precos: 'none', Auditoria: 'none', Configuracoes: 'none' },
+  motorista:        { Dashboard: 'view', Pedidos: 'none', Kanban: 'none', Separacao: 'none', SeparacaoGalpao: 'none', Estoque: 'none', Embalagem: 'none', Etiquetas: 'none', Expedicao: 'full', Clientes: 'none', Produtos: 'none', Relatorios: 'none', Perdas: 'none', Faturamento: 'none', Precos: 'none', Auditoria: 'none', Configuracoes: 'none' },
+  estoquista_industria: { Dashboard: 'view', Pedidos: 'view', Kanban: 'view', Separacao: 'full', SeparacaoGalpao: 'none', Estoque: 'full', Embalagem: 'none', Etiquetas: 'full', Expedicao: 'none', Clientes: 'none', Produtos: 'view', Relatorios: 'none', Perdas: 'view', Faturamento: 'none', Precos: 'none', Auditoria: 'none', Configuracoes: 'none' },
+  estoquista_galpao:    { Dashboard: 'view', Pedidos: 'none', Kanban: 'none', Separacao: 'none', SeparacaoGalpao: 'full', Estoque: 'view', Embalagem: 'none', Etiquetas: 'full', Expedicao: 'view', Clientes: 'none', Produtos: 'view', Relatorios: 'none', Perdas: 'view', Faturamento: 'none', Precos: 'none', Auditoria: 'none', Configuracoes: 'none' },
+  vendedor_industria:   { Dashboard: 'view', Pedidos: 'full', Kanban: 'view', Separacao: 'view', SeparacaoGalpao: 'none', Estoque: 'view', Embalagem: 'none', Etiquetas: 'none', Expedicao: 'view', Clientes: 'full', Produtos: 'view', Relatorios: 'none', Perdas: 'none', Faturamento: 'none', Precos: 'none', Auditoria: 'none', Configuracoes: 'none' },
+  vendedor_loja:        { Dashboard: 'view', Pedidos: 'full', Kanban: 'none', Separacao: 'none', SeparacaoGalpao: 'none', Estoque: 'view', Embalagem: 'none', Etiquetas: 'none', Expedicao: 'view', Clientes: 'full', Produtos: 'view', Relatorios: 'none', Perdas: 'none', Faturamento: 'none', Precos: 'none', Auditoria: 'none', Configuracoes: 'none' },
+  conferente_industria: { Dashboard: 'view', Pedidos: 'view', Kanban: 'view', Separacao: 'full', SeparacaoGalpao: 'none', Estoque: 'view', Embalagem: 'none', Etiquetas: 'none', Expedicao: 'view', Clientes: 'none', Produtos: 'view', Relatorios: 'none', Perdas: 'none', Faturamento: 'none', Precos: 'none', Auditoria: 'none', Configuracoes: 'none' },
+  conferente_galpao:    { Dashboard: 'view', Pedidos: 'none', Kanban: 'none', Separacao: 'none', SeparacaoGalpao: 'full', Estoque: 'none', Embalagem: 'none', Etiquetas: 'none', Expedicao: 'view', Clientes: 'none', Produtos: 'view', Relatorios: 'none', Perdas: 'none', Faturamento: 'none', Precos: 'none', Auditoria: 'none', Configuracoes: 'none' },
 };
 
 const ROLE_LABEL = Object.fromEntries(ROLES.map(r => [r.key, r.label]));

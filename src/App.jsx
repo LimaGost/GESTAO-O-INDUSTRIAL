@@ -69,7 +69,7 @@ const AuthenticatedApp = () => {
     if (authError.type === 'auth_required') { navigateToLogin(); return null; }
   }
 
-  const ROLES_SISTEMA = ['admin', 'gerente_producao', 'vendedor', 'maquinista', 'embalador', 'estoquista', 'motorista', 'user'];
+  const ROLES_SISTEMA = ['admin', 'gerente_producao', 'vendedor', 'maquinista', 'embalador', 'estoquista', 'motorista', 'user', 'estoquista_industria', 'estoquista_galpao', 'vendedor_industria', 'vendedor_loja', 'conferente_industria', 'conferente_galpao'];
   if (user && !ROLES_SISTEMA.includes(user.role)) {
     return <AguardandoAprovacao user={user} />;
   }
@@ -83,8 +83,8 @@ const AuthenticatedApp = () => {
           <Route path="/Pedidos"        element={<RotaProtegida modulo="Pedidos">        <Pedidos />        </RotaProtegida>} />
           <Route path="/Kanban"         element={<RotaProtegida modulo="Kanban">         <Kanban />         </RotaProtegida>} />
           <Route path="/KanbanSeparacao" element={<RotaProtegida modulo="Separacao">     <KanbanSeparacao /> </RotaProtegida>} />
-          <Route path="/KanbanGalpao"    element={<RotaProtegida modulo="Separacao">     <KanbanGalpao />    </RotaProtegida>} />
-          <Route path="/PedidosFranqueados" element={<RotaProtegida modulo="Separacao">  <PedidosFranqueados /> </RotaProtegida>} />
+          <Route path="/KanbanGalpao"    element={<RotaProtegida modulo="SeparacaoGalpao">     <KanbanGalpao />    </RotaProtegida>} />
+          <Route path="/PedidosFranqueados" element={<RotaProtegida modulo="SeparacaoGalpao">  <PedidosFranqueados /> </RotaProtegida>} />
           <Route path="/Estoque"        element={<RotaProtegida modulo="Estoque">        <Estoque />        </RotaProtegida>} />
           <Route path="/Embalagem"      element={<RotaProtegida modulo="Embalagem">      <Embalagem />      </RotaProtegida>} />
           <Route path="/Etiquetas"      element={<RotaProtegida modulo="Etiquetas">      <Etiquetas />      </RotaProtegida>} />

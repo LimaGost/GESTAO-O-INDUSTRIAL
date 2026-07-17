@@ -237,6 +237,9 @@ const ROLE_LABELS = {
   admin: 'Administrador', gerente_producao: 'Gerente de Produção',
   vendedor: 'Vendedor', maquinista: 'Maquinista', embalador: 'Embalador',
   estoquista: 'Estoquista', motorista: 'Motorista',
+  estoquista_industria: 'Estoquista Industria', estoquista_galpao: 'Estoquista Galpão',
+  vendedor_industria: 'Vendedor Industria', vendedor_loja: 'Vendedor Loja',
+  conferente_industria: 'Conferente Industria', conferente_galpao: 'Conferente Galpão',
 };
 
 const ROLE_COLORS = {
@@ -247,6 +250,12 @@ const ROLE_COLORS = {
   embalador: 'bg-sun-yellow/10 text-sun-yellow border-sun-yellow/30',
   estoquista: 'bg-rainbow-green/10 text-rainbow-green border-rainbow-green/30',
   motorista: 'bg-muted text-muted-foreground border-border',
+  estoquista_industria: 'bg-rainbow-green/10 text-rainbow-green border-rainbow-green/30',
+  estoquista_galpao: 'bg-rainbow-green/10 text-rainbow-green border-rainbow-green/30',
+  vendedor_industria: 'bg-sky-blue/10 text-sky-blue border-sky-blue/30',
+  vendedor_loja: 'bg-rainbow-indigo/10 text-rainbow-indigo border-rainbow-indigo/30',
+  conferente_industria: 'bg-teal-dark/10 text-teal-dark border-teal-dark/30',
+  conferente_galpao: 'bg-rainbow-purple/10 text-rainbow-purple border-rainbow-purple/30',
 };
 
 const NIVEL_LABEL = { none: 'Sem acesso', view: 'Visualização', full: 'Completo' };
