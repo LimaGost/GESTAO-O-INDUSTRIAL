@@ -196,7 +196,7 @@ export default function ModalDetalhesPedido({
   // Determina etapa atual no pipeline
   const getPipelineStep = () => {
     if (pedido.status === 'cancelado') return -1;
-    if (expedicao?.status === 'entregue' || expedicao?.confirmado_pelo_cliente) return PIPELINE.length - 1;
+    if (pedido.status === 'entregue' || expedicao?.status === 'entregue' || expedicao?.confirmado_pelo_cliente) return PIPELINE.length;
     if (expedicao) return PIPELINE.findIndex(s => s.id === 'expedido');
     if (pedido.status === 'separado') return PIPELINE.findIndex(s => s.id === 'separado');
     if (pedido.status === 'separacao') return PIPELINE.findIndex(s => s.id === 'separacao');
