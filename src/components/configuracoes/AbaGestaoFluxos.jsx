@@ -4,7 +4,7 @@ import {
   ArrowRight, Settings2, Users,
 } from 'lucide-react';
 import {
-  KANBANS, CORES, ROLES,
+  KANBANS, FLUXOS, CORES, ROLES,
   getIcon, loadKanbanFluxo, saveKanbanFluxo, DEFAULTS,
   loadAcoesConfig, getAcoesEtapa,
   loadRegrasConfig, getTriggersKanban, getAcoesAutomacao,
@@ -12,6 +12,7 @@ import {
 import IconPicker from './IconPicker';
 
 export default function AbaGestaoFluxos() {
+  const [fluxoAtivo, setFluxoAtivo] = useState('industria');
   const [kanbanAtivo, setKanbanAtivo] = useState('pedidos');
   const [configs, setConfigs] = useState({}); // { [kanbanKey]: { stages, automacoes } }
   const [loading, setLoading] = useState(true);
@@ -111,18 +112,34 @@ export default function AbaGestaoFluxos() {
 
   if (loading) return <div className="h-40 flex items-center justify-center text-muted-foreground text-sm">Carregando configurações...</div>;
 
+  const fluxoInfo = FLUXOS.find(f => f.key === fluxoAtivo) || FLUXOS[0];
+  const kanbansFluxo = KANBANS.filter(k => fluxoInfo.kanbans.includes(k.key));
   const kanbanInfo = KANBANS.find(k => k.key === kanbanAtivo);
+
+  const trocarFluxo = (key) => {
+    setFluxoAtivo(key);
+    const f = FLUXOS.find(x => x.key === key);
+    if (f && !f.kanbans.includes(kanbanAtivo)) setKanbanAtivo(f.kanbans[0]);
+  };
 
   return (
     <div className="space-y-4">
-      {/* Visão geral do fluxo */}
+      {/* Seletor de Fluxo */}
       <div className="bg-card border border-border rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-3">
           <Zap size={15} className="text-primary" />
           <p className="font-bold text-sm text-foreground">Fluxo Operacional Integrado</p>
         </div>
+        <div className="flex items-center gap-2 flex-wrap mb-3">
+          {FLUXOS.map(f => (
+            <button key={f.key} onClick={() => trocarFluxo(f.key)}
+              className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${fluxoAtivo === f.key ? 'bg-primary text-primary-foreground border-primary shadow-sm' : 'bg-background text-muted-foreground border-border hover:bg-muted'}`}>
+              {f.label}
+            </button>
+          ))}
+        </div>
         <div className="flex items-center gap-1.5 flex-wrap text-xs">
-          {KANBANS.map((k, i) => {
+          {kanbansFluxo.map((k, i) => {
             const Icon = getIcon(k.icon);
             const ativo = k.key === kanbanAtivo;
             return (
@@ -132,7 +149,7 @@ export default function AbaGestaoFluxos() {
                   style={ativo ? { borderColor: k.cor, color: k.cor } : {}}>
                   <Icon size={13} /> {k.label.replace('Kanban de ', '')}
                 </button>
-                {i < KANBANS.length - 1 && <ArrowRight size={12} className="text-muted-foreground/40" />}
+                {i < kanbansFluxo.length - 1 && <ArrowRight size={12} className="text-muted-foreground/40" />}
               </div>
             );
           })}
@@ -141,7 +158,7 @@ export default function AbaGestaoFluxos() {
 
       {/* Seletor de Kanban (mobile) */}
       <div className="sm:hidden flex gap-1.5 overflow-x-auto pb-1">
-        {KANBANS.map(k => {
+        {kanbansFluxo.map(k => {
           const Icon = getIcon(k.icon);
           const ativo = k.key === kanbanAtivo;
           return (

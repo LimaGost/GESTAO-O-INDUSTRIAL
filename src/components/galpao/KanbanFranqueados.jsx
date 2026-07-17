@@ -2,18 +2,11 @@ import { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { gerarNumero } from '@/lib/numeracao';
 import { registrarLog } from '@/lib/audit';
-import { Store, RefreshCw, Clock, CheckCircle, Package, FileText, XCircle } from 'lucide-react';
+import { Store, RefreshCw } from 'lucide-react';
 import FranqueadoCard from '@/components/galpao/FranqueadoCard';
 import FranqueadosKpis from '@/components/galpao/FranqueadosKpis';
 import ModalPedidoFranqueado from '@/components/galpao/ModalPedidoFranqueado';
-
-const COLUNAS = [
-  { key: 'pendente',     label: '⏳ Pendente',      icon: Clock,       accent: '#F59E0B', bg: '#FFFBEB', border: '#FCD34D' },
-  { key: 'aprovado',     label: '✅ Aprovado',      icon: CheckCircle, accent: '#22C55E', bg: '#F0FDF4', border: '#86EFAC' },
-  { key: 'em_expedicao', label: '📦 Em Expedição',  icon: Package,     accent: '#3B82F6', bg: '#EFF6FF', border: '#BFDBFE' },
-  { key: 'faturado',     label: '🟣 Faturado',      icon: FileText,    accent: '#A855F7', bg: '#FAF5FF', border: '#D8B4FE' },
-  { key: 'cancelado',    label: '❌ Cancelado',     icon: XCircle,     accent: '#EF4444', bg: '#FFF5F5', border: '#FCA5A5' },
-];
+import { readStagesLocal, buildColunas, loadKanbanFluxo } from '@/lib/kanbanFluxo';
 
 const FRANQUEADOS = [
   'Raio do Sol Artigos Religiosos',
@@ -38,6 +31,15 @@ export default function KanbanFranqueados() {
   const [pedidoSelecionado, setPedidoSelecionado] = useState(null);
   const [enviados, setEnviados] = useState(new Set());
   const [enviandoId, setEnviandoId] = useState(null);
+  const [colunas, setColunas] = useState(() => buildColunas(readStagesLocal('pedidos_franqueados')));
+
+  // Etapas configuráveis (Configurações > Gestão de Fluxos > Fluxo Microvix)
+  useEffect(() => {
+    loadKanbanFluxo('pedidos_franqueados').then(cfg => setColunas(buildColunas(cfg.stages)));
+    const onSaved = () => setColunas(buildColunas(readStagesLocal('pedidos_franqueados')));
+    window.addEventListener('franqueados:settings:saved', onSaved);
+    return () => window.removeEventListener('franqueados:settings:saved', onSaved);
+  }, []);
 
   // Pedidos já enviados para o Kanban de Separação Galpão
   useEffect(() => {
@@ -140,7 +142,7 @@ export default function KanbanFranqueados() {
 
         {/* Progress bars */}
         <div className="mt-4 grid gap-2 grid-cols-3 md:grid-cols-5">
-          {COLUNAS.map((col) => {
+          {colunas.map((col) => {
             const count = pedidosFiltrados.filter(p => p.status === col.key).length;
             const pct = pedidosFiltrados.length > 0 ? Math.round(count / pedidosFiltrados.length * 100) : 0;
             return (
@@ -149,7 +151,7 @@ export default function KanbanFranqueados() {
                   <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: col.accent }} />
                 </div>
                 <p className="text-base md:text-lg font-bold text-foreground">{count}</p>
-                <p className="text-[9px] md:text-[10px] text-muted-foreground leading-tight hidden sm:block">{col.label.replace(/^\S+\s/, '')}</p>
+                <p className="text-[9px] md:text-[10px] text-muted-foreground leading-tight hidden sm:block">{col.label}</p>
               </div>
             );
           })}
@@ -158,7 +160,7 @@ export default function KanbanFranqueados() {
 
       {/* Colunas */}
       <div className="flex gap-3 overflow-x-auto pb-4 items-start snap-x">
-        {COLUNAS.map(({ key, label, icon: Icon, accent, bg, border }) => {
+        {colunas.map(({ key, label, icon: Icon, accent, bg, border }) => {
           const colPedidos = pedidosFiltrados.filter(p => p.status === key);
           const totalColuna = colPedidos.reduce((s, p) => s + (p.valor_total || 0), 0);
           return (

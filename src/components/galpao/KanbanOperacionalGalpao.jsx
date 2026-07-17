@@ -2,17 +2,9 @@ import { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { registrarLog } from '@/lib/audit';
 import { agoraISO } from '@/lib/brasilia';
-import { ClipboardCheck, Clock, PackageSearch, PackageCheck, SearchCheck, CheckCircle, Truck } from 'lucide-react';
+import { ClipboardCheck } from 'lucide-react';
 import GalpaoCard from '@/components/galpao/GalpaoCard';
-
-const COLUNAS = [
-  { key: 'aguardando_separacao', label: 'Aguardando Separação', icon: Clock,         accent: '#64748B', bg: '#F8FAFC', border: '#CBD5E1', dot: '#94A3B8' },
-  { key: 'em_separacao',         label: 'Em Separação',         icon: PackageSearch, accent: '#0EA5E9', bg: '#F0F9FF', border: '#7DD3FC', dot: '#0EA5E9' },
-  { key: 'separado',             label: 'Separado',             icon: PackageCheck,  accent: '#22C55E', bg: '#F0FDF4', border: '#86EFAC', dot: '#22C55E' },
-  { key: 'em_conferencia',       label: 'Em Conferência',       icon: SearchCheck,   accent: '#F59E0B', bg: '#FFFBEB', border: '#FCD34D', dot: '#F59E0B' },
-  { key: 'conferido',            label: 'Conferido',            icon: CheckCircle,   accent: '#A855F7', bg: '#FAF5FF', border: '#D8B4FE', dot: '#A855F7' },
-  { key: 'liberado_expedicao',   label: 'Liberado p/ Expedição', icon: Truck,        accent: '#14B8A6', bg: '#F0FDFA', border: '#99F6E4', dot: '#14B8A6' },
-];
+import { readStagesLocal, buildColunas, loadKanbanFluxo } from '@/lib/kanbanFluxo';
 
 const DATA_POR_STATUS = {
   em_separacao: 'data_inicio_separacao',
@@ -24,10 +16,19 @@ const DATA_POR_STATUS = {
 export default function KanbanOperacionalGalpao() {
   const [separacoes, setSeparacoes] = useState([]);
   const [loadingId, setLoadingId] = useState(null);
+  const [colunas, setColunas] = useState(() => buildColunas(readStagesLocal('separacao_galpao')));
 
   const load = () => base44.entities.SeparacaoGalpao.list('-created_date').then(setSeparacoes).catch(() => {});
 
   useEffect(() => { load(); }, []);
+
+  // Etapas configuráveis (Configurações > Gestão de Fluxos > Fluxo Microvix)
+  useEffect(() => {
+    loadKanbanFluxo('separacao_galpao').then(cfg => setColunas(buildColunas(cfg.stages)));
+    const onSaved = () => setColunas(buildColunas(readStagesLocal('separacao_galpao')));
+    window.addEventListener('galpao:settings:saved', onSaved);
+    return () => window.removeEventListener('galpao:settings:saved', onSaved);
+  }, []);
 
   useEffect(() => {
     const unsubscribe = base44.entities.SeparacaoGalpao.subscribe(() => { load(); });
@@ -35,8 +36,8 @@ export default function KanbanOperacionalGalpao() {
   }, []);
 
   const avancar = async (sep) => {
-    const idx = COLUNAS.findIndex(c => c.key === sep.status);
-    const proximo = COLUNAS[idx + 1]?.key;
+    const idx = colunas.findIndex(c => c.key === sep.status);
+    const proximo = colunas[idx + 1]?.key;
     if (!proximo) return;
     setLoadingId(sep.id);
     setSeparacoes(prev => prev.map(s => s.id === sep.id ? { ...s, status: proximo } : s));
@@ -44,7 +45,7 @@ export default function KanbanOperacionalGalpao() {
     if (DATA_POR_STATUS[proximo]) updates[DATA_POR_STATUS[proximo]] = agoraISO();
     try {
       await base44.entities.SeparacaoGalpao.update(sep.id, updates);
-      const label = COLUNAS[idx + 1]?.label || proximo;
+      const label = colunas[idx + 1]?.label || proximo;
       registrarLog('SeparacaoGalpao', sep.id, 'AVANCO_STATUS', `Separação Galpão ${sep.numero} avançou para "${label}"`).catch(() => {});
     } catch (e) {
       setSeparacoes(prev => prev.map(s => s.id === sep.id ? { ...s, status: sep.status } : s));
@@ -77,7 +78,7 @@ export default function KanbanOperacionalGalpao() {
 
         {/* Progress bars */}
         <div className="mt-4 grid gap-2 grid-cols-3 md:grid-cols-6">
-          {COLUNAS.map((col) => {
+          {colunas.map((col) => {
             const count = separacoes.filter(s => s.status === col.key).length;
             const pct = separacoes.length > 0 ? Math.round(count / separacoes.length * 100) : 0;
             return (
@@ -95,9 +96,9 @@ export default function KanbanOperacionalGalpao() {
 
       {/* Colunas */}
       <div className="flex gap-3 overflow-x-auto pb-4 items-start snap-x">
-        {COLUNAS.map(({ key, label, icon: Icon, accent, bg, border, dot }, idx) => {
+        {colunas.map(({ key, label, icon: Icon, accent, bg, border, dot }, idx) => {
           const colSeps = separacoes.filter(s => s.status === key);
-          const labelBotao = COLUNAS[idx + 1] ? `→ ${COLUNAS[idx + 1].label}` : null;
+          const labelBotao = colunas[idx + 1] ? `→ ${colunas[idx + 1].label}` : null;
           return (
             <div key={key} className="flex-shrink-0 w-80 sm:w-96 md:w-72 rounded-2xl flex flex-col overflow-hidden snap-center"
               style={{ maxHeight: 'calc(100vh - 260px)', minHeight: '280px', background: bg, border: `1.5px solid ${border}` }}>

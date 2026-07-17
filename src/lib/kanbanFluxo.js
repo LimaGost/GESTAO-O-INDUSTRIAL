@@ -5,12 +5,14 @@ import {
   Clock, Factory, CheckCircle, Package, Flag, Layers, Archive, Truck,
   ShoppingCart, ClipboardCheck, BadgeCheck, PackageCheck, Send, MapPin,
   Home, Building2, FileText, ClipboardList, Tag, Boxes, AlertTriangle, CircleDollarSign,
+  Store, PackageSearch, SearchCheck, XCircle,
 } from 'lucide-react';
 
 export const ICON_MAP = {
   Clock, Factory, CheckCircle, Package, Flag, Layers, Archive, Truck,
   ShoppingCart, ClipboardCheck, BadgeCheck, PackageCheck, Send, MapPin,
   Home, Building2, FileText, ClipboardList, Tag, Boxes, AlertTriangle, CircleDollarSign,
+  Store, PackageSearch, SearchCheck, XCircle,
 };
 
 export const ICONES = Object.keys(ICON_MAP);
@@ -44,6 +46,14 @@ export const KANBANS = [
   { key: 'producao',  label: 'Kanban Produção',     icon: 'Factory',       entidade: 'OrdemProducao',cor: '#F59E0B' },
   { key: 'separacao', label: 'Separação Industria', icon: 'ClipboardCheck',entidade: 'Separacao',   cor: '#22C55E' },
   { key: 'expedicao', label: 'Expedição',           icon: 'Truck',        entidade: 'Expedicao',    cor: '#A855F7' },
+  { key: 'pedidos_franqueados', label: 'Pedidos Franqueados', icon: 'Store',          entidade: 'Microvix',        cor: '#F97316' },
+  { key: 'separacao_galpao',    label: 'Separação Galpão',    icon: 'ClipboardCheck', entidade: 'SeparacaoGalpao', cor: '#14B8A6' },
+];
+
+// Fluxos operacionais: agrupam os kanbans que compõem cada cadeia
+export const FLUXOS = [
+  { key: 'industria', label: 'Fluxo Industria de Velas', kanbans: ['pedidos', 'producao', 'separacao', 'expedicao'] },
+  { key: 'microvix',  label: 'Fluxo Microvix',           kanbans: ['pedidos_franqueados', 'separacao_galpao', 'expedicao'] },
 ];
 
 export const DEFAULTS = {
@@ -95,6 +105,27 @@ export const DEFAULTS = {
       { trigger: 'pedido_entregue', acao: 'finalizar_pedido', ativo: true },
     ],
   },
+  pedidos_franqueados: {
+    stages: [
+      { key: 'pendente',     label: 'Pendente',     cor: 3, icone: 'Clock',       responsaveis: ['vendedor'] },
+      { key: 'aprovado',     label: 'Aprovado',     cor: 2, icone: 'CheckCircle', responsaveis: ['vendedor'] },
+      { key: 'em_expedicao', label: 'Em Expedição', cor: 1, icone: 'Package',     responsaveis: ['estoquista'] },
+      { key: 'faturado',     label: 'Faturado',     cor: 4, icone: 'FileText',    responsaveis: [] },
+      { key: 'cancelado',    label: 'Cancelado',    cor: 5, icone: 'XCircle',     responsaveis: [] },
+    ],
+    automacoes: [],
+  },
+  separacao_galpao: {
+    stages: [
+      { key: 'aguardando_separacao', label: 'Aguardando Separação',  cor: 0, icone: 'Clock',         responsaveis: ['estoquista'] },
+      { key: 'em_separacao',         label: 'Em Separação',          cor: 1, icone: 'PackageSearch', responsaveis: ['estoquista'] },
+      { key: 'separado',             label: 'Separado',              cor: 2, icone: 'PackageCheck',  responsaveis: ['estoquista'] },
+      { key: 'em_conferencia',       label: 'Em Conferência',        cor: 3, icone: 'SearchCheck',   responsaveis: ['embalador'] },
+      { key: 'conferido',            label: 'Conferido',             cor: 4, icone: 'CheckCircle',   responsaveis: ['embalador'] },
+      { key: 'liberado_expedicao',   label: 'Liberado p/ Expedição', cor: 7, icone: 'Truck',         responsaveis: ['gerente_producao'] },
+    ],
+    automacoes: [],
+  },
 };
 
 export const TRIGGERS = {
@@ -117,6 +148,14 @@ export const TRIGGERS = {
     { key: 'pedido_enviado', label: 'Pedido Enviado' },
     { key: 'pedido_entregue', label: 'Pedido Entregue' },
   ],
+  pedidos_franqueados: [
+    { key: 'pedido_franqueado_recebido', label: 'Pedido Franqueado Recebido' },
+    { key: 'enviado_separacao_galpao', label: 'Enviado p/ Separação Galpão' },
+  ],
+  separacao_galpao: [
+    { key: 'separacao_galpao_criada', label: 'Separação Galpão Criada' },
+    { key: 'separacao_galpao_liberada', label: 'Separação Galpão Liberada' },
+  ],
 };
 
 export const ACOES = {
@@ -138,6 +177,12 @@ export const ACOES = {
   expedicao: [
     { key: 'finalizar_pedido', label: 'Finalizar pedido' },
     { key: 'notificar_cliente', label: 'Notificar cliente' },
+  ],
+  pedidos_franqueados: [
+    { key: 'criar_separacao_galpao', label: 'Criar card na Separação Galpão' },
+  ],
+  separacao_galpao: [
+    { key: 'criar_expedicao', label: 'Criar card na Expedição' },
   ],
 };
 
@@ -163,6 +208,13 @@ export const ACOES_ETAPA = {
   expedicao: [
     { key: 'nenhuma', label: 'Nenhuma ação' },
     { key: 'notificar_cliente', label: 'Notificar cliente' },
+  ],
+  pedidos_franqueados: [
+    { key: 'nenhuma', label: 'Nenhuma ação' },
+  ],
+  separacao_galpao: [
+    { key: 'nenhuma', label: 'Nenhuma ação' },
+    { key: 'gerar_etiquetas', label: 'Gerar etiquetas dos itens' },
   ],
 };
 
@@ -279,12 +331,16 @@ const LS_KEYS = {
   producao: 'kanban_colunas_config',
   separacao: 'separacao_colunas_config',
   expedicao: 'expedicao_colunas_config',
+  pedidos_franqueados: 'franqueados_colunas_config',
+  separacao_galpao: 'galpao_colunas_config',
 };
 const EVENTS = {
   pedidos: 'pedidos:settings:saved',
   producao: 'settings:saved',
   separacao: 'separacao:settings:saved',
   expedicao: 'expedicao:settings:saved',
+  pedidos_franqueados: 'franqueados:settings:saved',
+  separacao_galpao: 'galpao:settings:saved',
 };
 
 // Lê a config de um kanban do banco (com fallback p/ defaults)
