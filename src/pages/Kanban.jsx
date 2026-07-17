@@ -114,8 +114,8 @@ export default function Kanban() {
   const [filtroCategoria, setFiltroCategoria] = useState('todas');
   const [busca, setBusca] = useState('');
   const [ordemSelecionada, setOrdemSelecionada] = useState(null);
-  const [sortKey, setSortKey] = useState('urgencia');
-  const [showFilters, setShowFilters] = useState(false);
+  const [sortKey, setSortKey] = useState('created_date_asc');
+  const [showFilters, setShowFilters] = useState(true);
   const [showTotal, setShowTotal] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [colunasVisiveis, setColunasVisiveis] = useState(() => {
@@ -496,7 +496,7 @@ export default function Kanban() {
   }).map((c) => c.key);
   const ativas = ordens.filter((o) => !colunasFinais.includes(o.status)).length;
   const finalizadas = ordens.filter((o) => colunasFinais.includes(o.status)).length;
-  const filtrosAtivos = busca || filtroOrigem !== 'todas' || filtroCategoria !== 'todas' || sortKey !== 'urgencia';
+  const filtrosAtivos = busca || filtroOrigem !== 'todas' || filtroCategoria !== 'todas' || sortKey !== 'created_date_asc';
 
   return (
     <div className="flex flex-col h-full space-y-4">
@@ -566,7 +566,7 @@ export default function Kanban() {
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Filtros e Ordenação</p>
             {filtrosAtivos &&
-          <button onClick={() => {setBusca('');setFiltroOrigem('todas');setFiltroCategoria('todas');setSortKey('urgencia');}}
+          <button onClick={() => {setBusca('');setFiltroOrigem('todas');setFiltroCategoria('todas');setSortKey('created_date_asc');}}
           className="text-xs text-muted-foreground hover:text-destructive">Limpar tudo</button>
           }
           </div>
