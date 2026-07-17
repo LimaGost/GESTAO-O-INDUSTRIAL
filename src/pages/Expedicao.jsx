@@ -12,6 +12,7 @@ import { usePermissoes } from '@/lib/usePermissoes.jsx';
 import { loadConfig } from '@/lib/appConfig';
 import AlertaSeparacao from '@/components/expedicao/AlertaSeparacao';
 import ModalItensPedido from '@/components/expedicao/ModalItensPedido';
+import ModalCheckoutConferencia from '@/components/expedicao/ModalCheckoutConferencia';
 const EXP_COLUNAS_DEFAULT = [
   { key: 'a_expedir', label: 'A Expedir',    cor: 4, desc: 'OPs prontas para NF',     fixo: true },
   { key: 'emitida',   label: 'NF Emitida',   cor: 1, desc: 'Aguardando envio',         fixo: true },
@@ -289,6 +290,7 @@ export default function Expedicao() {
   const [galpaoExpIds, setGalpaoExpIds] = useState(() => new Set());
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [etapaMobile, setEtapaMobile] = useState('a_expedir');
+  const [conferencia, setConferencia] = useState(null); // { exp, proximo }
   const [headerAberto, setHeaderAberto] = useState(false);
 
   useEffect(() => {
@@ -503,6 +505,16 @@ export default function Expedicao() {
     setShowForm(false);
   };
 
+  // Abre a conferência estilo "Checkout de Pedido" antes de avançar o card
+  const iniciarAvanco = (id, proximo) => {
+    const exp = expedicoes.find(e => e.id === id);
+    if (exp && (exp.itens || []).length > 0) {
+      setConferencia({ exp, proximo });
+    } else {
+      atualizarStatus(id, proximo);
+    }
+  };
+
   const atualizarStatus = async (id, status) => {
     setAdvancingId(id);
     const updates = { status };
@@ -674,7 +686,7 @@ export default function Expedicao() {
       exp={card}
       coluna={coluna}
       advancing={advancingId === card.id}
-      onAvancar={readonly ? null : atualizarStatus}
+      onAvancar={readonly ? null : iniciarAvanco}
       onVoltar={readonly ? null : voltarStatus}
       onImprimirNF={imprimirDANFE}
       onImprimirDocTransporte={imprimirDocumentoTransporte}
@@ -943,6 +955,20 @@ export default function Expedicao() {
         <ModalItensPedido
           pedido={pedidoDetalhes}
           onClose={() => setPedidoDetalhes(null)}
+        />
+      )}
+      {conferencia && (
+        <ModalCheckoutConferencia
+          expedicao={conferencia.exp}
+          titulo={conferencia.proximo === 'enviada' ? 'Check-out de Pedido' : 'Check-in de Pedido'}
+          onConcluir={async () => {
+            const { exp, proximo } = conferencia;
+            await registrarLog('Expedicao', exp.id, 'CONFERENCIA',
+              `Conferência ${proximo === 'enviada' ? 'de check-out' : 'de check-in'} concluída — NF ${exp.numero_nf}, todos os itens validados`);
+            setConferencia(null);
+            await atualizarStatus(exp.id, proximo);
+          }}
+          onClose={() => setConferencia(null)}
         />
       )}
     </div>
