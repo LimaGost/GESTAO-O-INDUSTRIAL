@@ -119,6 +119,11 @@
           "user_condition": {
             "role": "vendedor"
           }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista_galpao"
+          }
         }
       ]
     },
@@ -158,6 +163,16 @@
           "user_condition": {
             "role": "motorista"
           }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista_galpao"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "conferente_galpao"
+          }
         }
       ]
     },
@@ -191,6 +206,16 @@
         {
           "user_condition": {
             "role": "motorista"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista_galpao"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "conferente_galpao"
           }
         }
       ]
