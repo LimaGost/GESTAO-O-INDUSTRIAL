@@ -41,6 +41,7 @@ export default function ModalEditarSku({ produto, onClose, onSaved }) {
     profundidade_cm: produto.profundidade_cm || 0,
     foto_url: produto.foto_url || '',
     white_label: produto.white_label || false,
+    controla_estoque: produto.controla_estoque !== false,
   });
   const [loading, setLoading] = useState(false);
 
@@ -82,9 +83,20 @@ export default function ModalEditarSku({ produto, onClose, onSaved }) {
             />
           </div>
 
+          {/* Controle de estoque */}
+          <label className="flex items-center gap-2.5 cursor-pointer bg-muted/40 border border-border rounded-xl px-3.5 py-2.5">
+            <input type="checkbox" checked={form.controla_estoque}
+              onChange={e => set('controla_estoque', e.target.checked)}
+              className="w-4 h-4 accent-[#C9A227]" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Controlar estoque deste produto</p>
+              <p className="text-[11px] text-muted-foreground">Desative para produtos sem controle de quantidade — não exibirá estoque zerado nem alertas.</p>
+            </div>
+          </label>
+
           {/* Campos em grid */}
           <div className="grid grid-cols-2 gap-3">
-            {campos.map(({ key, label, type, col }) => (
+            {campos.filter(({ key }) => form.controla_estoque || !key.startsWith('estoque_')).map(({ key, label, type, col }) => (
               <div key={key} className={col === 2 ? 'col-span-2' : 'col-span-1'}>
                 <label className="text-xs font-medium text-muted-foreground mb-1 block">{label}</label>
                 <input
@@ -109,6 +121,7 @@ export default function ModalEditarSku({ produto, onClose, onSaved }) {
           </div>
 
           {/* Preview barra de estoque */}
+          {form.controla_estoque && (
           <div className="bg-muted/30 rounded-xl p-3 space-y-1">
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">Progresso de estoque</span>
@@ -124,6 +137,7 @@ export default function ModalEditarSku({ produto, onClose, onSaved }) {
               />
             </div>
           </div>
+          )}
 
           {/* Ações */}
           <div className="flex gap-3 pt-1">

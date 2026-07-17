@@ -16,6 +16,7 @@ const emptyFamilia = {
   nomeBase: '', codigoBase: '', categoria: '', novaCategoria: '',
   descricao: '', unidade: 'unidade', itens_por_caixa: 1,
   estoque_inicial: 0, estoque_minimo: 10, estoque_maximo: 0, preco_unitario: 0, variacoes: [],
+  controla_estoque: true,
 };
 
 function exportarProdutos(produtos) {
@@ -124,10 +125,11 @@ export default function Produtos() {
 
   const kpis = useMemo(() => {
     const total = produtos.length;
-    const alertaMin = produtos.filter(p => (p.estoque_atual || 0) <= (p.estoque_minimo || 0)).length;
-    const zerados = produtos.filter(p => (p.estoque_atual || 0) === 0).length;
-    const ok = produtos.filter(p => (p.estoque_atual || 0) > (p.estoque_minimo || 0)).length;
-    const totalEstoque = produtos.reduce((s, p) => s + (p.estoque_atual || 0), 0);
+    const comControle = produtos.filter(p => p.controla_estoque !== false);
+    const alertaMin = comControle.filter(p => (p.estoque_atual || 0) <= (p.estoque_minimo || 0)).length;
+    const zerados = comControle.filter(p => (p.estoque_atual || 0) === 0).length;
+    const ok = comControle.filter(p => (p.estoque_atual || 0) > (p.estoque_minimo || 0)).length;
+    const totalEstoque = comControle.reduce((s, p) => s + (p.estoque_atual || 0), 0);
     return { total, alertaMin, zerados, ok, totalEstoque };
   }, [produtos]);
 
@@ -139,11 +141,12 @@ export default function Produtos() {
         p.categoria?.toLowerCase().includes(busca.toLowerCase());
       const matchCat = filtroCategoria === 'todas' || (p.categoria || 'Sem Categoria') === filtroCategoria;
       const est = p.estoque_atual || 0;
+      const controla = p.controla_estoque !== false;
       const matchEst =
         filtroEstoque === 'todos' ? true :
-        filtroEstoque === 'zerado' ? est === 0 :
-        filtroEstoque === 'alerta' ? est > 0 && est <= (p.estoque_minimo || 0) :
-        filtroEstoque === 'ok' ? est > (p.estoque_minimo || 0) : true;
+        filtroEstoque === 'zerado' ? controla && est === 0 :
+        filtroEstoque === 'alerta' ? controla && est > 0 && est <= (p.estoque_minimo || 0) :
+        filtroEstoque === 'ok' ? controla && est > (p.estoque_minimo || 0) : true;
       return matchBusca && matchCat && matchEst;
     });
   }, [produtos, busca, filtroCategoria, filtroEstoque]);
@@ -167,8 +170,9 @@ export default function Produtos() {
       await base44.entities.Produto.create({
         nome: familia.nomeBase.trim(), codigo: familia.codigoBase.trim(), categoria: categoriaFinal,
         descricao: familia.descricao, unidade: familia.unidade, itens_por_caixa: familia.itens_por_caixa,
-        estoque_atual: familia.estoque_inicial, estoque_minimo: familia.estoque_minimo,
-        estoque_maximo: familia.estoque_maximo, preco_unitario: familia.preco_unitario, alerta_ativo: false,
+        estoque_atual: familia.controla_estoque ? familia.estoque_inicial : 0, estoque_minimo: familia.controla_estoque ? familia.estoque_minimo : 0,
+        estoque_maximo: familia.controla_estoque ? familia.estoque_maximo : 0, preco_unitario: familia.preco_unitario, alerta_ativo: false,
+        controla_estoque: familia.controla_estoque,
       });
     } else {
       let contador = parseInt(familia.codigoBase);
@@ -176,8 +180,9 @@ export default function Produtos() {
         base44.entities.Produto.create({
           nome: `${familia.nomeBase.trim()} ${v}`, codigo: String(contador++), categoria: categoriaFinal,
           descricao: familia.descricao, unidade: familia.unidade, itens_por_caixa: familia.itens_por_caixa,
-          estoque_atual: familia.estoque_inicial, estoque_minimo: familia.estoque_minimo,
-          estoque_maximo: familia.estoque_maximo, preco_unitario: familia.preco_unitario, alerta_ativo: false, variacoes: [],
+          estoque_atual: familia.controla_estoque ? familia.estoque_inicial : 0, estoque_minimo: familia.controla_estoque ? familia.estoque_minimo : 0,
+          estoque_maximo: familia.controla_estoque ? familia.estoque_maximo : 0, preco_unitario: familia.preco_unitario, alerta_ativo: false, variacoes: [],
+          controla_estoque: familia.controla_estoque,
         })
       ));
     }
@@ -395,7 +400,19 @@ export default function Produtos() {
                   className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
               </div>
             )}
-            {[['estoque_inicial','Estoque Inicial','number'],['estoque_minimo','Estoque Mínimo','number'],['estoque_maximo','Estoque Máximo','number'],['preco_unitario','Preço Unitário','number'],['itens_por_caixa','Itens por Caixa','number']].map(([key, label, type]) => (
+            <div className="md:col-span-2">
+              <label className="flex items-center gap-2.5 cursor-pointer bg-muted/40 border border-border rounded-xl px-3.5 py-2.5">
+                <input type="checkbox" checked={familia.controla_estoque}
+                  onChange={e => setFamilia(f => ({ ...f, controla_estoque: e.target.checked }))}
+                  className="w-4 h-4 accent-[#C9A227]" />
+                <span className="text-sm font-medium text-foreground">Controlar estoque deste produto</span>
+                <span className="text-xs text-muted-foreground">— desative para produtos sem controle de quantidade</span>
+              </label>
+            </div>
+            {(familia.controla_estoque
+              ? [['estoque_inicial','Estoque Inicial','number'],['estoque_minimo','Estoque Mínimo','number'],['estoque_maximo','Estoque Máximo','number'],['preco_unitario','Preço Unitário','number'],['itens_por_caixa','Itens por Caixa','number']]
+              : [['preco_unitario','Preço Unitário','number'],['itens_por_caixa','Itens por Caixa','number']]
+            ).map(([key, label, type]) => (
               <div key={key}>
                 <label className="text-xs text-muted-foreground mb-1 block">{label}</label>
                 <input type={type} value={familia[key]} onChange={e => setFamilia(f => ({ ...f, [key]: Number(e.target.value) }))}
@@ -472,8 +489,9 @@ export default function Produtos() {
               {expandidas[cat] && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                   {prods.map(p => {
-                    const alerta = (p.estoque_atual || 0) <= (p.estoque_minimo || 0);
-                    const zerado = (p.estoque_atual || 0) === 0;
+                    const semControle = p.controla_estoque === false;
+                    const alerta = !semControle && (p.estoque_atual || 0) <= (p.estoque_minimo || 0);
+                    const zerado = !semControle && (p.estoque_atual || 0) === 0;
                     return (
                       <div key={p.id} className={`bg-card border rounded-2xl overflow-hidden transition-all ${zerado ? 'border-rainbow-red/30' : alerta ? 'border-sun-yellow/30' : 'border-border'}`}>
                         <>
@@ -488,8 +506,8 @@ export default function Produtos() {
                                 </div>
                               )}
                               {/* Badge de status sobreposto */}
-                              <span className={`absolute top-2 right-2 text-[10px] px-2 py-1 rounded-full font-bold shadow-sm ${zerado ? 'bg-rainbow-red text-white' : alerta ? 'bg-sun-yellow text-white' : 'bg-rainbow-green text-white'}`}>
-                                {zerado ? '● Zerado' : alerta ? '▲ Alerta' : '✓ OK'}
+                              <span className={`absolute top-2 right-2 text-[10px] px-2 py-1 rounded-full font-bold shadow-sm ${semControle ? 'bg-slate-400 text-white' : zerado ? 'bg-rainbow-red text-white' : alerta ? 'bg-sun-yellow text-white' : 'bg-rainbow-green text-white'}`}>
+                                {semControle ? '∞ Sem controle' : zerado ? '● Zerado' : alerta ? '▲ Alerta' : '✓ OK'}
                               </span>
                               {!readonly && (
                                 <div className="absolute top-2 left-2 flex gap-1">
@@ -514,6 +532,11 @@ export default function Produtos() {
                               </div>
 
                               {/* Estoque + barra */}
+                              {semControle ? (
+                                <div className="mt-2.5 bg-muted/40 rounded-lg px-2.5 py-2">
+                                  <p className="text-xs text-muted-foreground">📦 Sem controle de estoque</p>
+                                </div>
+                              ) : (
                               <div className="mt-2.5">
                                 <div className="flex items-end justify-between mb-1">
                                   <div>
@@ -531,6 +554,7 @@ export default function Produtos() {
                                     style={{ width: `${p.estoque_minimo > 0 ? Math.min(100, Math.round(((p.estoque_atual || 0) / (p.estoque_minimo * 2)) * 100)) : 100}%` }} />
                                 </div>
                               </div>
+                              )}
                             </div>
                           </>
                           </div>
@@ -556,8 +580,9 @@ export default function Produtos() {
             </thead>
             <tbody>
               {produtosFiltrados.map(p => {
-                const alerta = (p.estoque_atual || 0) <= (p.estoque_minimo || 0);
-                const zerado = (p.estoque_atual || 0) === 0;
+                const semControle = p.controla_estoque === false;
+                const alerta = !semControle && (p.estoque_atual || 0) <= (p.estoque_minimo || 0);
+                const zerado = !semControle && (p.estoque_atual || 0) === 0;
                 return (
                   <tr key={p.id} className="border-t border-border hover:bg-muted/20 transition-colors">
                     <td className="px-3 py-2"><FotoProduto fotoUrl={p.foto_url} size="sm" readOnly /></td>
@@ -565,12 +590,12 @@ export default function Produtos() {
                     <td className="px-3 py-2 font-medium text-foreground">{p.nome}</td>
                     <td className="px-3 py-2 text-muted-foreground text-xs">{p.categoria || '—'}</td>
                     <td className="px-3 py-2 text-muted-foreground text-xs">{p.unidade || '—'}</td>
-                    <td className="px-3 py-2 font-bold text-foreground">{p.estoque_atual || 0}</td>
-                    <td className="px-3 py-2 text-muted-foreground">{p.estoque_minimo || 0}</td>
+                    <td className="px-3 py-2 font-bold text-foreground">{semControle ? '—' : (p.estoque_atual || 0)}</td>
+                    <td className="px-3 py-2 text-muted-foreground">{semControle ? '—' : (p.estoque_minimo || 0)}</td>
                     <td className="px-3 py-2 text-muted-foreground">R$ {(p.preco_unitario || 0).toFixed(2)}</td>
                     <td className="px-3 py-2">
-                      <span className={`text-[10px] px-2 py-1 rounded-full font-semibold ${zerado ? 'bg-rainbow-red/10 text-rainbow-red' : alerta ? 'bg-sun-yellow/10 text-sun-yellow' : 'bg-rainbow-green/10 text-rainbow-green'}`}>
-                        {zerado ? 'Zerado' : alerta ? 'Alerta' : 'OK'}
+                      <span className={`text-[10px] px-2 py-1 rounded-full font-semibold ${semControle ? 'bg-slate-200 text-slate-600' : zerado ? 'bg-rainbow-red/10 text-rainbow-red' : alerta ? 'bg-sun-yellow/10 text-sun-yellow' : 'bg-rainbow-green/10 text-rainbow-green'}`}>
+                        {semControle ? 'Sem controle' : zerado ? 'Zerado' : alerta ? 'Alerta' : 'OK'}
                       </span>
                     </td>
                     <td className="px-3 py-2">

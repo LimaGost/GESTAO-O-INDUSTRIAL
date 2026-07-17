@@ -34,6 +34,11 @@
       "type": "number",
       "default": 0
     },
+    "controla_estoque": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se falso, o produto n\u00e3o tem controle de estoque (n\u00e3o exibe quantidades nem alertas)"
+    },
     "estoque_atual": {
       "type": "number",
       "default": 0
