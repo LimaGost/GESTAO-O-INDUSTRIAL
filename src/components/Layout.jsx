@@ -1,5 +1,6 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import NotificacoesPanel from '@/components/NotificacoesPanel';
+import MuralPopup from '@/components/avisos/MuralPopup';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   LayoutDashboard, ShoppingCart, Factory, Package,
@@ -148,6 +149,7 @@ export default function Layout() {
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'hsl(200,15%,97%)' }}>
+      <MuralPopup />
 
       {/* SIDEBAR (desktop) */}
       <aside

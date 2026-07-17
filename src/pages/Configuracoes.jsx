@@ -14,6 +14,8 @@ import AbaAcoes from '@/components/configuracoes/AbaAcoes.jsx';
 import AbaRegrasAutomacao from '@/components/configuracoes/AbaRegrasAutomacao.jsx';
 import AbaWhatsapp from '@/components/configuracoes/AbaWhatsapp.jsx';
 import AbaBling from '@/components/configuracoes/AbaBling';
+import AbaMural from '@/components/configuracoes/AbaMural.jsx';
+import { Megaphone } from 'lucide-react';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 
 const BADGE_CORES = [
@@ -688,6 +690,7 @@ const TAB_GROUPS = [
       { key: 'checklists',     label: 'Checklists',      icon: CheckSquare, desc: 'Etapas do Kanban' },
       { key: 'etiquetas',      label: 'Etiquetas',        icon: Printer,     desc: 'Configuração de impressora' },
       { key: 'whatsapp',       label: 'WhatsApp',         icon: MessageCircle, desc: 'Notificações automáticas' },
+      { key: 'mural',          label: 'Mural de Avisos',  icon: Megaphone,   desc: 'Avisos para todos os usuários', adminOnly: true },
     ],
   },
   {
@@ -797,6 +800,7 @@ export default function Configuracoes() {
           {aba === 'producao'       && <AbaProducao />}
           {aba === 'etiquetas'      && <AbaEtiquetas />}
           {aba === 'whatsapp'       && <AbaWhatsapp />}
+          {aba === 'mural'    && isAdmin && <AbaMural />}
           {aba === 'usuarios'       && <AbaUsuarios />}
           {aba === 'auditoria'      && <AbaAuditoria />}
           {aba === 'bling'    && isAdmin && <AbaBling />}

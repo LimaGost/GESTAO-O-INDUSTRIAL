@@ -1,0 +1,43 @@
+{
+  "name": "Aviso",
+  "type": "object",
+  "properties": {
+    "titulo": {
+      "type": "string",
+      "description": "T\u00edtulo do aviso"
+    },
+    "mensagem": {
+      "type": "string",
+      "description": "Conte\u00fado do aviso"
+    },
+    "ativo": {
+      "type": "boolean",
+      "default": true
+    },
+    "criado_por_nome": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "titulo",
+    "mensagem"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": null,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
