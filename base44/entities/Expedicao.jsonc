@@ -137,6 +137,31 @@
           "user_condition": {
             "role": "motorista"
           }
+        },
+        {
+          "user_condition": {
+            "role": "vendedor_industria"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "vendedor_loja"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista_galpao"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "conferente_industria"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "conferente_galpao"
+          }
         }
       ]
     },
