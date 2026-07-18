@@ -532,6 +532,12 @@ export default function Produtos() {
                                 <p className="text-[10px] text-muted-foreground font-mono">{p.codigo || '—'}</p>
                                 <p className="text-[10px] text-muted-foreground">{p.unidade || 'un'} · R$ {(p.preco_unitario || 0).toFixed(2)}</p>
                               </div>
+                              {p.video_demo_url && (
+                                <a href={p.video_demo_url} target="_blank" rel="noopener noreferrer"
+                                  className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-semibold text-primary hover:underline">
+                                  🎬 Ver vídeo de demonstração
+                                </a>
+                              )}
 
                               {/* Estoque + barra */}
                               {semControle ? (
