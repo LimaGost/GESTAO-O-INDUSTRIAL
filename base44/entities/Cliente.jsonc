@@ -43,6 +43,11 @@
         },
         {
           "user_condition": {
+            "role": "diretor"
+          }
+        },
+        {
+          "user_condition": {
             "role": "vendedor"
           }
         },
@@ -63,6 +68,11 @@
         {
           "user_condition": {
             "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "diretor"
           }
         },
         {
@@ -96,6 +106,11 @@
         },
         {
           "user_condition": {
+            "role": "diretor"
+          }
+        },
+        {
+          "user_condition": {
             "role": "vendedor"
           }
         },
@@ -116,6 +131,11 @@
         {
           "user_condition": {
             "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "diretor"
           }
         },
         {
