@@ -21,28 +21,45 @@ Deno.serve(async (req) => {
       return Response.json({ skipped: true, motivo: 'Produto já possui vídeo' });
     }
 
-    const nome = produto.nome || 'Produto';
-    const categoria = produto.categoria || '';
-    const descricao = produto.descricao || '';
-
-    // Se o produto tem foto, extrai uma descrição visual detalhada com IA para o vídeo ser fiel ao produto real
-    let descricaoVisual = '';
-    if (produto.foto_url) {
-      try {
-        descricaoVisual = await base44.asServiceRole.integrations.Core.InvokeLLM({
-          prompt: 'Look at this product photo and write, in English, an extremely precise visual description so a video generator can recreate it EXACTLY: object type, exact shape, exact colors, material, texture, packaging (wrapping, plastic, box), labels and any text visible, quantity of items shown, and proportions. Be literal — describe only what is visible in the photo, do not invent details. Answer with one long objective sentence, no introduction.',
-          file_urls: [produto.foto_url],
-        });
-      } catch { /* segue sem descrição visual */ }
+    // A foto do cadastro é obrigatória — sem ela não há como garantir fidelidade visual
+    if (!produto.foto_url) {
+      return Response.json({ skipped: true, motivo: 'Produto sem foto cadastrada — vídeo não gerado para garantir fidelidade visual' });
     }
 
-    const prompt = descricaoVisual
-      ? `Professional product demo video. THE PRODUCT MUST LOOK EXACTLY LIKE THIS, do not change its appearance, colors, packaging or quantity: ${descricaoVisual} ` +
-        `Product name: ${nome}${categoria ? ` (category: ${categoria})` : ''}. ` +
-        `Scene: professional studio, elegant dark teal and gold background, soft warm lighting, camera slowly rotating around the product placed on a reflective surface, cinematic style, detailed close-up, premium atmosphere. The product itself must remain identical to the description above at all times.`
-      : `Vídeo de demonstração de produto para catálogo comercial: ${nome}${categoria ? `, categoria ${categoria}` : ''}. ${descricao}. ` +
-        `Cena de estúdio profissional com fundo elegante em tons de azul-petróleo escuro e dourado, iluminação suave e quente, ` +
-        `câmera girando lentamente ao redor do produto em destaque sobre uma superfície refletiva, estilo cinematográfico, close-up detalhado, atmosfera premium.`;
+    const nome = produto.nome || 'Produto';
+    const categoria = produto.categoria || '';
+
+    // Análise visual rigorosa da foto exata do cadastro (modelo de alta qualidade com visão)
+    const analise = await base44.asServiceRole.integrations.Core.InvokeLLM({
+      prompt:
+        'You are analyzing the EXACT registered photo of a product so a video generator can recreate it with total fidelity. ' +
+        'Examine the image carefully and fill every field literally — describe ONLY what is visible, never invent or embellish. ' +
+        'Include: precise object type and how many units are visible; exact shape and proportions; exact colors (be specific, e.g. "vivid opaque yellow"); ' +
+        'material and surface texture; packaging details (transparent shrink-wrap plastic, box, etc.); every label with its background color, position, and ALL readable text transcribed verbatim; ' +
+        'logos or illustrations on the label; barcode presence and position; and the background of the photo.',
+      model: 'claude_sonnet_4_6',
+      file_urls: [produto.foto_url],
+      response_json_schema: {
+        type: 'object',
+        properties: {
+          descricao_visual: { type: 'string', description: 'One extremely detailed English paragraph describing the product exactly as photographed' },
+          texto_rotulo: { type: 'string', description: 'All text visible on the label, transcribed verbatim' },
+          cores_principais: { type: 'string', description: 'Main exact colors of product and label' },
+        },
+        required: ['descricao_visual'],
+      },
+    });
+
+    const descricaoVisual = analise.descricao_visual;
+
+    const prompt =
+      `Professional product demo video. CRITICAL: the product shown must be a PIXEL-FAITHFUL recreation of this exact real product — same shape, same colors, same packaging, same label, same quantity. Never redesign it. ` +
+      `PRODUCT (exactly as photographed): ${descricaoVisual} ` +
+      (analise.texto_rotulo ? `LABEL TEXT (must appear exactly as written): "${analise.texto_rotulo}". ` : '') +
+      (analise.cores_principais ? `EXACT COLORS: ${analise.cores_principais}. ` : '') +
+      `Product name: ${nome}${categoria ? ` (category: ${categoria})` : ''}. ` +
+      `Scene: professional studio, elegant dark teal and gold background, soft warm lighting, camera slowly rotating around the product standing still on a reflective surface, cinematic style, premium atmosphere. ` +
+      `The product must remain static and identical to the description above during the entire video — only the camera moves.`;
 
     const result = await base44.asServiceRole.integrations.Core.GenerateVideo({
       prompt,
