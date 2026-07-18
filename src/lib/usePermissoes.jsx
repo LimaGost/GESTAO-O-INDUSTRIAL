@@ -47,7 +47,7 @@ export function PermissoesProvider({ user, children }) {
 
   useEffect(() => {
     if (!user) { setModulos({}); return; }
-    if (user.role === 'admin') { setModulos(null); return; }
+    if (user.role === 'admin' || user.role === 'diretor') { setModulos(null); return; }
 
     base44.entities.PermissaoRole.filter({ role: user.role }).then(lista => {
       if (lista?.length > 0 && lista[0].modulos_niveis) {
@@ -62,7 +62,7 @@ export function PermissoesProvider({ user, children }) {
 
   const getNivel = (modulo) => {
     if (!user) return 'none';
-    if (user.role === 'admin') return 'full';
+    if (user.role === 'admin' || user.role === 'diretor') return 'full';
     if (modulos === undefined) return 'full';
     // Compatibilidade: perfis salvos antes da separação Industria/Galpão herdam o nível de 'Separacao'
     return modulos[modulo] ?? (modulo === 'SeparacaoGalpao' ? modulos['Separacao'] : undefined) ?? 'none';
@@ -72,7 +72,7 @@ export function PermissoesProvider({ user, children }) {
   const somenteLeitura = (modulo) => getNivel(modulo) === 'view';
   // Retorna true se o usuário NÃO pode ver valores financeiros (nível 'view' em módulo financeiro)
   const ocultarFinanceiro = (modulo) => MODULOS_FINANCEIROS.includes(modulo) && getNivel(modulo) === 'view';
-  const isLoading = modulos === undefined && user?.role !== 'admin';
+  const isLoading = modulos === undefined && user?.role !== 'admin' && user?.role !== 'diretor';
 
   return (
     <PermissoesContext.Provider value={{ getNivel, temAcesso, somenteLeitura, ocultarFinanceiro, modulos, isLoading }}>
