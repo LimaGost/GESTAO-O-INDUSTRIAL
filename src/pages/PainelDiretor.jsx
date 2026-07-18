@@ -30,7 +30,7 @@ export default function PainelDiretor() {
       base44.entities.SeparacaoGalpao.list('-created_date').catch(() => []),
       base44.entities.Expedicao.list('-created_date'),
       base44.entities.Produto.list(),
-      base44.entities.User.list().catch(() => []),
+      base44.functions.invoke('chatListarUsuarios', {}).then(r => r.data?.usuarios || []).catch(() => []),
       base44.entities.LogAuditoria.list('-created_date', 2000).catch(() => []),
     ]);
     setDados({ pedidos, ops, separacoes, sepsGalpao, expedicoes, produtos, usuarios, logs });
@@ -38,15 +38,15 @@ export default function PainelDiretor() {
   };
 
   useEffect(() => {
-    if (user?.role === 'admin') load();
+    if (user?.role === 'diretor') load();
   }, [user]);
 
-  if (user && user.role !== 'admin') {
+  if (user && user.role !== 'diretor') {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3 text-center px-6">
         <span className="text-4xl">👑</span>
         <p className="font-bold text-foreground">Painel Diretor</p>
-        <p className="text-sm text-muted-foreground">Esta área é exclusiva para o Diretor/Administrador da empresa.</p>
+        <p className="text-sm text-muted-foreground">Esta área é exclusiva para usuários com o cargo de <strong>Diretor</strong>.</p>
       </div>
     );
   }

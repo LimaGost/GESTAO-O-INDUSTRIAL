@@ -71,7 +71,7 @@ const AuthenticatedApp = () => {
     if (authError.type === 'auth_required') { navigateToLogin(); return null; }
   }
 
-  const ROLES_SISTEMA = ['admin', 'gerente_producao', 'vendedor', 'maquinista', 'embalador', 'estoquista', 'motorista', 'user', 'estoquista_industria', 'estoquista_galpao', 'vendedor_industria', 'vendedor_loja', 'conferente_industria', 'conferente_galpao'];
+  const ROLES_SISTEMA = ['admin', 'diretor', 'gerente_producao', 'vendedor', 'maquinista', 'embalador', 'estoquista', 'motorista', 'user', 'estoquista_industria', 'estoquista_galpao', 'vendedor_industria', 'vendedor_loja', 'conferente_industria', 'conferente_galpao'];
   if (user && !ROLES_SISTEMA.includes(user.role)) {
     return <AguardandoAprovacao user={user} />;
   }

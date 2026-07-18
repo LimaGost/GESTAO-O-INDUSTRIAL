@@ -106,7 +106,7 @@ const PATH_MODULO = {
   '/CRM':                  'Clientes',
   '/Clientes':     'Clientes',
   '/Produtos':     'Produtos',
-  '/PainelDiretor': '__admin__',
+  '/PainelDiretor': '__diretor__',
   '/Relatorios':   'Relatorios',
   '/Perdas':       'Perdas',
   '/Reposicoes':   'Estoque',
@@ -138,7 +138,7 @@ export default function Layout() {
 
   const filtrarItens = (itens) => itens.filter(item => {
     const modulo = PATH_MODULO[item.path];
-    if (modulo === '__admin__') return user?.role === 'admin';
+    if (modulo === '__diretor__') return user?.role === 'diretor';
     if (modulo === undefined) return true;
     if (modulo === null) return true;
     return temAcesso(modulo);
