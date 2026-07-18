@@ -27,6 +27,7 @@ const navGroups = [
   {
     label: 'PRINCIPAL',
     items: [
+      { path: '/PainelDiretor', label: 'Painel Diretor', icon: Crown },
       { path: '/Dashboard',  label: 'Dashboard',       icon: LayoutDashboard },
       { path: '/Pedidos',    label: 'Pedidos',          icon: ShoppingCart },
       { path: '/Kanban',     label: 'Kanban Produção',  icon: Factory },
@@ -49,7 +50,6 @@ const navGroups = [
   {
     label: 'ANÁLISE',
     items: [
-      { path: '/PainelDiretor', label: 'Painel Diretor', icon: Crown },
       { path: '/Relatorios',  label: 'Relatórios',  icon: BarChart2 },
       { path: '/Perdas',      label: 'Perdas',       icon: Trash2 },
       { path: '/Reposicoes',  label: 'Reposições',   icon: AlertTriangle },
