@@ -13,6 +13,7 @@ import KanbanCardModal from '@/components/kanban/KanbanCardModal';
 import ModalTotalProducao from '@/components/kanban/ModalTotalProducao';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 import { readStagesLocal, loadKanbanFluxo, getIcon } from '@/lib/kanbanFluxo';
+import PullToRefresh from '@/components/PullToRefresh';
 
 const CORES_OPCOES = [
 { accent: '#64748B', bg: '#F8FAFC', border: '#CBD5E1', dot: '#94A3B8' },
@@ -499,6 +500,7 @@ export default function Kanban() {
   const filtrosAtivos = busca || filtroOrigem !== 'todas' || filtroCategoria !== 'todas' || sortKey !== 'created_date_asc';
 
   return (
+    <PullToRefresh onRefresh={() => load(true)}>
     <div className="flex flex-col h-full space-y-4">
       {/* Header */}
       <div className="bg-card border border-border rounded-2xl px-4 md:px-5 py-4 flex-shrink-0">
@@ -867,6 +869,7 @@ export default function Kanban() {
         onClose={() => setOrdemSelecionada(null)} />
 
       }
-    </div>);
+    </div>
+    </PullToRefresh>);
 
 }

@@ -13,6 +13,7 @@ import DashboardLogistica from '@/components/dashboard/DashboardLogistica';
 import DashboardWhiteLabel from '@/components/dashboard/DashboardWhiteLabel';
 import DashboardAlertas from '@/components/dashboard/DashboardAlertas';
 import PeriodFilter from '@/components/dashboard/PeriodFilter';
+import PullToRefresh from '@/components/PullToRefresh';
 
 const ABAS = [
   { id: 'geral',      label: '📊 Geral' },
@@ -105,6 +106,7 @@ export default function Dashboard() {
   };
 
   return (
+    <PullToRefresh onRefresh={() => load(true)}>
     <div className="space-y-4">
       <DashboardHeader onRefresh={() => load(true)} loading={loading} />
 
@@ -154,5 +156,6 @@ export default function Dashboard() {
         <DashboardWhiteLabel rawData={rawData} loading={loading} period={resolvedPeriod} ocultarValores={ocultarValores} />
       )}
     </div>
+    </PullToRefresh>
   );
 }

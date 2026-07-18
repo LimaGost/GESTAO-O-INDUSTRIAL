@@ -152,6 +152,22 @@
            transition-colors;
   }
 
+  /* ── Alvo de toque mínimo 44x44px (mobile/touch) sem alterar o layout ── */
+  @media (max-width: 768px), (pointer: coarse) {
+    button, [role="button"] { position: relative; }
+    button::before, [role="button"]::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      min-width: 44px;
+      min-height: 44px;
+      width: 100%;
+      height: 100%;
+    }
+  }
+
   @media (max-width: 768px) {
     p, span, div, li, button, a, label { @apply text-sm; }
     h1 { @apply text-2xl; }

@@ -14,6 +14,7 @@ import { gerarNumero, gerarLote } from '@/lib/numeracao';
 import { registrarLog } from '@/lib/audit';
 import { alocarPedido } from '@/lib/alocacaoPedido';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
+import PullToRefresh from '@/components/PullToRefresh';
 
 
 const VALOR_OCULTO = '••••••';
@@ -368,6 +369,7 @@ export default function Pedidos() {
   };
 
   return (
+    <PullToRefresh onRefresh={load}>
     <div className="flex flex-col h-full space-y-4">
       {/* ── Header ── */}
       <div className="bg-card border border-border rounded-2xl px-5 py-4 flex-shrink-0">
@@ -583,5 +585,6 @@ export default function Pedidos() {
         />
       )}
     </div>
+    </PullToRefresh>
   );
 }

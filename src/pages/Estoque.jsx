@@ -4,6 +4,8 @@ import { AlertTriangle, TrendingUp, Archive, Plus, X, Check, Search, Eye, Packag
 import { registrarLog } from '@/lib/audit';
 import { gerarNumero } from '@/lib/numeracao';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
+import PullToRefresh from '@/components/PullToRefresh';
+import SelectMobile, { SelectOption } from '@/components/ui/select-mobile';
 
 function StatusBadge({ zerado, alertaMax, alerta }) {
   if (zerado)    return <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-100 text-red-600 font-semibold">Zerado</span>;
@@ -32,6 +34,7 @@ export default function Estoque() {
   const [busca, setBusca] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('todos');
   const [filtroCategoria, setFiltroCategoria] = useState('todas');
+  const [isMobileTela] = useState(window.innerWidth < 768);
   const buscaRef = useRef(null);
 
   useEffect(() => {
@@ -112,6 +115,7 @@ export default function Estoque() {
   const produtoAjuste = produtos.find(p => p.id === ajuste.produto_id);
 
   return (
+    <PullToRefresh onRefresh={load}>
     <div className="space-y-5">
 
       {/* Header */}
@@ -330,11 +334,16 @@ export default function Estoque() {
 
               <div>
                 <label className="text-xs text-muted-foreground mb-1.5 block font-semibold">Produto *</label>
-                <select value={ajuste.produto_id} onChange={e => setAjuste(a => ({ ...a, produto_id: e.target.value }))}
-                  className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
-                  <option value="">Selecione...</option>
-                  {produtos.map(p => <option key={p.id} value={p.id}>{p.nome} — Atual: {p.estoque_atual || 0}</option>)}
-                </select>
+                <SelectMobile
+                  value={ajuste.produto_id}
+                  onValueChange={v => setAjuste(a => ({ ...a, produto_id: v }))}
+                  placeholder="Selecione..."
+                  isMobile={isMobileTela}
+                >
+                  {produtos.map(p => (
+                    <SelectOption key={p.id} value={p.id}>{`${p.nome} — Atual: ${p.estoque_atual || 0}`}</SelectOption>
+                  ))}
+                </SelectMobile>
                 {produtoAjuste && (
                   <div className="mt-2 flex items-center gap-3 bg-muted/40 rounded-xl px-3 py-2">
                     <div className="flex-1">
@@ -383,5 +392,6 @@ export default function Estoque() {
         </div>
       )}
     </div>
+    </PullToRefresh>
   );
 }

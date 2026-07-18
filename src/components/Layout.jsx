@@ -2,6 +2,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import NotificacoesPanel from '@/components/NotificacoesPanel';
 import MuralPopup from '@/components/avisos/MuralPopup';
 import PresenceHeartbeat from '@/components/PresenceHeartbeat';
+import BottomTabBar from '@/components/BottomTabBar';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   LayoutDashboard, ShoppingCart, Factory, Package,
@@ -334,38 +335,13 @@ export default function Layout() {
           <Outlet />
         </main>
 
-        {/* BOTTOM TAB BAR (mobile) */}
-        <nav
-          className="md:hidden flex-shrink-0 flex items-center"
-          style={{
-            background: '#0D3B45',
-            borderTop: '1px solid rgba(255,255,255,0.10)',
-            height: 'calc(60px + env(safe-area-inset-bottom))',
-            paddingBottom: 'env(safe-area-inset-bottom)',
-          }}
-        >
-          {bottomTabsVisiveis.map(({ path, label, icon: Icon }) => {
-            const active = location.pathname === path;
-            return (
-              <Link key={path} to={path}
-                className="flex-1 flex flex-col items-center justify-center gap-0.5 min-h-[44px] transition-all"
-                style={{ color: active ? '#C9A227' : 'rgba(255,255,255,0.45)' }}
-              >
-                <Icon size={20} className="flex-shrink-0" />
-                <span className="text-[10px] font-medium leading-tight">{label}</span>
-              </Link>
-            );
-          })}
-
-          <button
-            onClick={() => setMoreOpen(true)}
-            className="flex-1 flex flex-col items-center justify-center gap-0.5 min-h-[44px] transition-all"
-            style={{ color: isMoreActive ? '#C9A227' : 'rgba(255,255,255,0.45)' }}
-          >
-            <MoreHorizontal size={20} />
-            <span className="text-[10px] font-medium leading-tight">Mais</span>
-          </button>
-        </nav>
+        {/* BOTTOM TAB BAR (mobile) — memoizada para preservação de estado */}
+        <BottomTabBar
+          tabs={bottomTabsVisiveis}
+          activePath={location.pathname}
+          isMoreActive={isMoreActive}
+          onMore={() => setMoreOpen(true)}
+        />
       </div>
 
       {/* "MAIS" DRAWER (mobile) */}
