@@ -10,6 +10,7 @@ import FotoProduto from '@/components/produtos/FotoProduto';
 import ModalEditarSku from '@/components/produtos/ModalEditarSku';
 import ModalImportarPlanilha from '@/components/produtos/ModalImportarPlanilha';
 import GerenciadorVariaveisCategoria from '@/components/produtos/GerenciadorVariaveisCategoria';
+import VitrineProduto from '@/components/produtos/VitrineProduto';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 
 const emptyFamilia = {
@@ -69,6 +70,7 @@ export default function Produtos() {
   const [showImportar, setShowImportar] = useState(false);
   const [categoriasComVariaveis, setCategoriasComVariaveis] = useState({});
   const [gerenciandoVariaveis, setGerenciandoVariaveis] = useState(null);
+  const [vitrineProduto, setVitrineProduto] = useState(null);
 
   // Filtros
   const [busca, setBusca] = useState('');
@@ -532,11 +534,11 @@ export default function Produtos() {
                                 <p className="text-[10px] text-muted-foreground font-mono">{p.codigo || '—'}</p>
                                 <p className="text-[10px] text-muted-foreground">{p.unidade || 'un'} · R$ {(p.preco_unitario || 0).toFixed(2)}</p>
                               </div>
-                              {p.video_demo_url && (
-                                <a href={p.video_demo_url} target="_blank" rel="noopener noreferrer"
+                              {p.foto_url && (
+                                <button onClick={() => setVitrineProduto(p)}
                                   className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-semibold text-primary hover:underline">
-                                  🎬 Ver vídeo de demonstração
-                                </a>
+                                  🎬 Ver demonstração
+                                </button>
                               )}
 
                               {/* Estoque + barra */}
@@ -645,6 +647,9 @@ export default function Produtos() {
           load();
         }}
         />
+      )}
+      {vitrineProduto && (
+        <VitrineProduto produto={vitrineProduto} onClose={() => setVitrineProduto(null)} />
       )}
       {gerenciandoVariaveis && (
         <GerenciadorVariaveisCategoria
