@@ -117,6 +117,11 @@
         },
         {
           "user_condition": {
+            "role": "diretor"
+          }
+        },
+        {
+          "user_condition": {
             "role": "gerente_producao"
           }
         }
@@ -190,6 +195,11 @@
         },
         {
           "user_condition": {
+            "role": "diretor"
+          }
+        },
+        {
+          "user_condition": {
             "role": "gerente_producao"
           }
         },
@@ -220,6 +230,11 @@
         {
           "user_condition": {
             "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "diretor"
           }
         },
         {
