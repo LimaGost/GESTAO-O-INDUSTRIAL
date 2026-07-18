@@ -7,7 +7,7 @@ import {
   LayoutDashboard, ShoppingCart, Factory, Package,
   Truck, Settings, ChevronLeft, ChevronRight, ChevronUp,
   Bell, Tag, Users, Archive, SlidersHorizontal, BarChart2,
-  Database, MoreHorizontal, RefreshCw, Trash2, MessageCircle, LogOut, User, AlertTriangle, HeadphonesIcon, ClipboardCheck, Printer, Store, GraduationCap
+  Database, MoreHorizontal, RefreshCw, Trash2, MessageCircle, LogOut, User, AlertTriangle, HeadphonesIcon, ClipboardCheck, Printer, Store, GraduationCap, Crown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
@@ -49,6 +49,7 @@ const navGroups = [
   {
     label: 'ANÁLISE',
     items: [
+      { path: '/PainelDiretor', label: 'Painel Diretor', icon: Crown },
       { path: '/Relatorios',  label: 'Relatórios',  icon: BarChart2 },
       { path: '/Perdas',      label: 'Perdas',       icon: Trash2 },
       { path: '/Reposicoes',  label: 'Reposições',   icon: AlertTriangle },
@@ -79,6 +80,7 @@ const allNavItems = [
   { path: '/Expedicao',      label: 'Expedição',         icon: Truck },
   { path: '/Clientes',       label: 'Clientes',          icon: Users },
   { path: '/Produtos',       label: 'Produtos',          icon: Settings },
+  { path: '/PainelDiretor',  label: 'Painel Diretor',    icon: Crown },
   { path: '/Relatorios',     label: 'Relatórios',        icon: BarChart2 },
   { path: '/Perdas',         label: 'Perdas',            icon: Trash2 },
   { path: '/Reposicoes',     label: 'Reposições',        icon: AlertTriangle },
@@ -104,6 +106,7 @@ const PATH_MODULO = {
   '/CRM':                  'Clientes',
   '/Clientes':     'Clientes',
   '/Produtos':     'Produtos',
+  '/PainelDiretor': '__admin__',
   '/Relatorios':   'Relatorios',
   '/Perdas':       'Perdas',
   '/Reposicoes':   'Estoque',
@@ -135,6 +138,7 @@ export default function Layout() {
 
   const filtrarItens = (itens) => itens.filter(item => {
     const modulo = PATH_MODULO[item.path];
+    if (modulo === '__admin__') return user?.role === 'admin';
     if (modulo === undefined) return true;
     if (modulo === null) return true;
     return temAcesso(modulo);
