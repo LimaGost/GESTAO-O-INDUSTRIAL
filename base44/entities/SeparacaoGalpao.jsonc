@@ -136,6 +136,11 @@
         },
         {
           "user_condition": {
+            "role": "diretor"
+          }
+        },
+        {
+          "user_condition": {
             "role": "gerente_producao"
           }
         },
