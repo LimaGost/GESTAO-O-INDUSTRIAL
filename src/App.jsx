@@ -32,6 +32,7 @@ import Suporte from './pages/Suporte.jsx';
 import TicketsSuporte from './pages/TicketsSuporte.jsx';
 import CRM from './pages/CRM.jsx';
 import Chat from './pages/Chat.jsx';
+import BaseConhecimento from './pages/BaseConhecimento.jsx';
 import AguardandoAprovacao from './components/AguardandoAprovacao';
 import { PermissoesProvider, usePermissoes } from '@/lib/usePermissoes.jsx';
 
@@ -98,6 +99,7 @@ const AuthenticatedApp = () => {
           <Route path="/Auditoria"      element={<RotaProtegida modulo="Auditoria">      <Auditoria />      </RotaProtegida>} />
           <Route path="/CRM" element={<RotaProtegida modulo="Clientes"><CRM /></RotaProtegida>} />
           <Route path="/Chat" element={<Chat />} />
+          <Route path="/BaseConhecimento" element={<BaseConhecimento />} />
           <Route path="/Suporte" element={<Suporte />} />
           <Route path="/TicketsSuporte" element={<TicketsSuporte />} />
           <Route path="/SupabaseSchemas" element={<SupabaseSchemas />} />

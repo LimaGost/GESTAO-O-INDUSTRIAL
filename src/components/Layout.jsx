@@ -7,7 +7,7 @@ import {
   LayoutDashboard, ShoppingCart, Factory, Package,
   Truck, Settings, ChevronLeft, ChevronRight, ChevronUp,
   Bell, Tag, Users, Archive, SlidersHorizontal, BarChart2,
-  Database, MoreHorizontal, RefreshCw, Trash2, MessageCircle, LogOut, User, AlertTriangle, HeadphonesIcon, ClipboardCheck, Printer, Store
+  Database, MoreHorizontal, RefreshCw, Trash2, MessageCircle, LogOut, User, AlertTriangle, HeadphonesIcon, ClipboardCheck, Printer, Store, GraduationCap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
@@ -59,6 +59,7 @@ const navGroups = [
     items: [
       { path: '/Configuracoes', label: 'Configurações', icon: SlidersHorizontal },
       { path: '/Chat',          label: 'Chat',           icon: MessageCircle },
+      { path: '/BaseConhecimento', label: 'Base de Conhecimento', icon: GraduationCap },
       { path: '/Suporte',        label: 'Suporte',        icon: HeadphonesIcon },
       { path: '/TicketsSuporte',  label: 'Tickets',         icon: HeadphonesIcon },
     ],
@@ -83,6 +84,7 @@ const allNavItems = [
   { path: '/Reposicoes',     label: 'Reposições',        icon: AlertTriangle },
   { path: '/Configuracoes',  label: 'Configurações',     icon: SlidersHorizontal },
   { path: '/Chat',           label: 'Chat',               icon: MessageCircle },
+  { path: '/BaseConhecimento', label: 'Base de Conhecimento', icon: GraduationCap },
   { path: '/Suporte',        label: 'Suporte',            icon: HeadphonesIcon },
   { path: '/TicketsSuporte', label: 'Tickets',             icon: HeadphonesIcon },
 ];
@@ -108,6 +110,7 @@ const PATH_MODULO = {
   '/Auditoria':    'Auditoria',
   '/Configuracoes': 'Configuracoes',
   '/Chat':            null,
+  '/BaseConhecimento': null,
   '/Suporte':         null,
   '/TicketsSuporte':   'Configuracoes',
   '/SupabaseSchemas':  null,
