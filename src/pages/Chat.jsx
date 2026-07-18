@@ -40,6 +40,22 @@ function tocarSomAlerta() {
   } catch {}
 }
 
+// Online = atividade nos últimos 3 minutos
+const ONLINE_MS = 3 * 60 * 1000;
+function isOnline(u) {
+  if (!u?.ultima_atividade) return false;
+  return Date.now() - new Date(u.ultima_atividade).getTime() < ONLINE_MS;
+}
+function fmtUltimaVez(iso) {
+  if (!iso) return 'offline';
+  const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (min < 60) return `visto há ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `visto há ${h}h`;
+  const d = Math.floor(h / 24);
+  return `visto há ${d} dia${d > 1 ? 's' : ''}`;
+}
+
 function getIniciais(nome, email) {
   const n = nome || email || 'U';
   return n.trim().charAt(0).toUpperCase();
@@ -192,6 +208,17 @@ export default function Chat() {
       Notification.requestPermission();
     }
   }, []);
+
+  // Atualiza presença (online/offline) a cada 30s
+  useEffect(() => {
+    if (!usuarioAtual) return;
+    const interval = setInterval(async () => {
+      const res = await base44.functions.invoke('chatListarUsuarios', {}).catch(() => null);
+      const lista = res?.data?.usuarios;
+      if (lista) { setUsuarios(lista); usuariosRef.current = lista; }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [usuarioAtual]);
 
   // Subscribe conversas
   useEffect(() => {
@@ -362,6 +389,7 @@ export default function Chat() {
                   <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
                     <span className="text-base font-bold text-primary">{getIniciais(usuario.full_name, usuario.email)}</span>
                   </div>
+                  <span className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-card ${isOnline(usuario) ? 'bg-green-500' : 'bg-slate-300'}`} />
                   {qtdNaoLidas > 0 && (
                     <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                       {qtdNaoLidas > 9 ? '9+' : qtdNaoLidas}
@@ -378,7 +406,9 @@ export default function Chat() {
                     </span>
                   </div>
                   <p className={`text-xs truncate ${qtdNaoLidas > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
-                    {usuario.conversa?.ultima_mensagem || <span className="italic opacity-60">Clique para conversar</span>}
+                    {isOnline(usuario)
+                      ? <span className="text-green-600 font-semibold">● Online</span>
+                      : (usuario.conversa?.ultima_mensagem || <span className="italic opacity-60">Clique para conversar</span>)}
                   </p>
                 </div>
               </button>
@@ -399,12 +429,20 @@ export default function Chat() {
               >
                 <ChevronLeft size={20} className="text-muted-foreground" />
               </button>
-              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                <span className="text-sm font-bold text-primary">{getIniciais(usuarioAtivo.full_name, usuarioAtivo.email)}</span>
+              <div className="relative flex-shrink-0">
+                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                  <span className="text-sm font-bold text-primary">{getIniciais(usuarioAtivo.full_name, usuarioAtivo.email)}</span>
+                </div>
+                <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-card ${isOnline(usuarios.find(u => u.id === usuarioAtivo.id) || usuarioAtivo) ? 'bg-green-500' : 'bg-slate-300'}`} />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-foreground text-sm">{usuarioAtivo.full_name || usuarioAtivo.email}</p>
-                <p className="text-xs text-muted-foreground truncate">{usuarioAtivo.email}</p>
+                {(() => {
+                  const uAtual = usuarios.find(u => u.id === usuarioAtivo.id) || usuarioAtivo;
+                  return isOnline(uAtual)
+                    ? <p className="text-xs text-green-600 font-semibold">Online</p>
+                    : <p className="text-xs text-muted-foreground truncate">{fmtUltimaVez(uAtual.ultima_atividade)}</p>;
+                })()}
               </div>
             </div>
 

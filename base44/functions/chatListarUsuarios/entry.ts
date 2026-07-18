@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
     const todos = await base44.asServiceRole.entities.User.list();
     const outros = todos
       .filter(u => u.id !== user.id)
-      .map(u => ({ id: u.id, full_name: u.full_name, email: u.email, role: u.role }));
+      .map(u => ({ id: u.id, full_name: u.full_name, email: u.email, role: u.role, ultima_atividade: u.ultima_atividade || null }));
 
     return Response.json({ usuarios: outros });
   } catch (error) {
