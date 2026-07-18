@@ -81,6 +81,24 @@ const DEFAULTS = {
 
 const ROLE_LABEL = Object.fromEntries(ROLES.map(r => [r.key, r.label]));
 
+// Online = atividade nos últimos 3 minutos
+const ONLINE_MS = 3 * 60 * 1000;
+function isOnline(u) {
+  if (!u.ultima_atividade) return false;
+  return Date.now() - new Date(u.ultima_atividade).getTime() < ONLINE_MS;
+}
+function fmtUltimaVez(iso) {
+  if (!iso) return 'nunca acessou';
+  const diff = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return 'agora mesmo';
+  if (min < 60) return `há ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `há ${h}h`;
+  const d = Math.floor(h / 24);
+  return `há ${d} dia${d > 1 ? 's' : ''}`;
+}
+
 // Botão de nível — clica para ciclar entre none → view → full → none
 function NivelCycleButton({ nivel, onClick, disabled }) {
   const cfg = NIVEIS.find(n => n.key === nivel) || NIVEIS[0];
@@ -288,6 +306,7 @@ function AbaUsuariosList({ usuarios, onRoleChange }) {
   };
 
   const ROLES_SISTEMA = ROLES.map(r => r.key);
+  const onlineCount = usuarios.filter(isOnline).length;
 
   return (
     <div className="space-y-4">
@@ -295,6 +314,22 @@ function AbaUsuariosList({ usuarios, onRoleChange }) {
         <AlertTriangle size={13} className="text-amber-600 flex-shrink-0" />
         Usuários sem perfil <strong>não acessam o sistema</strong>. Clique no badge de perfil para atribuir ou alterar.
       </p>
+
+      {/* Resumo de presença em tempo real */}
+      <div className="flex items-center gap-4 bg-card border border-border rounded-xl px-4 py-2.5">
+        <span className="flex items-center gap-1.5 text-xs font-semibold text-green-600">
+          <span className="relative flex w-2.5 h-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-60" />
+            <span className="relative inline-flex rounded-full w-2.5 h-2.5 bg-green-500" />
+          </span>
+          {onlineCount} online
+        </span>
+        <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+          <span className="w-2.5 h-2.5 rounded-full bg-slate-300 inline-block" />
+          {usuarios.length - onlineCount} offline
+        </span>
+        <span className="text-[10px] text-muted-foreground ml-auto">atualiza automaticamente</span>
+      </div>
       <input value={busca} onChange={e => setBusca(e.target.value)}
         placeholder="Buscar por nome ou e-mail..."
         className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
@@ -309,12 +344,18 @@ function AbaUsuariosList({ usuarios, onRoleChange }) {
           return (
             <div key={u.id} className={`border rounded-xl p-3 space-y-2 transition-all ${isEditando ? 'border-primary/30 bg-primary/5' : 'border-border'}`}>
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center font-bold text-sm text-primary flex-shrink-0">
-                  {(u.full_name || u.email || '?').charAt(0).toUpperCase()}
+                <div className="relative flex-shrink-0">
+                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center font-bold text-sm text-primary">
+                    {(u.full_name || u.email || '?').charAt(0).toUpperCase()}
+                  </div>
+                  <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-card ${isOnline(u) ? 'bg-green-500' : 'bg-slate-300'}`} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-foreground truncate">{u.full_name || '—'}</p>
                   <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                  {isOnline(u)
+                    ? <p className="text-[10px] font-semibold text-green-600">● Online agora</p>
+                    : <p className="text-[10px] text-muted-foreground">○ Offline · visto {fmtUltimaVez(u.ultima_atividade)}</p>}
                 </div>
                 <button onClick={() => setEditandoId(isEditando ? null : u.id)}
                   className={`text-xs px-2.5 py-1 rounded-full border font-semibold flex-shrink-0 transition-all hover:opacity-80 ${semRole ? 'bg-amber-100 text-amber-700 border-amber-300' : cfg?.color || 'bg-muted text-muted-foreground border-border'}`}>
@@ -366,6 +407,15 @@ export default function AbaUsuarios() {
   };
 
   useEffect(() => { load(); }, []);
+
+  // Atualiza a presença dos usuários a cada 30s
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const users = await base44.entities.User.list().catch(() => null);
+      if (users) setUsuarios(users);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleRoleChange = async (userId, novoRole) => {
     await base44.entities.User.update(userId, { role: novoRole });
