@@ -30,16 +30,19 @@ Deno.serve(async (req) => {
     if (produto.foto_url) {
       try {
         descricaoVisual = await base44.asServiceRole.integrations.Core.InvokeLLM({
-          prompt: 'Descreva em detalhes visuais este produto para que um gerador de vídeo reproduza sua aparência fielmente: formato, cores exatas, material, textura, embalagem, rótulos e proporções. Responda em uma frase longa e objetiva, em português, sem introduções.',
+          prompt: 'Look at this product photo and write, in English, an extremely precise visual description so a video generator can recreate it EXACTLY: object type, exact shape, exact colors, material, texture, packaging (wrapping, plastic, box), labels and any text visible, quantity of items shown, and proportions. Be literal — describe only what is visible in the photo, do not invent details. Answer with one long objective sentence, no introduction.',
           file_urls: [produto.foto_url],
         });
       } catch { /* segue sem descrição visual */ }
     }
 
-    const prompt = `Vídeo de demonstração de produto para catálogo comercial: ${nome}${categoria ? `, categoria ${categoria}` : ''}. ${descricao}. ` +
-      (descricaoVisual ? `Aparência exata do produto (reproduzir fielmente): ${descricaoVisual}. ` : '') +
-      `Cena de estúdio profissional com fundo elegante em tons de azul-petróleo escuro e dourado, iluminação suave e quente, ` +
-      `câmera girando lentamente ao redor do produto em destaque sobre uma superfície refletiva, estilo cinematográfico, close-up detalhado, atmosfera premium.`;
+    const prompt = descricaoVisual
+      ? `Professional product demo video. THE PRODUCT MUST LOOK EXACTLY LIKE THIS, do not change its appearance, colors, packaging or quantity: ${descricaoVisual} ` +
+        `Product name: ${nome}${categoria ? ` (category: ${categoria})` : ''}. ` +
+        `Scene: professional studio, elegant dark teal and gold background, soft warm lighting, camera slowly rotating around the product placed on a reflective surface, cinematic style, detailed close-up, premium atmosphere. The product itself must remain identical to the description above at all times.`
+      : `Vídeo de demonstração de produto para catálogo comercial: ${nome}${categoria ? `, categoria ${categoria}` : ''}. ${descricao}. ` +
+        `Cena de estúdio profissional com fundo elegante em tons de azul-petróleo escuro e dourado, iluminação suave e quente, ` +
+        `câmera girando lentamente ao redor do produto em destaque sobre uma superfície refletiva, estilo cinematográfico, close-up detalhado, atmosfera premium.`;
 
     const result = await base44.asServiceRole.integrations.Core.GenerateVideo({
       prompt,
