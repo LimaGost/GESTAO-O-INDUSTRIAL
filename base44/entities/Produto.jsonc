@@ -54,10 +54,6 @@
     "foto_url": {
       "type": "string"
     },
-    "video_demo_url": {
-      "type": "string",
-      "description": "URL do v\u00eddeo de demonstra\u00e7\u00e3o gerado por IA no lan\u00e7amento do produto"
-    },
     "variacoes": {
       "type": "array",
       "items": {
@@ -113,11 +109,6 @@
         {
           "user_condition": {
             "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "diretor"
           }
         },
         {
@@ -195,11 +186,6 @@
         },
         {
           "user_condition": {
-            "role": "diretor"
-          }
-        },
-        {
-          "user_condition": {
             "role": "gerente_producao"
           }
         },
@@ -230,11 +216,6 @@
         {
           "user_condition": {
             "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "diretor"
           }
         },
         {
