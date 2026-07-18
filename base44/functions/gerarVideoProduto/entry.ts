@@ -25,7 +25,19 @@ Deno.serve(async (req) => {
     const categoria = produto.categoria || '';
     const descricao = produto.descricao || '';
 
+    // Se o produto tem foto, extrai uma descrição visual detalhada com IA para o vídeo ser fiel ao produto real
+    let descricaoVisual = '';
+    if (produto.foto_url) {
+      try {
+        descricaoVisual = await base44.asServiceRole.integrations.Core.InvokeLLM({
+          prompt: 'Descreva em detalhes visuais este produto para que um gerador de vídeo reproduza sua aparência fielmente: formato, cores exatas, material, textura, embalagem, rótulos e proporções. Responda em uma frase longa e objetiva, em português, sem introduções.',
+          file_urls: [produto.foto_url],
+        });
+      } catch { /* segue sem descrição visual */ }
+    }
+
     const prompt = `Vídeo de demonstração de produto para catálogo comercial: ${nome}${categoria ? `, categoria ${categoria}` : ''}. ${descricao}. ` +
+      (descricaoVisual ? `Aparência exata do produto (reproduzir fielmente): ${descricaoVisual}. ` : '') +
       `Cena de estúdio profissional com fundo elegante em tons de azul-petróleo escuro e dourado, iluminação suave e quente, ` +
       `câmera girando lentamente ao redor do produto em destaque sobre uma superfície refletiva, estilo cinematográfico, close-up detalhado, atmosfera premium.`;
 
