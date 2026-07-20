@@ -699,7 +699,7 @@ export default function Kanban() {
                    <KanbanCard
                      key={ordem.id}
                      ordem={ordemEnriquecida}
-                     clienteNome={pedInfo?.nome || null}
+                     clienteNome={pedInfo?.nome || ordem.cliente_nome || null}
                       checklistConfigs={checklistConfigs}
                       checklistOk={checklistOk}
                       setChecklistOk={setChecklistOk}
@@ -859,7 +859,7 @@ export default function Kanban() {
         checklistConfigs={checklistConfigs}
         produtos={produtos}
         kanbanColunas={kanbanColunas}
-        clienteNome={ordemSelecionada.pedido_id ? pedidoMap[ordemSelecionada.pedido_id]?.nome : null}
+        clienteNome={(ordemSelecionada.pedido_id ? pedidoMap[ordemSelecionada.pedido_id]?.nome : null) || ordemSelecionada.cliente_nome || null}
         whiteLabelMarca={ordemSelecionada.pedido_id ? pedidoMap[ordemSelecionada.pedido_id]?.white_label_marca : null}
         isWhiteLabel={!!(ordemSelecionada.pedido_id && pedidoMap[ordemSelecionada.pedido_id]?.white_label)}
         grupoOrigem={ordemSelecionada.grupo_id ? grupoMapById[ordemSelecionada.grupo_id] || null : null}

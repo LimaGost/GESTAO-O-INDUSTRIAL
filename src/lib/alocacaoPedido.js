@@ -99,6 +99,7 @@ export async function alocarPedido({ pedido, itens, produtos, origem = 'pedido' 
       status: 'a_produzir',
       pedido_id: pedido.id,
       pedido_numero: numero,
+      cliente_nome: pedido.cliente_nome || null,
       origem,
       observacoes: pedido.observacoes || '',
       quantidade_pedido_total: qtdPedidoTotal,
