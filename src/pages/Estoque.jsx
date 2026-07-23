@@ -6,6 +6,8 @@ import { gerarNumero } from '@/lib/numeracao';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 import PullToRefresh from '@/components/PullToRefresh';
 import SelectMobile, { SelectOption } from '@/components/ui/select-mobile';
+import { mapaSaldosFracionados } from '@/lib/estoqueFracionado';
+import { calcularCaixas, formatarCaixas } from '@/lib/calculoCaixas';
 
 function StatusBadge({ zerado, alertaMax, alerta }) {
   if (zerado)    return <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-100 text-red-600 font-semibold">Zerado</span>;
@@ -32,6 +34,7 @@ export default function Estoque() {
   const [ajuste, setAjuste] = useState({ produto_id: '', tipo: 'entrada', quantidade: 1, motivo: '' });
   const [loading, setLoading] = useState(false);
   const [busca, setBusca] = useState('');
+  const [fracionados, setFracionados] = useState({});
   const [filtroStatus, setFiltroStatus] = useState('todos');
   const [filtroCategoria, setFiltroCategoria] = useState('todas');
   const [isMobileTela] = useState(window.innerWidth < 768);
@@ -51,8 +54,12 @@ export default function Estoque() {
 
   const load = async () => {
     setCarregando(true);
-    const data = await base44.entities.Produto.list('-updated_date');
+    const [data, frac] = await Promise.all([
+      base44.entities.Produto.list('-updated_date'),
+      mapaSaldosFracionados().catch(() => ({})),
+    ]);
     setProdutos(data);
+    setFracionados(frac);
     setCarregando(false);
   };
 
@@ -96,6 +103,7 @@ export default function Estoque() {
   const alertas = produtos.filter(p => (p.estoque_atual || 0) <= (p.estoque_minimo || 0)).length;
   const zerados = produtos.filter(p => (p.estoque_atual || 0) === 0).length;
   const totalUnidades = produtos.reduce((s, p) => s + (p.estoque_atual || 0), 0);
+  const totalAvulsas = Object.values(fracionados).reduce((s, q) => s + q, 0);
   const categorias = useMemo(() => [...new Set(produtos.map(p => p.categoria).filter(Boolean))].sort(), [produtos]);
 
   const produtosFiltrados = useMemo(() => produtos.filter(p => {
@@ -162,7 +170,7 @@ export default function Estoque() {
             <span className="text-xs text-muted-foreground">Total em Estoque</span>
           </div>
           <p className="text-2xl font-bold text-foreground">{totalUnidades.toLocaleString('pt-BR')}</p>
-          <p className="text-[10px] text-muted-foreground">unidades</p>
+          <p className="text-[10px] text-muted-foreground">un. lacradas{totalAvulsas > 0 ? ` · +${totalAvulsas.toLocaleString('pt-BR')} avulsas` : ''}</p>
         </div>
         <div onClick={() => setFiltroStatus('alerta')} className={`rounded-2xl p-4 cursor-pointer transition-colors border ${alertas > 0 ? 'bg-amber-50 border-amber-200 hover:border-amber-400' : 'bg-card border-border'}`}>
           <div className="flex items-center gap-2 mb-2">
@@ -258,7 +266,7 @@ export default function Estoque() {
             <table className="w-full text-sm">
               <thead className="bg-muted/30">
                 <tr>
-                  {['Produto', 'Código', 'Unidade', 'Atual', 'Mín', 'Máx', 'Status'].map(h => (
+                  {['Produto', 'Código', 'Unidade', 'Lacrado', 'Avulso', 'Total', 'Mín', 'Máx', 'Status'].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -284,8 +292,27 @@ export default function Estoque() {
                       <td className="px-4 py-3 font-mono text-xs text-muted-foreground whitespace-nowrap">{p.codigo || '—'}</td>
                       <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{p.unidade || '—'}</td>
                       <td className="px-4 py-3">
-                        <span className={`text-base font-bold ${zerado ? 'text-red-500' : alerta ? 'text-amber-600' : 'text-foreground'}`}>
-                          {est.toLocaleString('pt-BR')}
+                        <div className="flex flex-col">
+                          <span className={`text-base font-bold ${zerado ? 'text-red-500' : alerta ? 'text-amber-600' : 'text-foreground'}`}>
+                            {est.toLocaleString('pt-BR')}
+                          </span>
+                          {(p.itens_por_caixa || 1) > 1 && est > 0 && (
+                            <span className="text-[10px] text-muted-foreground whitespace-nowrap">{formatarCaixas(calcularCaixas(p, est))}</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        {(fracionados[p.id] || 0) > 0 ? (
+                          <span className="text-sm font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-lg whitespace-nowrap">
+                            {(fracionados[p.id] || 0).toLocaleString('pt-BR')} un
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm font-semibold text-foreground">
+                          {(est + (fracionados[p.id] || 0)).toLocaleString('pt-BR')}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-muted-foreground text-sm">{p.estoque_minimo || 0}</td>
@@ -298,7 +325,7 @@ export default function Estoque() {
                 })}
                 {produtosFiltrados.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="text-center py-14 text-muted-foreground">
+                    <td colSpan={9} className="text-center py-14 text-muted-foreground">
                       <Package size={28} className="mx-auto mb-2 opacity-20" />
                       <p className="text-sm">{busca ? `Nenhum produto encontrado para "${busca}"` : 'Nenhum produto encontrado.'}</p>
                     </td>

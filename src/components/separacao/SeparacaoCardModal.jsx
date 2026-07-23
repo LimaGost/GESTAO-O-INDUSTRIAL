@@ -1,4 +1,5 @@
 import { X, ArrowRight, User, Tag, Package, Truck, MapPin, Calendar, Flag, CheckCircle, Hash, ClipboardList, Home, Clock, Factory } from 'lucide-react';
+import AlertaFracionado from '@/components/fracionado/AlertaFracionado';
 
 const STATUS_ACCENT = {
   aguardando_producao: '#F59E0B',
@@ -71,6 +72,11 @@ export default function SeparacaoCardModal({ separacao, colunas = [], onAvancar,
         </div>
 
         <div className="p-6 overflow-y-auto space-y-4">
+          {/* Alerta de Estoque Fracionado ao separador */}
+          {onAvancar && ['aguardando_separacao', 'em_separacao'].includes(separacao.status) && (
+            <AlertaFracionado itens={separacao.itens || []} contexto={`Separação ${separacao.numero}`} />
+          )}
+
           {/* Aguardando produção */}
           {separacao.status === 'aguardando_producao' && (
             <div className="text-xs font-semibold px-3 py-2.5 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 space-y-1">

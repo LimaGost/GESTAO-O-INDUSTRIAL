@@ -1,0 +1,157 @@
+{
+  "name": "EstoqueFracionado",
+  "type": "object",
+  "properties": {
+    "produto_id": {
+      "type": "string",
+      "description": "ID do produto"
+    },
+    "produto_nome": {
+      "type": "string",
+      "description": "Nome do produto"
+    },
+    "produto_codigo": {
+      "type": "string",
+      "description": "C\u00f3digo/SKU do produto"
+    },
+    "quantidade": {
+      "type": "number",
+      "default": 0,
+      "description": "Saldo de unidades avulsas (caixas desmontadas / sobras de produ\u00e7\u00e3o)"
+    }
+  },
+  "required": [
+    "produto_id",
+    "produto_nome"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "diretor"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "gerente_producao"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista_industria"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista_galpao"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "conferente_industria"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "conferente_galpao"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "embalador"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "maquinista"
+          }
+        }
+      ]
+    },
+    "read": null,
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "diretor"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "gerente_producao"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista_industria"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "estoquista_galpao"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "conferente_industria"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "conferente_galpao"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "embalador"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "maquinista"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "diretor"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "gerente_producao"
+          }
+        }
+      ]
+    }
+  }
+}

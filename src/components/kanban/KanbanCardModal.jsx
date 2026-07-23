@@ -1,6 +1,8 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { X, ArrowRight, CheckCircle, CheckSquare, Square, Trash2, Printer, User, AlertTriangle, Plus, Minus, PackagePlus, Search, Save, Tag, Layers } from 'lucide-react';
 import ModalDescarte from './ModalDescarte';
+import ModalSobraFracionado from '@/components/fracionado/ModalSobraFracionado';
+import AlertaFracionado from '@/components/fracionado/AlertaFracionado';
 import { imprimirEtiquetaProduto } from '@/lib/imprimirEtiquetaProduto';
 
 function buildProximos(colunas) {
@@ -56,6 +58,7 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
   const [checkEtapa, setCheckEtapa] = useState(() => loadStorage(getStorageKey(checkKey, 'etapa')));
   const [checkItens, setCheckItens] = useState(() => loadStorage(getStorageKey(checkKey, 'prod')));
 
+  const [showSobra, setShowSobra] = useState(false);
   const [descartarAtivo, setDescartarAtivo] = useState(null);
   const [descarteRegistrado, setDescarteRegistrado] = useState(null);
   const [showDescarte, setShowDescarte] = useState(false);
@@ -207,6 +210,11 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
         </div>
 
         <div className="p-5 space-y-4">
+
+          {/* Alerta de Estoque Fracionado ao separador */}
+          {isSeparacao && onAvancar && (
+            <AlertaFracionado itens={itensNormalizados} contexto={`OP ${ordem.numero}`} />
+          )}
 
           {/* ── Edição de itens (apenas em_separacao) ── */}
           {isSeparacao && onAvancar && (
@@ -532,6 +540,12 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
                   <Printer size={13} /> Imprimir Etiquetas
                 </button>
 
+                {/* Enviar sobra p/ Estoque Fracionado */}
+                <button onClick={() => setShowSobra(true)}
+                  className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold border border-amber-300 text-amber-700 hover:bg-amber-50 transition-colors">
+                  <PackagePlus size={13} /> Enviar Sobra p/ Estoque Fracionado
+                </button>
+
                 {/* Descarte avulso */}
                 <button onClick={() => setShowDescarte(true)}
                   className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold border border-red-200 text-red-600 hover:bg-red-50 transition-colors">
@@ -563,6 +577,15 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
           </div>
         </div>
       </div>
+
+      {showSobra && (
+        <ModalSobraFracionado
+          itens={itensNormalizados}
+          produtos={produtos}
+          origem={`Sobra da OP ${ordem.numero}`}
+          onClose={() => setShowSobra(false)}
+        />
+      )}
 
       {showDescarte && (
         <ModalDescarte
