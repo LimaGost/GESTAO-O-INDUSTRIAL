@@ -6,7 +6,7 @@ import { gerarNumero } from '@/lib/numeracao';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 import PullToRefresh from '@/components/PullToRefresh';
 import SelectMobile, { SelectOption } from '@/components/ui/select-mobile';
-import { mapaSaldosFracionados } from '@/lib/estoqueFracionado';
+import { listarFracionado } from '@/lib/estoqueFracionado';
 import { calcularCaixas, formatarCaixas } from '@/lib/calculoCaixas';
 
 function StatusBadge({ zerado, alertaMax, alerta }) {
@@ -35,6 +35,8 @@ export default function Estoque() {
   const [loading, setLoading] = useState(false);
   const [busca, setBusca] = useState('');
   const [fracionados, setFracionados] = useState({});
+  const [fracRegistros, setFracRegistros] = useState([]);
+  const [visao, setVisao] = useState('principal');
   const [filtroStatus, setFiltroStatus] = useState('todos');
   const [filtroCategoria, setFiltroCategoria] = useState('todas');
   const [isMobileTela] = useState(window.innerWidth < 768);
@@ -54,12 +56,15 @@ export default function Estoque() {
 
   const load = async () => {
     setCarregando(true);
-    const [data, frac] = await Promise.all([
+    const [data, fracAll] = await Promise.all([
       base44.entities.Produto.list('-updated_date'),
-      mapaSaldosFracionados().catch(() => ({})),
+      listarFracionado().catch(() => []),
     ]);
     setProdutos(data);
-    setFracionados(frac);
+    setFracRegistros(fracAll);
+    const map = {};
+    for (const r of fracAll) map[r.produto_id] = (map[r.produto_id] || 0) + (r.quantidade || 0);
+    setFracionados(map);
     setCarregando(false);
   };
 
@@ -137,7 +142,17 @@ export default function Estoque() {
             <p className="text-xs text-muted-foreground">{totalProdutos} SKUs · {totalUnidades.toLocaleString('pt-BR')} unidades</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex bg-muted rounded-xl p-1">
+            <button onClick={() => setVisao('principal')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${visao === 'principal' ? 'bg-card shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+              📦 Principal
+            </button>
+            <button onClick={() => setVisao('desmontado')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${visao === 'desmontado' ? 'bg-card shadow text-amber-600' : 'text-muted-foreground hover:text-foreground'}`}>
+              🔓 Desmontado{totalAvulsas > 0 ? ` (${totalAvulsas})` : ''}
+            </button>
+          </div>
           <button onClick={() => load()} disabled={carregando}
             className="p-2.5 border border-border rounded-xl hover:bg-muted transition-colors text-muted-foreground disabled:opacity-40">
             <RefreshCw size={14} className={carregando ? 'animate-spin' : ''} />
@@ -240,7 +255,8 @@ export default function Estoque() {
         )}
       </div>
 
-      {/* Tabela */}
+      {/* Tabela Estoque Principal */}
+      {visao === 'principal' && (
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
         {/* Contador de resultados */}
         <div className="px-4 py-2.5 border-b border-border flex items-center justify-between">
@@ -336,6 +352,69 @@ export default function Estoque() {
           </div>
         )}
       </div>
+
+      )}
+
+      {/* Tabela Estoque Desmontado */}
+      {visao === 'desmontado' && (
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-amber-200 bg-amber-50 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-bold text-amber-800">🔓 Estoque Desmontado (Fracionado)</p>
+              <p className="text-[11px] text-amber-600">Unidades avulsas de caixas abertas e sobras de produção — usar antes de abrir caixa nova</p>
+            </div>
+            <span className="text-sm font-bold text-amber-700 bg-amber-100 px-3 py-1 rounded-full whitespace-nowrap">
+              {totalAvulsas.toLocaleString('pt-BR')} un
+            </span>
+          </div>
+          {(() => {
+            const b = busca.toLowerCase();
+            const registros = fracRegistros
+              .filter(r => (r.quantidade || 0) > 0)
+              .filter(r => !busca || (r.produto_nome || '').toLowerCase().includes(b) || (r.produto_codigo || '').toLowerCase().includes(b))
+              .sort((a, c) => (c.quantidade || 0) - (a.quantidade || 0));
+            if (registros.length === 0) {
+              return (
+                <div className="text-center py-14 text-muted-foreground">
+                  <Package size={28} className="mx-auto mb-2 opacity-20" />
+                  <p className="text-sm">{busca ? `Nenhum item avulso encontrado para "${busca}"` : 'Nenhuma unidade avulsa no momento.'}</p>
+                  <p className="text-xs mt-1">As sobras da produção e caixas abertas na separação aparecem aqui.</p>
+                </div>
+              );
+            }
+            return (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/30">
+                    <tr>
+                      {['Produto', 'Código', 'Un. Avulsas', 'Estoque Lacrado', 'Total'].map(h => (
+                        <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/60">
+                    {registros.map(r => {
+                      const prod = produtos.find(p => p.id === r.produto_id);
+                      const lacrado = prod?.estoque_atual || 0;
+                      return (
+                        <tr key={r.id} className="hover:bg-amber-50/40 transition-colors">
+                          <td className="px-4 py-3 font-medium text-foreground">{r.produto_nome}</td>
+                          <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{r.produto_codigo || prod?.codigo || '—'}</td>
+                          <td className="px-4 py-3">
+                            <span className="text-base font-bold text-amber-600">{(r.quantidade || 0).toLocaleString('pt-BR')}</span>
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">{lacrado.toLocaleString('pt-BR')}</td>
+                          <td className="px-4 py-3 font-semibold text-foreground">{(lacrado + (r.quantidade || 0)).toLocaleString('pt-BR')}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
+        </div>
+      )}
 
       {/* Modal Ajuste */}
       {showAjuste && !readonly && (
