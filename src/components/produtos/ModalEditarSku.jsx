@@ -6,7 +6,6 @@ import { base44 } from '@/api/base44Client';
 const campos = [
   { key: 'nome', label: 'Nome *', type: 'text', col: 2 },
   { key: 'codigo', label: 'Código / SKU', type: 'text', col: 1 },
-  { key: 'categoria', label: 'Categoria', type: 'text', col: 1 },
   { key: 'unidade', label: 'Unidade', type: 'text', col: 1 },
   { key: 'itens_por_caixa', label: 'Itens por Caixa', type: 'number', col: 1 },
   { key: 'preco_unitario', label: 'Preço Unitário (R$)', type: 'number', col: 1 },
@@ -21,7 +20,8 @@ const campos = [
   { key: 'profundidade_cm', label: 'Profundidade (cm)', type: 'number', col: 1 },
 ];
 
-export default function ModalEditarSku({ produto, onClose, onSaved, isAdmin = false }) {
+export default function ModalEditarSku({ produto, onClose, onSaved, isAdmin = false, categorias = [] }) {
+  const [novaCategoria, setNovaCategoria] = useState(false);
   const [form, setForm] = useState({
     nome: produto.nome || '',
     codigo: produto.codigo || '',
@@ -109,6 +109,35 @@ export default function ModalEditarSku({ produto, onClose, onSaved, isAdmin = fa
                 />
               </div>
             ))}
+
+            {/* Categoria */}
+            <div className="col-span-1">
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Categoria</label>
+              {novaCategoria ? (
+                <input
+                  autoFocus
+                  value={form.categoria}
+                  onChange={e => set('categoria', e.target.value)}
+                  placeholder="Nome da nova categoria"
+                  className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                />
+              ) : (
+                <select
+                  value={form.categoria}
+                  onChange={e => {
+                    if (e.target.value === '__new__') { setNovaCategoria(true); set('categoria', ''); }
+                    else set('categoria', e.target.value);
+                  }}
+                  className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                >
+                  <option value="">Sem categoria</option>
+                  {[...new Set([...categorias, produto.categoria].filter(Boolean))].sort().map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                  <option value="__new__">+ Nova categoria</option>
+                </select>
+              )}
+            </div>
 
             {/* Descrição */}
             <div className="col-span-2">

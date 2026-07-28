@@ -631,6 +631,7 @@ export default function Produtos() {
       {editingSku && (
         <ModalEditarSku
           produto={editingSku}
+          categorias={categorias}
           isAdmin={user?.role === 'admin'}
           onClose={() => setEditingSku(null)}
           onSaved={(produtoAtualizado) => {
