@@ -74,6 +74,33 @@
       "default": false,
       "description": "Pedido sem r\u00f3tulo \u2014 produtos devem ser entregues sem rotulagem"
     },
+    "forma_pagamento": {
+      "type": "string",
+      "enum": [
+        "dinheiro",
+        "pix",
+        "boleto",
+        "bonificacao",
+        "cartao_debito",
+        "cartao_credito",
+        "link_pagamento"
+      ],
+      "description": "Forma de pagamento do pedido"
+    },
+    "status_pagamento": {
+      "type": "string",
+      "enum": [
+        "pago",
+        "pendente",
+        "pagamento_na_retirada"
+      ],
+      "default": "pendente",
+      "description": "Situa\u00e7\u00e3o do pagamento"
+    },
+    "observacoes_pagamento": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es sobre o pagamento"
+    },
     "destino_tipo": {
       "type": "string",
       "enum": [

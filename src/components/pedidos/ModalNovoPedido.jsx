@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
-import { X, CheckCircle, ChevronRight, ChevronLeft, User, Package, FileText, Search, Tag, UserPlus } from 'lucide-react';
+import { X, CheckCircle, ChevronRight, ChevronLeft, User, Package, FileText, Search, Tag, UserPlus, CreditCard } from 'lucide-react';
 import SeletorProdutos from './SeletorProdutos';
+import PagamentoPedido, { getPagamentoLabel, getStatusPagamentoLabel } from './PagamentoPedido';
 import NovoClienteRapido from './NovoClienteRapido';
 import { DestinoForm, getDestinoLabel } from './DestinoPedido';
 
@@ -8,6 +9,7 @@ const STEPS = [
   { id: 1, label: 'Cliente', icon: User },
   { id: 2, label: 'Produtos', icon: Package },
   { id: 3, label: 'Detalhes', icon: FileText },
+  { id: 4, label: 'Pagamento', icon: CreditCard },
 ];
 
 export default function ModalNovoPedido({ clientes, produtos, loading, onConfirmar, onClose }) {
@@ -25,6 +27,9 @@ export default function ModalNovoPedido({ clientes, produtos, loading, onConfirm
     white_label: false,
     white_label_marca: '',
     sem_rotulo: false,
+    forma_pagamento: '',
+    status_pagamento: 'pendente',
+    observacoes_pagamento: '',
     destino_tipo: '',
     destino_unidade: '',
     destino_transportadora: '',
@@ -51,7 +56,7 @@ export default function ModalNovoPedido({ clientes, produtos, loading, onConfirm
   };
 
   const handleConfirmar = () => {
-    if (!form.cliente_nome || form.itens.length === 0) return;
+    if (!form.cliente_nome || form.itens.length === 0 || !form.forma_pagamento) return;
     onConfirmar(form);
   };
 
@@ -243,6 +248,14 @@ export default function ModalNovoPedido({ clientes, produtos, loading, onConfirm
                   className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none" />
               </div>
 
+            </div>
+          )}
+
+          {/* Step 4: Pagamento */}
+          {step === 4 && (
+            <div className="space-y-5">
+              <PagamentoPedido value={form} onChange={pag => setForm(f => ({ ...f, ...pag }))} />
+
               {/* Resumo final */}
               <div className="bg-muted/30 border border-border rounded-xl p-4 space-y-2">
                 <p className="text-sm font-bold text-foreground mb-3">Resumo do Pedido</p>
@@ -253,6 +266,12 @@ export default function ModalNovoPedido({ clientes, produtos, loading, onConfirm
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Itens</span>
                   <span className="font-medium text-foreground">{form.itens.length} produto(s)</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Pagamento</span>
+                  <span className="font-medium text-foreground">
+                    {form.forma_pagamento ? getPagamentoLabel(form.forma_pagamento) : 'Não informado'} · {getStatusPagamentoLabel(form.status_pagamento)}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm border-t border-border pt-2 mt-2">
                   <span className="font-semibold text-foreground">Total</span>
@@ -277,7 +296,7 @@ export default function ModalNovoPedido({ clientes, produtos, loading, onConfirm
                 Próximo <ChevronRight size={15} />
               </button>
             ) : (
-              <button onClick={handleConfirmar} disabled={loading || !form.cliente_nome || form.itens.length === 0}
+              <button onClick={handleConfirmar} disabled={loading || !form.cliente_nome || form.itens.length === 0 || !form.forma_pagamento}
                 className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity">
                 <CheckCircle size={15} />
                 {loading ? 'Processando...' : 'Confirmar Pedido'}
