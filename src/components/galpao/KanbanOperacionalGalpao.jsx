@@ -4,6 +4,7 @@ import { registrarLog } from '@/lib/audit';
 import { agoraISO } from '@/lib/brasilia';
 import { ClipboardCheck } from 'lucide-react';
 import GalpaoCard from '@/components/galpao/GalpaoCard';
+import { useRealtimeEntity } from '@/hooks/useRealtimeEntity';
 import { readStagesLocal, buildColunas, loadKanbanFluxo } from '@/lib/kanbanFluxo';
 
 const DATA_POR_STATUS = {
@@ -30,10 +31,8 @@ export default function KanbanOperacionalGalpao() {
     return () => window.removeEventListener('galpao:settings:saved', onSaved);
   }, []);
 
-  useEffect(() => {
-    const unsubscribe = base44.entities.SeparacaoGalpao.subscribe(() => { load(); });
-    return () => unsubscribe();
-  }, []);
+  // Tempo real: aplica só o card alterado, sem recarregar a lista inteira
+  useRealtimeEntity('SeparacaoGalpao', setSeparacoes);
 
   const avancar = async (sep) => {
     const idx = colunas.findIndex(c => c.key === sep.status);

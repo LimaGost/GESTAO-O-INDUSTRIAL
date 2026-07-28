@@ -14,6 +14,7 @@ import ModalTotalProducao from '@/components/kanban/ModalTotalProducao';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 import { readStagesLocal, loadKanbanFluxo, getIcon } from '@/lib/kanbanFluxo';
 import PullToRefresh from '@/components/PullToRefresh';
+import { useRealtimeEntity } from '@/hooks/useRealtimeEntity';
 
 const CORES_OPCOES = [
 { accent: '#64748B', bg: '#F8FAFC', border: '#CBD5E1', dot: '#94A3B8' },
@@ -212,6 +213,9 @@ export default function Kanban() {
 
   useEffect(() => {load();}, []);
 
+  // Tempo real: aplica apenas o card alterado por outro usuário (sem recarregar a lista)
+  useRealtimeEntity('OrdemProducao', setOrdens);
+
   const avancarStatus = async (ordem, descarte = null) => {
     const proximo = PROXIMOS[ordem.status];
     if (!proximo) return;
@@ -394,8 +398,8 @@ export default function Kanban() {
         })();
       }
 
-      // Background refresh sem bloquear a UI
-      load(true).catch(() => {});
+      // Sem recarregar a lista: o estado já foi atualizado e o tempo real cuida dos demais usuários
+      cacheInvalidate('Produto');
     } catch (error) {
       // Se a API falhar, desfazer a mudança otimista
       setOrdens((prev) => prev.map((o) => o.id === ordem.id ? { ...o, status: ordem.status } : o));

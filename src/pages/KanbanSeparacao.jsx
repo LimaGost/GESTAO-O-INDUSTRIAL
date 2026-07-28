@@ -9,6 +9,7 @@ import { usePermissoes } from '@/lib/usePermissoes.jsx';
 import SeparacaoCard from '@/components/separacao/SeparacaoCard';
 import SeparacaoCardModal from '@/components/separacao/SeparacaoCardModal';
 import SeparacaoKpis from '@/components/separacao/SeparacaoKpis';
+import { useRealtimeEntity } from '@/hooks/useRealtimeEntity';
 import { ClipboardCheck, Plus, X, Search, RefreshCw } from 'lucide-react';
 
 function buildSepColunas() {
@@ -65,11 +66,8 @@ export default function KanbanSeparacao() {
 
   useEffect(() => { load(); }, []);
 
-  // Realtime
-  useEffect(() => {
-    const unsubscribe = base44.entities.Separacao.subscribe(() => { load(); });
-    return () => unsubscribe();
-  }, []);
+  // Tempo real: aplica só o card alterado, sem recarregar a lista inteira
+  useRealtimeEntity('Separacao', setSeparacoes);
 
   const avancar = async (sep) => {
     if (sep.status === 'aguardando_producao') return; // bloqueado até a produção concluir
@@ -146,7 +144,6 @@ export default function KanbanSeparacao() {
           }
         }
       }
-      load().catch(() => {});
     } catch (e) {
       setSeparacoes(prev => prev.map(s => s.id === sep.id ? { ...s, status: sep.status } : s));
       console.error('[KanbanSeparacao] erro ao avançar:', e);
