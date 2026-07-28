@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
-import { X, CheckCircle, ChevronRight, ChevronLeft, User, Package, FileText, Search, Tag } from 'lucide-react';
+import { X, CheckCircle, ChevronRight, ChevronLeft, User, Package, FileText, Search, Tag, UserPlus } from 'lucide-react';
 import SeletorProdutos from './SeletorProdutos';
+import NovoClienteRapido from './NovoClienteRapido';
 import { DestinoForm, getDestinoLabel } from './DestinoPedido';
 
 const STEPS = [
@@ -12,6 +13,8 @@ const STEPS = [
 export default function ModalNovoPedido({ clientes, produtos, loading, onConfirmar, onClose }) {
   const [step, setStep] = useState(1);
   const [buscaCliente, setBuscaCliente] = useState('');
+  const [novosClientes, setNovosClientes] = useState([]);
+  const [showNovoCliente, setShowNovoCliente] = useState(false);
   const [form, setForm] = useState({
     cliente_id: '',
     cliente_nome: '',
@@ -30,14 +33,15 @@ export default function ModalNovoPedido({ clientes, produtos, loading, onConfirm
   const totalPedido = form.itens.reduce((s, i) => s + (i.total || 0), 0);
 
   const clientesFiltrados = useMemo(() => {
-    if (!buscaCliente.trim()) return clientes;
+    const todos = [...novosClientes, ...clientes];
+    if (!buscaCliente.trim()) return todos;
     const b = buscaCliente.toLowerCase();
-    return clientes.filter(c =>
+    return todos.filter(c =>
       (c.nome || '').toLowerCase().includes(b) ||
       (c.email || '').toLowerCase().includes(b) ||
       (c.cnpj_cpf || '').toLowerCase().includes(b)
     );
-  }, [clientes, buscaCliente]);
+  }, [clientes, novosClientes, buscaCliente]);
 
   const canNext = () => {
     if (step === 1) return !!form.cliente_nome;
@@ -111,6 +115,23 @@ export default function ModalNovoPedido({ clientes, produtos, loading, onConfirm
                     autoFocus
                   />
                 </div>
+                {showNovoCliente ? (
+                  <NovoClienteRapido
+                    nomeInicial={buscaCliente}
+                    onCancelar={() => setShowNovoCliente(false)}
+                    onCriado={(novo) => {
+                      setNovosClientes(prev => [novo, ...prev]);
+                      setForm(f => ({ ...f, cliente_id: novo.id, cliente_nome: novo.nome }));
+                      setShowNovoCliente(false);
+                      setBuscaCliente('');
+                    }}
+                  />
+                ) : (
+                <>
+                <button onClick={() => setShowNovoCliente(true)}
+                  className="w-full mb-2 flex items-center justify-center gap-1.5 border border-dashed border-primary/40 text-primary py-2 rounded-xl text-xs font-semibold hover:bg-primary/5 transition-colors">
+                  <UserPlus size={13} /> Cadastrar novo cliente
+                </button>
                 <div className="space-y-2 max-h-64 overflow-y-auto">
                   {clientesFiltrados.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
@@ -139,6 +160,8 @@ export default function ModalNovoPedido({ clientes, produtos, loading, onConfirm
                     </div>
                   ))}
                 </div>
+                </>
+                )}
               </div>
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Data do Pedido *</label>
