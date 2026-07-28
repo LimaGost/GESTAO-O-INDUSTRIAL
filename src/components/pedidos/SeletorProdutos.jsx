@@ -1,18 +1,26 @@
 import { useState, useMemo } from 'react';
 import { Search, Plus, Minus, X, AlertTriangle, Package } from 'lucide-react';
+import FiltroCategorias from '@/components/common/FiltroCategorias';
 
 export default function SeletorProdutos({ produtos, itens, onChange }) {
   const [busca, setBusca] = useState('');
+  const [filtroCategoria, setFiltroCategoria] = useState('todas');
+
+  const todasCategorias = useMemo(
+    () => [...new Set(produtos.map(p => p.categoria || 'Outros'))].sort(),
+    [produtos]
+  );
 
   const produtosFiltrados = useMemo(() => {
     const b = busca.toLowerCase().trim();
-    if (!b) return produtos;
-    return produtos.filter(p =>
-      (p.codigo || '').toLowerCase().includes(b) ||
-      (p.nome || '').toLowerCase().includes(b) ||
-      (p.categoria || '').toLowerCase().includes(b)
-    );
-  }, [produtos, busca]);
+    return produtos.filter(p => {
+      if (filtroCategoria !== 'todas' && (p.categoria || 'Outros') !== filtroCategoria) return false;
+      if (!b) return true;
+      return (p.codigo || '').toLowerCase().includes(b) ||
+        (p.nome || '').toLowerCase().includes(b) ||
+        (p.categoria || '').toLowerCase().includes(b);
+    });
+  }, [produtos, busca, filtroCategoria]);
 
   const mapaItens = useMemo(() => {
     const m = {};
@@ -67,6 +75,11 @@ export default function SeletorProdutos({ produtos, itens, onChange }) {
           </button>
         )}
       </div>
+
+      {/* Filtro por categoria (apenas visual — não remove itens já adicionados) */}
+      {todasCategorias.length > 0 && (
+        <FiltroCategorias categorias={todasCategorias} valor={filtroCategoria} onChange={setFiltroCategoria} />
+      )}
 
       {/* Catálogo */}
       <div className="max-h-80 overflow-y-auto space-y-4 border border-border rounded-xl p-3">
