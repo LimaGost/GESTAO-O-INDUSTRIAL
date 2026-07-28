@@ -54,6 +54,11 @@ export default function PedidoKanbanCard({
                   <Tag size={8} /> WL
                 </span>
               )}
+              {pedido.sem_rotulo && (
+                <span className="inline-flex items-center gap-1 text-[10px] bg-teal-100 text-teal-700 border border-teal-200 px-1.5 py-0.5 rounded-full font-bold">
+                  <Tag size={8} /> SEM RÓTULO
+                </span>
+              )}
             </div>
             <p className="text-sm font-bold text-foreground mt-0.5 truncate">{pedido.cliente_nome}{pedido.numero ? ` • ${pedido.numero}` : ''}</p>
             {pedido.white_label && pedido.white_label_marca && (

@@ -24,6 +24,7 @@ export default function ModalNovoPedido({ clientes, produtos, loading, onConfirm
     itens: [],
     white_label: false,
     white_label_marca: '',
+    sem_rotulo: false,
     destino_tipo: '',
     destino_unidade: '',
     destino_transportadora: '',
@@ -213,6 +214,21 @@ export default function ModalNovoPedido({ clientes, produtos, loading, onConfirm
                     className="w-full border border-purple-300 rounded-xl px-3 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-purple-400" />
                 </div>
               )}
+              {/* Sem Rótulo */}
+              <label className="flex items-center gap-3 cursor-pointer select-none p-3 rounded-xl border border-border hover:bg-muted/30 transition-colors">
+                <div onClick={() => setForm(f => ({ ...f, sem_rotulo: !f.sem_rotulo }))}
+                  className={`w-10 h-6 rounded-full transition-colors flex items-center px-0.5 flex-shrink-0 ${form.sem_rotulo ? 'bg-teal-500' : 'bg-border'}`}>
+                  <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${form.sem_rotulo ? 'translate-x-4' : 'translate-x-0'}`} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                    <Tag size={12} className="text-teal-600" /> Pedido Sem Rótulo
+                  </p>
+                  <p className="text-xs text-muted-foreground">Produtos entregues sem rotulagem</p>
+                </div>
+                {form.sem_rotulo && <span className="text-[10px] bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full font-bold">SR</span>}
+              </label>
+
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Entrega Prevista</label>
                 <input type="date" value={form.data_entrega_prevista}

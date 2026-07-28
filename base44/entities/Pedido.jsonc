@@ -69,6 +69,11 @@
       "type": "string",
       "description": "Nome da marca/cliente para quem o produto White Label \u00e9 fabricado"
     },
+    "sem_rotulo": {
+      "type": "boolean",
+      "default": false,
+      "description": "Pedido sem r\u00f3tulo \u2014 produtos devem ser entregues sem rotulagem"
+    },
     "destino_tipo": {
       "type": "string",
       "enum": [
