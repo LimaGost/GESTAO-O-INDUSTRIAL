@@ -4,6 +4,7 @@ import ModalDescarte from './ModalDescarte';
 import ModalSobraFracionado from '@/components/fracionado/ModalSobraFracionado';
 import AlertaFracionado from '@/components/fracionado/AlertaFracionado';
 import { imprimirEtiquetaProduto } from '@/lib/imprimirEtiquetaProduto';
+import BadgeSemRotulo from '@/components/common/BadgeSemRotulo';
 
 function buildProximos(colunas) {
   const map = {};
@@ -181,6 +182,7 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
                   <Tag size={8} /> WL{whiteLabelMarca ? ` · ${whiteLabelMarca}` : ''}
                 </span>
               )}
+              {(ordem.sem_rotulo || (ordem.itens || []).some(i => i.sem_rotulo)) && <BadgeSemRotulo />}
             </div>
             {(clienteNome || ordem.pedido_numero) && (
               <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
@@ -235,6 +237,7 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
               {itensNormalizados.map((item, idx) => (
                 <div key={idx} className="flex items-center gap-3 px-4 py-2.5 border-b border-border/40">
                   <span className="text-sm flex-1 text-foreground truncate">{item.produto_nome}</span>
+                  {item.sem_rotulo && <BadgeSemRotulo size="sm" />}
                   <div className="flex items-center gap-1.5 flex-shrink-0">
                     <button onClick={() => alterarQuantidade(idx, -1)}
                       className="w-6 h-6 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/70 transition-colors">
@@ -382,6 +385,7 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
                           {item.produto_nome}
                         </span>
                         <div className="flex items-center gap-1.5">
+                          {item.sem_rotulo && <BadgeSemRotulo size="sm" />}
                           {jaDisponivel && (
                             <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-semibold">em estoque</span>
                           )}
