@@ -15,6 +15,8 @@ import AbaRegrasAutomacao from '@/components/configuracoes/AbaRegrasAutomacao.js
 import AbaWhatsapp from '@/components/configuracoes/AbaWhatsapp.jsx';
 import AbaBling from '@/components/configuracoes/AbaBling';
 import AbaMural from '@/components/configuracoes/AbaMural.jsx';
+import AbaDuplaChecagem from '@/components/configuracoes/AbaDuplaChecagem.jsx';
+import { Lock } from 'lucide-react';
 import { Megaphone } from 'lucide-react';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 
@@ -706,6 +708,7 @@ const TAB_GROUPS = [
     label: 'Acesso',
     items: [
       { key: 'usuarios',  label: 'Usuários',  icon: Users,  desc: 'Perfis e permissões' },
+      { key: 'dupla_checagem', label: 'Dupla Checagem', icon: Lock, desc: 'Senha extra na entrada', adminOnly: true },
       { key: 'auditoria', label: 'Auditoria', icon: Shield, desc: 'Logs de atividade' },
     ],
   },
@@ -811,6 +814,7 @@ export default function Configuracoes() {
           {aba === 'whatsapp'       && <AbaWhatsapp />}
           {aba === 'mural'    && isAdmin && <AbaMural />}
           {aba === 'usuarios'       && <AbaUsuarios />}
+          {aba === 'dupla_checagem' && isAdmin && <AbaDuplaChecagem />}
           {aba === 'auditoria'      && <AbaAuditoria />}
           {aba === 'bling'    && isAdmin && <AbaBling />}
           {aba === 'bling'    && !isAdmin && (

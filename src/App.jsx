@@ -35,6 +35,7 @@ import Chat from './pages/Chat.jsx';
 import BaseConhecimento from './pages/BaseConhecimento.jsx';
 import PainelDiretor from './pages/PainelDiretor.jsx';
 import AguardandoAprovacao from './components/AguardandoAprovacao';
+import DuplaChecagemGate from '@/components/DuplaChecagemGate';
 import { PermissoesProvider, usePermissoes } from '@/lib/usePermissoes.jsx';
 
 function RotaProtegida({ modulo, children }) {
@@ -80,7 +81,7 @@ const AuthenticatedApp = () => {
     <PermissoesProvider user={user}>
       <AnimatedRoutes>
         <Route path="/" element={<Navigate to="/Dashboard" replace />} />
-        <Route element={<Layout />}>
+        <Route element={<DuplaChecagemGate user={user}><Layout /></DuplaChecagemGate>}>
           <Route path="/Dashboard"      element={<RotaProtegida modulo="Dashboard">     <Dashboard />     </RotaProtegida>} />
           <Route path="/Pedidos"        element={<RotaProtegida modulo="Pedidos">        <Pedidos />        </RotaProtegida>} />
           <Route path="/Kanban"         element={<RotaProtegida modulo="Kanban">         <Kanban />         </RotaProtegida>} />
