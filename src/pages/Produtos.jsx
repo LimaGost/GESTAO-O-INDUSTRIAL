@@ -10,6 +10,7 @@ import FotoProduto from '@/components/produtos/FotoProduto';
 import ModalEditarSku from '@/components/produtos/ModalEditarSku';
 import ModalImportarPlanilha from '@/components/produtos/ModalImportarPlanilha';
 import GerenciadorVariaveisCategoria from '@/components/produtos/GerenciadorVariaveisCategoria';
+import GestaoCategorias from '@/components/produtos/GestaoCategorias';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 
 const emptyFamilia = {
@@ -69,6 +70,7 @@ export default function Produtos() {
   const [showImportar, setShowImportar] = useState(false);
   const [categoriasComVariaveis, setCategoriasComVariaveis] = useState({});
   const [gerenciandoVariaveis, setGerenciandoVariaveis] = useState(null);
+  const [showGestaoCategorias, setShowGestaoCategorias] = useState(false);
 
   // Filtros
   const [busca, setBusca] = useState('');
@@ -81,9 +83,12 @@ export default function Produtos() {
   const load = async () => {
     const data = await base44.entities.Produto.list();
     setProdutos(data);
-    const catsUnique = [...new Set(data.map(p => p.categoria).filter(Boolean))].sort();
+    const vars = await carregarVariaveisCategorias();
+    const catsUnique = [...new Set([
+      ...data.map(p => p.categoria).filter(Boolean),
+      ...vars.map(v => v.nome_categoria).filter(Boolean),
+    ])].sort();
     setCategorias(catsUnique);
-    carregarVariaveisCategorias();
     return data;
   };
 
@@ -92,6 +97,7 @@ export default function Produtos() {
     const map = {};
     vars.forEach(v => { map[v.nome_categoria] = v; });
     setCategoriasComVariaveis(map);
+    return vars;
   };
 
   const salvarVariaveisCategoria = async (nomeCategoria, variaveis) => {
@@ -322,10 +328,10 @@ export default function Produtos() {
               </button>
             ))}
           </div>
-          {!readonly && categorias.length > 0 && (
-            <button onClick={() => setGerenciandoVariaveis(categorias[0])}
+          {!readonly && (
+            <button onClick={() => setShowGestaoCategorias(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-muted border border-border text-muted-foreground hover:text-foreground transition-all">
-              <Settings size={12} /> Variáveis das Categorias
+              <Settings size={12} /> Gestão de Categorias
             </button>
           )}
         </div>
@@ -639,6 +645,15 @@ export default function Produtos() {
           setProdutos(prev => prev.map(p => p.id === produtoAtualizado.id ? { ...p, ...produtoAtualizado } : p));
           load();
         }}
+        />
+      )}
+      {showGestaoCategorias && (
+        <GestaoCategorias
+          produtos={produtos}
+          categoriasComVariaveis={categoriasComVariaveis}
+          onAbrirVariaveis={(cat) => setGerenciandoVariaveis(cat)}
+          onAtualizado={load}
+          onFechar={() => setShowGestaoCategorias(false)}
         />
       )}
       {gerenciandoVariaveis && (
