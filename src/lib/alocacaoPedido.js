@@ -24,6 +24,12 @@ export async function alocarPedido({ pedido, itens, produtos, origem = 'pedido' 
     if (!item.produto_id || (item.quantidade || 0) <= 0) continue;
     const p = produtos.find(pr => pr.id === item.produto_id);
     if (!p) continue;
+    // White Label / Sem Rótulo: não temos esses itens no estoque da indústria —
+    // vão integralmente para produção, sem reserva de estoque.
+    if (pedido.white_label || pedido.sem_rotulo || item.sem_rotulo) {
+      itensSemEstoque.push({ ...item, produto: p, quantidadeFalta: item.quantidade });
+      continue;
+    }
     const disponivel = p.estoque_atual || 0;
     const qtdReservar = Math.min(disponivel, item.quantidade);
     const qtdFalta = item.quantidade - qtdReservar;
