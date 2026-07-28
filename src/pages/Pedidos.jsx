@@ -2,8 +2,9 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import {
   ShoppingCart, Search, X, Plus, RefreshCw,
-  CheckCircle, Clock, Package, Truck, Ban, FileText, Eye, Zap, Tag
+  CheckCircle, Clock, Package, Truck, Ban, FileText, Eye, Zap, Tag, Layers
 } from 'lucide-react';
+import ModalGrupamento from '@/components/pedidos/ModalGrupamento';
 import ModalProcessarBling from '@/components/pedidos/ModalProcessarBling';
 import ModalProcessarPortal from '@/components/pedidos/ModalProcessarPortal';
 import ModalNovoPedido from '@/components/pedidos/ModalNovoPedido';
@@ -49,6 +50,8 @@ export default function Pedidos() {
   const [filtroWL, setFiltroWL] = useState(false);
   const [sincronizandoBling, setSincronizandoBling] = useState(false);
   const [showModalBling, setShowModalBling] = useState(false);
+  const [showGrupamento, setShowGrupamento] = useState(false);
+  const [grupos, setGrupos] = useState([]);
   const loadingRef = useRef(false);
   const staticLoadedRef = useRef(false);
 
@@ -57,12 +60,14 @@ export default function Pedidos() {
     if (loadingRef.current) return;
     loadingRef.current = true;
     try {
-      const [p, exp] = await Promise.all([
+      const [p, exp, grp] = await Promise.all([
         base44.entities.Pedido.list('-created_date'),
         base44.entities.Expedicao.list(),
+        base44.entities.GrupoPedidos.filter({ status: 'ativo' }).catch(() => []),
       ]);
       setPedidos(p);
       setExpedicoes(exp);
+      setGrupos(grp);
     } catch (erro) {
       if (erro.message?.includes('Rate limit') && tentativa < 3) {
         const delay = Math.pow(2, tentativa) * 1000;
@@ -406,6 +411,12 @@ export default function Pedidos() {
               <Zap size={14} className={sincronizandoBling ? 'animate-pulse' : ''} />
               {sincronizandoBling ? 'Buscando...' : 'Bling'}
             </button>
+            {!readonly && (
+              <button onClick={() => setShowGrupamento(true)}
+                className="flex items-center gap-1.5 border border-violet-300 text-violet-700 bg-violet-50 px-3 py-2 rounded-xl text-sm font-medium hover:bg-violet-100 transition-colors">
+                <Layers size={14} /> Agrupar{grupos.length > 0 ? ` (${grupos.length})` : ''}
+              </button>
+            )}
             <button onClick={() => setShowFiltros(v => !v)}
               className={`p-2.5 border rounded-xl hover:bg-muted transition-colors ${showFiltros ? 'border-primary/30 bg-primary/10' : 'border-border'}`}>
               <Eye size={15} className={showFiltros ? 'text-primary' : 'text-muted-foreground'} />
@@ -561,6 +572,15 @@ export default function Pedidos() {
           loading={processandoPortal}
           onConfirmar={processarPedidoPortal}
           onClose={() => setPedidoPortalProcessar(null)}
+        />
+      )}
+
+      {showGrupamento && (
+        <ModalGrupamento
+          pedidos={pedidos}
+          grupos={grupos}
+          onClose={() => setShowGrupamento(false)}
+          onRefresh={load}
         />
       )}
 
