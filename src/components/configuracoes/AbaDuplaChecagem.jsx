@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Lock, Save, ShieldCheck, ShieldOff } from 'lucide-react';
+import SeletorUsuariosChecagem from './SeletorUsuariosChecagem';
 
 const ROLES_DISPONIVEIS = [
   ['diretor', 'Diretor (CEO)'],
@@ -24,6 +25,8 @@ export default function AbaDuplaChecagem() {
   const [podeGerir, setPodeGerir] = useState(false);
   const [configurada, setConfigurada] = useState(false);
   const [rolesSel, setRolesSel] = useState([]);
+  const [usuariosSel, setUsuariosSel] = useState([]);
+  const [usuarios, setUsuarios] = useState([]);
   const [pin, setPin] = useState('');
   const [pinConfirma, setPinConfirma] = useState('');
   const [salvando, setSalvando] = useState(false);
@@ -35,6 +38,12 @@ export default function AbaDuplaChecagem() {
         setPodeGerir(!!res.data?.podeGerir);
         setConfigurada(!!res.data?.configurada);
         setRolesSel(res.data?.roles || []);
+        setUsuariosSel(res.data?.user_ids || []);
+        if (res.data?.podeGerir) {
+          base44.functions.invoke('duplaChecagem', { acao: 'usuarios' })
+            .then(r => setUsuarios(r.data?.usuarios || []))
+            .catch(() => {});
+        }
       })
       .catch(() => {})
       .finally(() => setCarregando(false));
@@ -42,6 +51,9 @@ export default function AbaDuplaChecagem() {
 
   const toggleRole = (r) =>
     setRolesSel(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r]);
+
+  const toggleUsuario = (id) =>
+    setUsuariosSel(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
   const salvar = async () => {
     setMsg(null);
@@ -54,6 +66,7 @@ export default function AbaDuplaChecagem() {
         acao: 'configurar',
         pin: pin || undefined,
         roles: rolesSel,
+        user_ids: usuariosSel,
       });
       if (res.data?.ok) {
         setConfigurada(true);
@@ -74,6 +87,7 @@ export default function AbaDuplaChecagem() {
     await base44.functions.invoke('duplaChecagem', { acao: 'desativar' }).catch(() => {});
     setConfigurada(false);
     setRolesSel([]);
+    setUsuariosSel([]);
     setMsg({ tipo: 'ok', texto: 'Dupla checagem desativada.' });
     setSalvando(false);
   };
@@ -146,8 +160,9 @@ export default function AbaDuplaChecagem() {
               );
             })}
           </div>
-          <p className="text-[11px] text-muted-foreground mt-2">Administradores nunca são bloqueados, para evitar perda de acesso.</p>
         </div>
+
+        <SeletorUsuariosChecagem usuarios={usuarios} selecionados={usuariosSel} onToggle={toggleUsuario} />
 
         {msg && (
           <p className={`text-xs rounded-lg px-3 py-2 ${msg.tipo === 'ok' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>

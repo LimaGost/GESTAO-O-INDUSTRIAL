@@ -15,7 +15,7 @@ export default async function(req) {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { acao, pin, roles } = await req.json();
+    const { acao, pin, roles, user_ids } = await req.json();
 
     const rows = await base44.asServiceRole.entities.AppConfig.filter({ chave: CONFIG_KEY });
     const registro = rows[0] || null;
@@ -24,12 +24,23 @@ export default async function(req) {
 
     if (acao === 'status') {
       const configurada = !!valor.pin_hash;
-      const requerida = configurada && (valor.roles || []).includes(user.role);
+      const requerida = configurada && user.email !== EMAIL_GESTOR && (
+        (valor.roles || []).includes(user.role) || (valor.user_ids || []).includes(user.id)
+      );
       return Response.json({
         configurada,
         requerida,
         podeGerir,
         roles: podeGerir ? (valor.roles || []) : undefined,
+        user_ids: podeGerir ? (valor.user_ids || []) : undefined,
+      });
+    }
+
+    if (acao === 'usuarios') {
+      if (!podeGerir) return Response.json({ error: 'Não autorizado' }, { status: 403 });
+      const lista = await base44.asServiceRole.entities.User.list();
+      return Response.json({
+        usuarios: lista.map(u => ({ id: u.id, full_name: u.full_name, email: u.email, role: u.role })),
       });
     }
 
@@ -53,6 +64,9 @@ export default async function(req) {
       if (Array.isArray(roles)) {
         novoValor.roles = roles.filter(r => r !== 'admin');
       }
+      if (Array.isArray(user_ids)) {
+        novoValor.user_ids = user_ids;
+      }
       if (!novoValor.pin_hash) {
         return Response.json({ error: 'Defina uma senha antes de ativar a dupla checagem.' }, { status: 400 });
       }
@@ -61,7 +75,7 @@ export default async function(req) {
       } else {
         await base44.asServiceRole.entities.AppConfig.create({ chave: CONFIG_KEY, valor: novoValor });
       }
-      return Response.json({ ok: true, roles: novoValor.roles || [] });
+      return Response.json({ ok: true, roles: novoValor.roles || [], user_ids: novoValor.user_ids || [] });
     }
 
     if (acao === 'desativar') {
