@@ -3,6 +3,7 @@ import { X, CheckCircle, ChevronRight, ChevronLeft, User, Package, FileText, Sea
 import SeletorProdutos from './SeletorProdutos';
 import PagamentoPedido, { getPagamentoLabel, getStatusPagamentoLabel } from './PagamentoPedido';
 import NovoClienteRapido from './NovoClienteRapido';
+import SelecaoItensSemRotulo from './SelecaoItensSemRotulo';
 import { DestinoForm, getDestinoLabel } from './DestinoPedido';
 
 const STEPS = [
@@ -221,7 +222,11 @@ export default function ModalNovoPedido({ clientes, produtos, loading, onConfirm
               )}
               {/* Sem Rótulo */}
               <label className="flex items-center gap-3 cursor-pointer select-none p-3 rounded-xl border border-border hover:bg-muted/30 transition-colors">
-                <div onClick={() => setForm(f => ({ ...f, sem_rotulo: !f.sem_rotulo }))}
+                <div onClick={() => setForm(f => ({
+                    ...f,
+                    sem_rotulo: !f.sem_rotulo,
+                    itens: f.itens.map(i => ({ ...i, sem_rotulo: !f.sem_rotulo })),
+                  }))}
                   className={`w-10 h-6 rounded-full transition-colors flex items-center px-0.5 flex-shrink-0 ${form.sem_rotulo ? 'bg-teal-500' : 'bg-border'}`}>
                   <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${form.sem_rotulo ? 'translate-x-4' : 'translate-x-0'}`} />
                 </div>
@@ -233,6 +238,15 @@ export default function ModalNovoPedido({ clientes, produtos, loading, onConfirm
                 </div>
                 {form.sem_rotulo && <span className="text-[10px] bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full font-bold">SR</span>}
               </label>
+              {form.sem_rotulo && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1.5">Quais itens vão sem rótulo?</p>
+                  <SelecaoItensSemRotulo
+                    itens={form.itens}
+                    onChange={itens => setForm(f => ({ ...f, itens }))}
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Entrega Prevista</label>
