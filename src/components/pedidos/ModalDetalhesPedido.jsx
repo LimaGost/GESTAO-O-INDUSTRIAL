@@ -8,6 +8,7 @@ import SeletorProdutos from './SeletorProdutos';
 import RastreioQuantidades from './RastreioQuantidades';
 import { DestinoForm, DestinoBadge, getDestinoLabel } from './DestinoPedido';
 import ComprovanteRecebimento from './ComprovanteRecebimento';
+import BadgeSemRotulo from '@/components/common/BadgeSemRotulo';
 
 const VALOR_OCULTO = '••••••';
 
@@ -658,10 +659,13 @@ export default function ModalDetalhesPedido({
                   const totalItem = Number(precoAtual) * item.quantidade;
 
                   return (
-                    <div key={i} className={`rounded-xl p-3 ${foiAlterado ? 'bg-amber-50 border border-amber-200' : 'bg-muted/40 border border-border'}`}>
+                    <div key={i} className={`rounded-xl p-3 ${(pedido.sem_rotulo && item.sem_rotulo) ? 'bg-teal-50 border border-teal-300' : foiAlterado ? 'bg-amber-50 border border-amber-200' : 'bg-muted/40 border border-border'}`}>
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">{item.produto_nome}</p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="text-sm font-medium text-foreground truncate">{item.produto_nome}</p>
+                            {item.sem_rotulo && <BadgeSemRotulo size="sm" />}
+                          </div>
                           <p className="text-xs text-muted-foreground">{item.quantidade} unidades</p>
                         </div>
                         <div className="text-right flex-shrink-0">
