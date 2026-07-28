@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Package, AlertTriangle, Search } from 'lucide-react';
 import ExportButtons from '@/components/relatorios/ExportButtons';
+import FiltroCategorias from '@/components/common/FiltroCategorias';
 import TabelaEstoquePlanilha from '@/components/relatorios/TabelaEstoquePlanilha';
 import ExportableChart from '@/components/dashboard/ExportableChart';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
@@ -21,10 +22,20 @@ function KpiCard({ label, value, sub, color = 'bg-primary', icon: Icon }) {
   );
 }
 
-export default function TabEstoque({ produtos }) {
+export default function TabEstoque({ produtos: produtosTodos }) {
   const [busca, setBusca] = useState('');
   const [subTab, setSubTab] = useState('planilha');
   const [ordenar, setOrdenar] = useState('nome');
+  const [filtroCategoria, setFiltroCategoria] = useState('todas');
+
+  const categorias = useMemo(
+    () => [...new Set(produtosTodos.map(p => p.categoria).filter(Boolean))].sort(),
+    [produtosTodos]
+  );
+  const produtos = useMemo(
+    () => filtroCategoria === 'todas' ? produtosTodos : produtosTodos.filter(p => p.categoria === filtroCategoria),
+    [produtosTodos, filtroCategoria]
+  );
 
   const criticos = produtos.filter(p => (p.estoque_atual || 0) <= (p.estoque_minimo || 0) && p.ativo !== false);
   const zerados = produtos.filter(p => (p.estoque_atual || 0) === 0 && p.ativo !== false);
@@ -60,6 +71,10 @@ export default function TabEstoque({ produtos }) {
         <KpiCard label="Valor em Estoque" value={`R$ ${(valorTotalEstoque / 1000).toFixed(1)}k`} sub="custo total" icon={Package} color="bg-green-500" />
         <KpiCard label="Estoque Crítico" value={criticos.length} sub="abaixo do mínimo" icon={AlertTriangle} color={criticos.length > 0 ? 'bg-red-500' : 'bg-green-500'} />
         <KpiCard label="Sem Estoque" value={zerados.length} sub="estoque zerado" icon={AlertTriangle} color={zerados.length > 0 ? 'bg-orange-500' : 'bg-green-500'} />
+      </div>
+
+      <div className="bg-card border border-border rounded-2xl p-4">
+        <FiltroCategorias categorias={categorias} valor={filtroCategoria} onChange={setFiltroCategoria} />
       </div>
 
       <div className="flex gap-2 flex-wrap">
