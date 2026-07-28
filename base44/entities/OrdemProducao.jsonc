@@ -13,7 +13,7 @@
     },
     "cliente_nome": {
       "type": "string",
-      "description": "Nome do cliente do pedido de origem (gravado na cria\u00e7\u00e3o para exibi\u00e7\u00e3o no card)"
+      "description": "Nome do cliente do pedido de origem"
     },
     "quantidade": {
       "type": "number",
@@ -57,21 +57,26 @@
     "origem": {
       "type": "string"
     },
+    "sem_rotulo": {
+      "type": "boolean",
+      "default": false,
+      "description": "Produ\u00e7\u00e3o sem r\u00f3tulo \u2014 itens devem sair sem rotulagem"
+    },
     "observacoes": {
       "type": "string"
     },
     "quantidade_pedido_total": {
       "type": "number",
-      "description": "Quantidade total do pedido de origem (estoque + produ\u00e7\u00e3o)"
+      "description": "Quantidade total do pedido de origem"
     },
     "quantidade_reservada_estoque": {
       "type": "number",
       "default": 0,
-      "description": "Quantidade j\u00e1 reservada em estoque quando a OP foi criada (aloca\u00e7\u00e3o parcial)"
+      "description": "Quantidade j\u00e1 reservada em estoque quando a OP foi criada"
     },
     "separacao_id": {
       "type": "string",
-      "description": "ID da Separa\u00e7\u00e3o aguardando esta produ\u00e7\u00e3o (aloca\u00e7\u00e3o parcial)"
+      "description": "ID da Separa\u00e7\u00e3o aguardando esta produ\u00e7\u00e3o"
     },
     "data_inicio": {
       "type": "string"

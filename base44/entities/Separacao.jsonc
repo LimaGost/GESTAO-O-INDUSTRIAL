@@ -46,6 +46,11 @@
     "white_label_marca": {
       "type": "string"
     },
+    "sem_rotulo": {
+      "type": "boolean",
+      "default": false,
+      "description": "Separa\u00e7\u00e3o sem r\u00f3tulo \u2014 itens entregues sem rotulagem"
+    },
     "itens": {
       "type": "array",
       "items": {
@@ -55,28 +60,23 @@
     },
     "quantidade_itens": {
       "type": "number",
-      "default": 0,
-      "description": "Quantidade de itens distintos"
+      "default": 0
     },
     "quantidade_total": {
       "type": "number",
-      "default": 0,
-      "description": "Soma das quantidades"
+      "default": 0
     },
     "quantidade_pendente_producao": {
       "type": "number",
-      "default": 0,
-      "description": "Quantidade aguardando conclus\u00e3o de produ\u00e7\u00e3o (aloca\u00e7\u00e3o parcial)"
+      "default": 0
     },
     "producao_concluida": {
       "type": "boolean",
-      "default": false,
-      "description": "Indica que a produ\u00e7\u00e3o pendente foi conclu\u00edda e as quantidades mescladas"
+      "default": false
     },
     "estoque_ja_reservado": {
       "type": "boolean",
-      "default": false,
-      "description": "Estoque j\u00e1 foi baixado na reserva do pedido \u2014 n\u00e3o baixar novamente na libera\u00e7\u00e3o"
+      "default": false
     },
     "destino_tipo": {
       "type": "string",
@@ -98,8 +98,7 @@
     },
     "data_prevista": {
       "type": "string",
-      "format": "date",
-      "description": "Data prevista de entrega"
+      "format": "date"
     },
     "prioridade": {
       "type": "string",

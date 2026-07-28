@@ -32,6 +32,18 @@
       ],
       "default": "emitida"
     },
+    "white_label": {
+      "type": "boolean",
+      "default": false
+    },
+    "white_label_marca": {
+      "type": "string"
+    },
+    "sem_rotulo": {
+      "type": "boolean",
+      "default": false,
+      "description": "Expedi\u00e7\u00e3o sem r\u00f3tulo \u2014 itens entregues sem rotulagem"
+    },
     "data_emissao": {
       "type": "string",
       "format": "date"
@@ -53,16 +65,13 @@
       "type": "string"
     },
     "data_confirmacao_cliente": {
-      "type": "string",
-      "description": "Data/hora em que o cliente confirmou o recebimento"
+      "type": "string"
     },
     "token_confirmacao": {
-      "type": "string",
-      "description": "Token do link p\u00fablico de confirma\u00e7\u00e3o de recebimento"
+      "type": "string"
     },
     "nome_recebedor": {
-      "type": "string",
-      "description": "Nome de quem recebeu a mercadoria"
+      "type": "string"
     },
     "cpf_recebedor": {
       "type": "string"
@@ -71,12 +80,10 @@
       "type": "string"
     },
     "assinatura_url": {
-      "type": "string",
-      "description": "URL da imagem da assinatura do recebedor"
+      "type": "string"
     },
     "foto_recebedor_url": {
-      "type": "string",
-      "description": "URL da foto do recebimento"
+      "type": "string"
     },
     "valor_total": {
       "type": "number",

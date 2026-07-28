@@ -54,10 +54,12 @@ export async function alocarPedido({ pedido, itens, produtos, origem = 'pedido' 
 
   // 2. Cria a Separação automaticamente (com o que está reservado)
   let separacao = null;
+  const semRotuloPedido = !!(pedido.sem_rotulo || itens.some(i => i.sem_rotulo));
   const itensSep = itensParaReserva.map(i => ({
     produto_id: i.produto_id,
     produto_nome: i.produto_nome,
     quantidade: i.qtdReservar,
+    sem_rotulo: !!(pedido.sem_rotulo || i.sem_rotulo),
   }));
   if (itensSep.length > 0) {
     separacao = await base44.entities.Separacao.create({
@@ -69,6 +71,7 @@ export async function alocarPedido({ pedido, itens, produtos, origem = 'pedido' 
       cliente_nome: pedido.cliente_nome,
       white_label: pedido.white_label || false,
       white_label_marca: pedido.white_label_marca || null,
+      sem_rotulo: semRotuloPedido,
       itens: itensSep,
       quantidade_itens: itensSep.length,
       quantidade_total: qtdReservadaTotal,
@@ -96,6 +99,7 @@ export async function alocarPedido({ pedido, itens, produtos, origem = 'pedido' 
       produto_nome: i.produto_nome,
       quantidade: i.quantidadeFalta,
       disponivel: false,
+      sem_rotulo: !!(pedido.sem_rotulo || i.sem_rotulo),
     }));
     ordem = await base44.entities.OrdemProducao.create({
       numero: gerarNumero('OP'),
@@ -106,6 +110,7 @@ export async function alocarPedido({ pedido, itens, produtos, origem = 'pedido' 
       pedido_id: pedido.id,
       pedido_numero: numero,
       cliente_nome: pedido.cliente_nome || null,
+      sem_rotulo: semRotuloPedido,
       origem,
       observacoes: pedido.observacoes || '',
       quantidade_pedido_total: qtdPedidoTotal,

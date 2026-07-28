@@ -1,3 +1,4 @@
+import BadgeSemRotulo from '@/components/common/BadgeSemRotulo';
 import { ArrowRight, User, Tag, Package, Truck, MapPin, Calendar, Flag, CheckCircle, Hash, ClipboardList, Home, Clock, ExternalLink } from 'lucide-react';
 
 const STATUS_ACCENT = {
@@ -55,6 +56,7 @@ export default function SeparacaoCard({ separacao, onAvancar, loading, labelBota
                 <Tag size={8} /> WL
               </span>
             )}
+            {(separacao.sem_rotulo || (separacao.itens || []).some(i => i.sem_rotulo)) && <BadgeSemRotulo />}
           </div>
           <span className="text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0"
             style={{ background: origem.bg, color: origem.color, border: `1px solid ${origem.border}` }}>
@@ -106,8 +108,9 @@ export default function SeparacaoCard({ separacao, onAvancar, loading, labelBota
         {separacao.itens?.length > 0 && (
           <div className="space-y-0.5 mb-2">
             {separacao.itens.slice(0, 3).map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between text-xs px-1.5 py-0.5 rounded">
+              <div key={idx} className={`flex items-center justify-between text-xs px-1.5 py-0.5 rounded ${item.sem_rotulo ? 'bg-teal-50 border border-teal-200' : ''}`}>
                 <span className="truncate flex-1 text-foreground">{item.produto_nome}</span>
+                {item.sem_rotulo && <BadgeSemRotulo size="sm" />}
                 <span className="font-semibold text-foreground ml-2 flex-shrink-0">{item.quantidade}</span>
               </div>
             ))}

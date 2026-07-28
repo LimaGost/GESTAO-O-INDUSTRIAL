@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import BadgeSemRotulo from '@/components/common/BadgeSemRotulo';
 import { FileText, Truck, CheckCircle, Printer, ChevronDown, ChevronUp, MapPin, Package, Send, Clock, Tag } from 'lucide-react';
 
 const STATUS_CONFIG = {
@@ -37,6 +38,7 @@ export default function ExpedicaoCard({ exp, onAtualizarStatus, onImprimirNF, on
                     <Tag size={10} /> WL{exp.white_label_marca ? ` · ${exp.white_label_marca}` : ''}
                   </span>
                 )}
+                {(exp.sem_rotulo || (exp.itens || []).some(i => i.sem_rotulo)) && <BadgeSemRotulo />}
                 {exp.confirmado_pelo_cliente && (
                   <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Recebido</span>
                 )}
@@ -110,7 +112,10 @@ export default function ExpedicaoCard({ exp, onAtualizarStatus, onImprimirNF, on
                 <tbody>
                   {(exp.itens || []).map((item, i) => (
                     <tr key={i} className="border-b border-border/50">
-                      <td className="py-1.5 pr-3 text-foreground">{item.produto_nome}</td>
+                      <td className="py-1.5 pr-3 text-foreground">
+                        {item.produto_nome}
+                        {item.sem_rotulo && <span className="ml-1.5 inline-block align-middle"><BadgeSemRotulo size="sm" /></span>}
+                      </td>
                       <td className="py-1.5 pr-3">{item.quantidade}</td>
                       <td className="py-1.5 pr-3">R$ {(item.preco_unitario || 0).toFixed(2)}</td>
                       <td className="py-1.5 font-medium text-foreground">R$ {(item.total || 0).toFixed(2)}</td>

@@ -320,6 +320,7 @@ export default function Pedidos() {
       cliente_id: pedido.cliente_id || '',
       cliente_nome: pedido.cliente_nome,
       itens: pedido.itens || [],
+      sem_rotulo: !!(pedido.sem_rotulo || (pedido.itens || []).some(i => i.sem_rotulo)),
       status: 'emitida',
       data_emissao: hoje,
       valor_total: pedido.valor_total || 0,

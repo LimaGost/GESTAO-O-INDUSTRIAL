@@ -1,6 +1,7 @@
 import { ArrowRight, Clock, Package, AlertTriangle, CheckCircle, User, Calendar, ExternalLink, Printer, XCircle, Tag } from 'lucide-react';
 import { imprimirEtiquetaProduto } from '@/lib/imprimirEtiquetaProduto';
 import CardChecklist from './CardChecklist';
+import BadgeSemRotulo from '@/components/common/BadgeSemRotulo';
 
 function fmtData(iso) {
   if (!iso) return null;
@@ -89,6 +90,7 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
                 <Tag size={8} /> WL
               </span>
             )}
+            {(ordem.sem_rotulo || (ordem.itens || []).some(i => i.sem_rotulo)) && <BadgeSemRotulo />}
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
             <span className="text-[10px] px-1.5 py-0.5 rounded font-medium"
@@ -134,9 +136,10 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
         {ordem.itens?.length > 0 ? (
           <div className="space-y-0.5 mb-2">
             {ordem.itens.slice(0, 3).map((item, idx) => (
-              <div key={idx} className={`flex items-center justify-between text-xs px-1.5 py-0.5 rounded ${item.disponivel ? 'bg-green-50' : ''}`}>
+              <div key={idx} className={`flex items-center justify-between text-xs px-1.5 py-0.5 rounded ${item.sem_rotulo ? 'bg-teal-50 border border-teal-200' : item.disponivel ? 'bg-green-50' : ''}`}>
                 <span className={`truncate flex-1 ${item.disponivel ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{item.produto_nome}</span>
                 <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                  {item.sem_rotulo && <BadgeSemRotulo size="sm" />}
                   {item.disponivel && <span className="text-[9px] text-green-600 font-bold">✓</span>}
                   <span className={`font-semibold ${item.disponivel ? 'text-green-600' : 'text-foreground'}`}>{item.quantidade}</span>
                 </div>
