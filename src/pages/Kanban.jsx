@@ -15,6 +15,7 @@ import { usePermissoes } from '@/lib/usePermissoes.jsx';
 import { readStagesLocal, loadKanbanFluxo, getIcon } from '@/lib/kanbanFluxo';
 import PullToRefresh from '@/components/PullToRefresh';
 import { useRealtimeEntity } from '@/hooks/useRealtimeEntity';
+import { buildMapaCategorias, listarCategorias, registroTemCategoria } from '@/lib/categoriaFiltro';
 
 const CORES_OPCOES = [
 { accent: '#64748B', bg: '#F8FAFC', border: '#CBD5E1', dot: '#94A3B8' },
@@ -470,13 +471,9 @@ export default function Kanban() {
     setSalvando(false);
   };
 
-  // Categorias de produtos disponíveis nas OPs
-  const categoriasOP = [...new Set(
-    ordens.map((o) => {
-      const p = produtos.find((pr) => pr.id === o.produto_id);
-      return p?.categoria || null;
-    }).filter(Boolean)
-  )].sort();
+  // Todas as categorias cadastradas (não só as que casam por produto_id)
+  const mapaCategorias = buildMapaCategorias(produtos);
+  const categoriasOP = listarCategorias(produtos);
 
   const ordensFiltradas = sortOrdens(
     ordens.filter((o) => {
@@ -486,10 +483,7 @@ export default function Kanban() {
       (o.pedido_numero || '').toLowerCase().includes(busca.toLowerCase())))
       return false;
       if (filtroOrigem !== 'todas' && o.origem !== filtroOrigem) return false;
-      if (filtroCategoria !== 'todas') {
-        const p = produtos.find((pr) => pr.id === o.produto_id);
-        if ((p?.categoria || '') !== filtroCategoria) return false;
-      }
+      if (!registroTemCategoria(o, mapaCategorias, filtroCategoria)) return false;
       return true;
     }),
     sortKey

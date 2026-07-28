@@ -10,6 +10,8 @@ import SeparacaoCard from '@/components/separacao/SeparacaoCard';
 import SeparacaoCardModal from '@/components/separacao/SeparacaoCardModal';
 import SeparacaoKpis from '@/components/separacao/SeparacaoKpis';
 import { useRealtimeEntity } from '@/hooks/useRealtimeEntity';
+import { buildMapaCategorias, listarCategorias, registroTemCategoria } from '@/lib/categoriaFiltro';
+import FiltroCategorias from '@/components/common/FiltroCategorias';
 import { ClipboardCheck, Plus, X, Search, RefreshCw } from 'lucide-react';
 
 function buildSepColunas() {
@@ -32,6 +34,8 @@ export default function KanbanSeparacao() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [colunas, setColunas] = useState(buildSepColunas);
   const [sepSelecionada, setSepSelecionada] = useState(null);
+  const [produtos, setProdutos] = useState([]);
+  const [filtroCategoria, setFiltroCategoria] = useState('todas');
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -49,13 +53,15 @@ export default function KanbanSeparacao() {
   const load = async () => {
     setLoading(true);
     try {
-      const [seps, peds, gps] = await Promise.all([
+      const [seps, peds, gps, prods] = await Promise.all([
         base44.entities.Separacao.list('-created_date'),
         base44.entities.Pedido.list().catch(() => []),
         base44.entities.GrupoPedidos.list().catch(() => []),
+        base44.entities.Produto.list().catch(() => []),
       ]);
       setSeparacoes(seps);
       setPedidos(peds);
+      setProdutos(prods);
       setGrupos(gps.filter(g => g.status !== 'desfeito'));
     } catch (e) {
       console.warn('[KanbanSeparacao] erro ao carregar:', e.message);
@@ -184,7 +190,11 @@ export default function KanbanSeparacao() {
   // Cards aguardando produção (alocação parcial) aparecem na primeira coluna, bloqueados
   const statusColuna = (s) => s.status === 'aguardando_producao' ? (colunas[0]?.key || 'aguardando_separacao') : s.status;
 
+  const mapaCategorias = buildMapaCategorias(produtos);
+  const categorias = listarCategorias(produtos);
+
   const separacoesFiltradas = separacoes.filter(s => {
+    if (!registroTemCategoria(s, mapaCategorias, filtroCategoria)) return false;
     if (!busca) return true;
     const q = busca.toLowerCase();
     return (s.numero || '').toLowerCase().includes(q) ||
@@ -236,6 +246,13 @@ export default function KanbanSeparacao() {
             }
           </div>
         </div>
+
+        {/* Filtro por categoria */}
+        {categorias.length > 0 && (
+          <div className="mb-4">
+            <FiltroCategorias categorias={categorias} valor={filtroCategoria} onChange={setFiltroCategoria} />
+          </div>
+        )}
 
         {/* KPIs */}
         {!loading && <SeparacaoKpis separacoes={separacoes} />}
