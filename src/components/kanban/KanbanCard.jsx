@@ -44,7 +44,7 @@ function tempoDecorrido(dataISO) {
   return { text: `${m}min`, hours };
 }
 
-export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, checklistOk, setChecklistOk, onAvancar, loading, onOpenModal, labelBotao, acaoAtual, onCancelar, etapasKeys }) {
+export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, checklistOk, setChecklistOk, onAvancar, loading, onOpenModal, labelBotao, acaoAtual, onCancelar, etapasKeys, colunaLabel }) {
   const origem = ordem.origem || 'manual';
   const origemCfg = ORIGEM_CONFIG[origem] || ORIGEM_CONFIG.manual;
   const checkKey = `${ordem.id}_${ordem.status}`;
@@ -225,8 +225,8 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
           </button>
         )}
 
-        {/* Imprimir Etiqueta — apenas na coluna "Em Embalagem" */}
-        {(ordem.status === 'em_embalagem' || acaoAtual === 'registrar_data_embalagem') && (
+        {/* Imprimir Etiqueta — apenas na coluna de Etiquetagem */}
+        {(/etiqueta/i.test(colunaLabel || '') || /etiqueta/i.test(ordem.status || '')) && (
           <button
             onClick={() => {
               const itensOP = ordem.itens?.length > 0 ? ordem.itens : (ordem.produto_id ? [{ produto_id: ordem.produto_id, produto_nome: ordem.produto_nome, quantidade: ordem.quantidade }] : []);

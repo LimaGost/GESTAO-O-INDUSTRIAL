@@ -48,8 +48,10 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
   const checkKey = `${ordem.id}_${ordem.status}`;
 
   const isSeparacao = ordem.status === 'em_separacao';
-  const isEmbalagem = ordem.status === 'em_embalagem' ||
-    (kanbanColunas.find(c => c.key === ordem.status)?.acao === 'registrar_data_embalagem');
+  const isEtiquetagem = (() => {
+    const col = kanbanColunas.find(c => c.key === ordem.status);
+    return /etiqueta/i.test(col?.label || '') || /etiqueta/i.test(ordem.status || '');
+  })();
   const [itensEditados, setItensEditados] = useState(null);
   const [novoItem, setNovoItem] = useState({ produto_id: '', produto_nome: '', quantidade: 1, estoque: 0 });
   const [showAdicionarItem, setShowAdicionarItem] = useState(false);
@@ -531,8 +533,8 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
                   </button>
                 )}
 
-                {/* Imprimir Etiquetas — apenas na etapa "Em Embalagem" */}
-                {isEmbalagem && (
+                {/* Imprimir Etiquetas — apenas na etapa de Etiquetagem */}
+                {isEtiquetagem && (
                   <button onClick={() => {
                     itensNormalizados.forEach(item => {
                       imprimirEtiquetaProduto({
