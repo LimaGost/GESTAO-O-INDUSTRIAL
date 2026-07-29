@@ -98,6 +98,9 @@ function OPFinalizadaCard({ op, clienteNome, onEmitirNF, emitindo, onVerPedido }
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-sm font-bold text-foreground leading-tight">{clienteNome || op.produto_nome}</p>
+          {!clienteNome && op.pedido_numero && !onVerPedido && (
+            <p className="text-[10px] text-amber-600 font-semibold mt-0.5">⚠ Pedido excluído — cliente indisponível</p>
+          )}
           <p className="text-xs font-bold text-muted-foreground mt-0.5">{op.numero}</p>
         </div>
         <div className="text-right flex-shrink-0">
@@ -688,10 +691,10 @@ export default function Expedicao() {
     <OPFinalizadaCard
       key={card.id}
       op={card}
-      clienteNome={card.pedido_id ? pedidoMap[card.pedido_id]?.nome : null}
+      clienteNome={(card.pedido_id ? pedidoMap[card.pedido_id]?.nome : null) || card.cliente_nome || null}
       onEmitirNF={readonly ? null : emitirNFdaOP}
       emitindo={emitindoOpId === card.id}
-      onVerPedido={abrirPedido}
+      onVerPedido={card.pedido_id && pedidoMap[card.pedido_id] ? abrirPedido : null}
     />
   ) : (
     <ExpedicaoCard
