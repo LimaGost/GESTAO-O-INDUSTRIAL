@@ -12,6 +12,8 @@ import SeparacaoKpis from '@/components/separacao/SeparacaoKpis';
 import { useRealtimeEntity } from '@/hooks/useRealtimeEntity';
 import { buildMapaCategorias, listarCategorias, registroTemCategoria } from '@/lib/categoriaFiltro';
 import FiltroCategorias from '@/components/common/FiltroCategorias';
+import OrdenarPor from '@/components/common/OrdenarPor';
+import { ordenarCards } from '@/lib/ordenacaoCards';
 import { ClipboardCheck, Plus, X, Search, RefreshCw } from 'lucide-react';
 
 function buildSepColunas() {
@@ -36,6 +38,7 @@ export default function KanbanSeparacao() {
   const [sepSelecionada, setSepSelecionada] = useState(null);
   const [produtos, setProdutos] = useState([]);
   const [filtroCategoria, setFiltroCategoria] = useState('todas');
+  const [sortKey, setSortKey] = useState('urgencia');
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -193,7 +196,7 @@ export default function KanbanSeparacao() {
   const mapaCategorias = buildMapaCategorias(produtos);
   const categorias = listarCategorias(produtos);
 
-  const separacoesFiltradas = separacoes.filter(s => {
+  const separacoesFiltradas = ordenarCards(separacoes.filter(s => {
     if (!registroTemCategoria(s, mapaCategorias, filtroCategoria)) return false;
     if (!busca) return true;
     const q = busca.toLowerCase();
@@ -201,6 +204,9 @@ export default function KanbanSeparacao() {
            (s.pedido_numero || '').toLowerCase().includes(q) ||
            (s.ordem_producao_numero || '').toLowerCase().includes(q) ||
            (s.cliente_nome || '').toLowerCase().includes(q);
+  }), sortKey, {
+    getQtd: (s) => s.quantidade_total || 0,
+    getPrazo: (s) => s.data_prevista || null,
   });
 
   const pedidosDisponiveis = pedidos.filter(p => {
@@ -253,6 +259,11 @@ export default function KanbanSeparacao() {
             <FiltroCategorias categorias={categorias} valor={filtroCategoria} onChange={setFiltroCategoria} />
           </div>
         )}
+
+        {/* Ordenação */}
+        <div className="mb-4">
+          <OrdenarPor valor={sortKey} onChange={setSortKey} />
+        </div>
 
         {/* KPIs */}
         {!loading && <SeparacaoKpis separacoes={separacoes} />}

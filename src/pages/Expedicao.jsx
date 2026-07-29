@@ -13,6 +13,8 @@ import { loadConfig } from '@/lib/appConfig';
 import AlertaSeparacao from '@/components/expedicao/AlertaSeparacao';
 import ModalItensPedido from '@/components/expedicao/ModalItensPedido';
 import ModalCheckoutConferencia from '@/components/expedicao/ModalCheckoutConferencia';
+import OrdenarPor from '@/components/common/OrdenarPor';
+import { ordenarCards } from '@/lib/ordenacaoCards';
 const EXP_COLUNAS_DEFAULT = [
   { key: 'a_expedir', label: 'A Expedir',    cor: 4, desc: 'OPs prontas para NF',     fixo: true },
   { key: 'emitida',   label: 'NF Emitida',   cor: 1, desc: 'Aguardando envio',         fixo: true },
@@ -292,6 +294,7 @@ export default function Expedicao() {
   const [etapaMobile, setEtapaMobile] = useState('a_expedir');
   const [conferencia, setConferencia] = useState(null); // { exp, proximo }
   const [headerAberto, setHeaderAberto] = useState(false);
+  const [sortKey, setSortKey] = useState('urgencia');
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -643,22 +646,30 @@ export default function Expedicao() {
     if (filtroOrigem !== 'todos') {
       list = list.filter(e => e._fluxo === filtroOrigem);
     }
-    return list;
-  }, [expedicoes, busca, filtroDestino, filtroOrigem, pedidoMap, galpaoExpIds]);
+    return ordenarCards(list, sortKey, {
+      getQtd: (e) => (e.itens || []).reduce((s, i) => s + (i.quantidade || 0), 0),
+      getPrazo: (e) => e._pedidoDestino?.data_entrega_prevista || null,
+    });
+  }, [expedicoes, busca, filtroDestino, filtroOrigem, pedidoMap, galpaoExpIds, sortKey]);
 
   const opsFiltradas = useMemo(() => {
     let list = opsFinalizadas;
     if (filtroOrigem !== 'todos') {
       list = list.filter(o => (o._origem === 'galpao' ? 'galpao' : 'industria') === filtroOrigem);
     }
-    if (!busca) return list;
-    const b = busca.toLowerCase();
-    return list.filter(o =>
-      o.produto_nome?.toLowerCase().includes(b) ||
-      o.numero?.toLowerCase().includes(b) ||
-      o.pedido_numero?.toLowerCase().includes(b)
-    );
-  }, [opsFinalizadas, busca, filtroOrigem]);
+    if (busca) {
+      const b = busca.toLowerCase();
+      list = list.filter(o =>
+        o.produto_nome?.toLowerCase().includes(b) ||
+        o.numero?.toLowerCase().includes(b) ||
+        o.pedido_numero?.toLowerCase().includes(b)
+      );
+    }
+    return ordenarCards(list, sortKey, {
+      getQtd: (o) => (o.itens?.length > 0 ? o.itens.reduce((s, i) => s + (i.quantidade || 0), 0) : (o.quantidade || 0)),
+      getPrazo: (o) => (o.pedido_id ? pedidoMap[o.pedido_id]?.data_entrega_prevista : null) || null,
+    });
+  }, [opsFinalizadas, busca, filtroOrigem, sortKey, pedidoMap]);
 
   const counts = colunasExp.reduce((acc, col) => {
     acc[col.key] = col.key === 'a_expedir'
@@ -777,6 +788,11 @@ export default function Expedicao() {
               {f.l}
             </button>
           ))}
+        </div>
+
+        {/* Ordenação */}
+        <div className="mt-3">
+          <OrdenarPor valor={sortKey} onChange={setSortKey} />
         </div>
 
         </div>
