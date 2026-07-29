@@ -97,8 +97,8 @@ function OPFinalizadaCard({ op, clienteNome, onEmitirNF, emitindo, onVerPedido }
     <div className="bg-white rounded-2xl border border-border shadow-sm p-4 space-y-3 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-xs font-bold text-muted-foreground">{op.numero}</p>
-          <p className="text-sm font-bold text-foreground leading-tight mt-0.5">{clienteNome || op.produto_nome}</p>
+          <p className="text-sm font-bold text-foreground leading-tight">{clienteNome || op.produto_nome}</p>
+          <p className="text-xs font-bold text-muted-foreground mt-0.5">{op.numero}</p>
         </div>
         <div className="text-right flex-shrink-0">
           <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${op._origem === 'galpao' ? 'bg-amber-100 text-amber-700' : 'bg-teal-100 text-teal-700'}`}>
@@ -159,7 +159,8 @@ function ExpedicaoCard({ exp, coluna, onAvancar, onVoltar, onImprimirNF, onImpri
       <div className="px-4 pt-4 pb-3 space-y-1.5">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5 flex-wrap">
+            <p className="text-sm font-bold text-foreground leading-tight truncate">{exp.cliente_nome}</p>
+            <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">NF {exp.numero_nf}</p>
               {exp._fluxo && (
                 <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${exp._fluxo === 'galpao' ? 'bg-amber-100 text-amber-700' : 'bg-teal-100 text-teal-700'}`}>
@@ -168,7 +169,6 @@ function ExpedicaoCard({ exp, coluna, onAvancar, onVoltar, onImprimirNF, onImpri
               )}
               {isWL && <span className="text-[9px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-bold">WL</span>}
             </div>
-            <p className="text-sm font-bold text-foreground leading-tight truncate">{exp.cliente_nome}</p>
             {exp.pedido_numero && (
               <p className="text-xs text-muted-foreground mt-0.5">Pedido <span className="font-semibold text-foreground">#{exp.pedido_numero}</span></p>
             )}
