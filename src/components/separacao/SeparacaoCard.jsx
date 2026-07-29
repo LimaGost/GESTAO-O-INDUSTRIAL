@@ -46,12 +46,15 @@ export default function SeparacaoCard({ separacao, onAvancar, loading, labelBota
             <p className="text-sm font-bold text-foreground truncate leading-tight">
               {separacao.cliente_nome || separacao.grupo_cliente_nome || separacao.numero}
             </p>
-            <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+            <div className="flex items-center gap-1.5 flex-wrap mt-1">
               {separacao.pedido_numero && (
-                <span className="text-[10px] text-muted-foreground font-medium">#{separacao.pedido_numero}</span>
+                <span className="text-[10px] bg-blue-50 text-blue-600 border border-blue-200 px-1.5 py-0.5 rounded font-medium">📋 Pedido {separacao.pedido_numero}</span>
               )}
               {separacao.ordem_producao_numero && (
-                <span className="text-[10px] text-muted-foreground">🏭 {separacao.ordem_producao_numero}</span>
+                <span className="text-[10px] bg-green-50 text-green-600 border border-green-200 px-1.5 py-0.5 rounded font-medium">🏭 {separacao.ordem_producao_numero}</span>
+              )}
+              {!separacao.pedido_numero && !separacao.ordem_producao_numero && (
+                <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-medium">{separacao.numero}</span>
               )}
             </div>
           </div>

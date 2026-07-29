@@ -84,11 +84,13 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
             <p className="text-sm font-bold text-foreground truncate leading-tight">
               {clienteNome || ordem.numero}
             </p>
-            <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+            <div className="flex items-center gap-1.5 flex-wrap mt-1">
               {ordem.pedido_numero && (
-                <span className="text-[10px] text-muted-foreground font-medium">#{ordem.pedido_numero}</span>
+                <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-medium">📋 {ordem.pedido_numero}</span>
               )}
-              {clienteNome && <span className="text-[10px] text-muted-foreground">{ordem.numero}</span>}
+              {clienteNome && (
+                <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-medium">{ordem.numero}</span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-1.5 flex-wrap justify-end flex-shrink-0">
