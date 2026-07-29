@@ -1,4 +1,5 @@
 import BadgeSemRotulo from '@/components/common/BadgeSemRotulo';
+import BadgeMovimentoEstoque from '@/components/common/BadgeMovimentoEstoque';
 import { ArrowRight, User, Tag, Package, Truck, MapPin, Calendar, Flag, CheckCircle, Hash, ClipboardList, Home, Clock, ExternalLink } from 'lucide-react';
 
 const STATUS_ACCENT = {
@@ -29,7 +30,7 @@ function fmtData(iso) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
 
-export default function SeparacaoCard({ separacao, onAvancar, loading, labelBotao, readonly, onOpenModal }) {
+export default function SeparacaoCard({ separacao, onAvancar, loading, labelBotao, readonly, onOpenModal, movimentoEstoque }) {
   const accent = STATUS_ACCENT[separacao.status] || '#64748B';
   const origem = ORIGEM_CONFIG[separacao.origem] || ORIGEM_CONFIG.ordem_producao;
   const atrasada = separacao.data_prevista && separacao.status !== 'liberado_expedicao' &&
@@ -65,6 +66,7 @@ export default function SeparacaoCard({ separacao, onAvancar, loading, labelBota
               </span>
             )}
             {(separacao.sem_rotulo || (separacao.itens || []).some(i => i.sem_rotulo)) && <BadgeSemRotulo />}
+            <BadgeMovimentoEstoque movimento={movimentoEstoque} />
             <span className="text-[10px] px-1.5 py-0.5 rounded font-medium"
               style={{ background: origem.bg, color: origem.color, border: `1px solid ${origem.border}` }}>
               {origem.label}

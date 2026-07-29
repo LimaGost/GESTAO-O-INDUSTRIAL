@@ -16,6 +16,8 @@ import { readStagesLocal, loadKanbanFluxo, getIcon } from '@/lib/kanbanFluxo';
 import PullToRefresh from '@/components/PullToRefresh';
 import { useRealtimeEntity } from '@/hooks/useRealtimeEntity';
 import { buildMapaCategorias, listarCategorias, registroTemCategoria } from '@/lib/categoriaFiltro';
+import { movimentoDaEtapa } from '@/lib/movimentoEstoque';
+import BadgeMovimentoEstoque from '@/components/common/BadgeMovimentoEstoque';
 
 const CORES_OPCOES = [
 { accent: '#64748B', bg: '#F8FAFC', border: '#CBD5E1', dot: '#94A3B8' },
@@ -649,6 +651,7 @@ export default function Kanban() {
       {/* Colunas Kanban */}
       <div className={`flex gap-3 overflow-x-auto pb-4 flex-1 min-h-0 items-start ${isMobile ? 'snap-x snap-mandatory' : ''}`}>
         {COLUNAS.map(({ key, label, icon: Icon, accent, bg, border, dot }) => {
+          const movimento = movimentoDaEtapa(kanbanColunas.find((c) => c.key === key), 'producao');
           const colOrdens = ordensFiltradas.filter((o) => o.status === key);
           const total = ordens.filter((o) => o.status === key).length;
           const colWidth = isMobile ? 'w-80 sm:w-96' : 'w-72';
@@ -657,12 +660,15 @@ export default function Kanban() {
           return (
             <div key={key} className={`flex-shrink-0 ${colWidth} rounded-2xl flex flex-col overflow-hidden ${isMobile ? 'snap-center' : ''}`}
             style={{ height: colHeight, background: bg, border: `1.5px solid ${border}` }}>
-              <div className="px-4 py-3 flex items-center justify-between sticky top-0 z-10"
+              <div className="px-4 py-2.5 flex items-center justify-between sticky top-0 z-10"
               style={{ background: bg, borderBottom: `1px solid ${border}` }}>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full" style={{ background: dot }} />
-                  <Icon size={13} style={{ color: accent }} />
-                  <span className="text-xs font-bold tracking-wide" style={{ color: accent }}>{label.toUpperCase()}</span>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full" style={{ background: dot }} />
+                    <Icon size={13} style={{ color: accent }} />
+                    <span className="text-xs font-bold tracking-wide" style={{ color: accent }}>{label.toUpperCase()}</span>
+                  </div>
+                  {movimento && <div className="mt-1"><BadgeMovimentoEstoque movimento={movimento} variante="coluna" /></div>}
                 </div>
                 <span className="text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full text-white"
                 style={{ background: accent, opacity: total === 0 ? 0.4 : 1 }}>{total}</span>
@@ -708,6 +714,7 @@ export default function Kanban() {
                       etapasKeys={kanbanColunas.map((c) => c.key)}
                       acaoAtual={kanbanColunas.find((c) => c.key === key)?.acao || ''}
                       colunaLabel={kanbanColunas.find((c) => c.key === key)?.label || ''}
+                      movimentoEstoque={movimento}
                       onCancelar={key === 'a_produzir' && podeGerenciarProducao && !readonly ? cancelarOP : null}
                       />
                       );

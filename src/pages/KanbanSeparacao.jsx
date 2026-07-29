@@ -14,6 +14,8 @@ import { buildMapaCategorias, listarCategorias, registroTemCategoria } from '@/l
 import FiltroCategorias from '@/components/common/FiltroCategorias';
 import OrdenarPor from '@/components/common/OrdenarPor';
 import { ordenarCards } from '@/lib/ordenacaoCards';
+import { movimentoDaEtapa } from '@/lib/movimentoEstoque';
+import BadgeMovimentoEstoque from '@/components/common/BadgeMovimentoEstoque';
 import { ClipboardCheck, Plus, X, Search, RefreshCw } from 'lucide-react';
 
 function buildSepColunas() {
@@ -289,6 +291,7 @@ export default function KanbanSeparacao() {
       {/* Colunas */}
       <div className={`flex gap-3 overflow-x-auto pb-4 flex-1 min-h-0 items-start ${isMobile ? 'snap-x snap-mandatory' : ''}`}>
         {colunas.map(({ key, label, icon: Icon, accent, bg, border, dot, proximo, proximoLabel }) => {
+          const movimento = movimentoDaEtapa(colunas.find(c => c.key === key), 'separacao');
           const colSeps = separacoesFiltradas.filter(s => statusColuna(s) === key);
           const total = separacoes.filter(s => statusColuna(s) === key).length;
           const labelBotao = proximo ? proximoLabel : null;
@@ -296,12 +299,15 @@ export default function KanbanSeparacao() {
           return (
             <div key={key} className={`flex-shrink-0 ${colWidth} rounded-2xl flex flex-col overflow-hidden ${isMobile ? 'snap-center' : ''}`}
               style={{ height: colHeight, background: bg, border: `1.5px solid ${border}` }}>
-              <div className="px-4 py-3 flex items-center justify-between sticky top-0 z-10"
+              <div className="px-4 py-2.5 flex items-center justify-between sticky top-0 z-10"
                 style={{ background: bg, borderBottom: `1px solid ${border}` }}>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full" style={{ background: dot }} />
-                  <Icon size={13} style={{ color: accent }} />
-                  <span className="text-xs font-bold tracking-wide" style={{ color: accent }}>{label.toUpperCase()}</span>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full" style={{ background: dot }} />
+                    <Icon size={13} style={{ color: accent }} />
+                    <span className="text-xs font-bold tracking-wide" style={{ color: accent }}>{label.toUpperCase()}</span>
+                  </div>
+                  {movimento && <div className="mt-1"><BadgeMovimentoEstoque movimento={movimento} variante="coluna" /></div>}
                 </div>
                 <span className="text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full text-white"
                   style={{ background: accent, opacity: total === 0 ? 0.4 : 1 }}>{total}</span>
@@ -325,6 +331,7 @@ export default function KanbanSeparacao() {
                       labelBotao={labelBotao}
                       readonly={readonly}
                       onOpenModal={() => setSepSelecionada(sep)}
+                      movimentoEstoque={movimento}
                     />
                   ))
                 )}
