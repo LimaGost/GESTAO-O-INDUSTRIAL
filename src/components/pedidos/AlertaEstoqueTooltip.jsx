@@ -1,8 +1,9 @@
+import { useState, useRef } from 'react';
 import { AlertTriangle } from 'lucide-react';
 
 /**
  * Ícone de alerta com explicação em popup ao passar o mouse.
- * tipo: 'sem_estoque' (vermelho) | 'abaixo_minimo' (âmbar)
+ * O popup é renderizado em posição fixa para não ser cortado por containers com scroll.
  */
 const TEXTOS = {
   sem_estoque: {
@@ -17,16 +18,46 @@ const TEXTOS = {
   },
 };
 
+const LARGURA = 240;
+
 export default function AlertaEstoqueTooltip({ tipo }) {
   const info = TEXTOS[tipo];
+  const ref = useRef(null);
+  const [pos, setPos] = useState(null);
+
   if (!info) return null;
+
+  const mostrar = () => {
+    const r = ref.current?.getBoundingClientRect();
+    if (!r) return;
+    const left = Math.min(
+      Math.max(8, r.left + r.width / 2 - LARGURA / 2),
+      window.innerWidth - LARGURA - 8
+    );
+    const abaixo = r.top < 140;
+    setPos({ left, top: abaixo ? r.bottom + 8 : r.top - 8, abaixo });
+  };
+
   return (
-    <span className="relative inline-flex group/alerta" onClick={e => e.stopPropagation()}>
-      <AlertTriangle size={11} className={`${info.cor} cursor-help`} />
-      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 hidden group-hover/alerta:block z-50 w-52 bg-foreground text-background text-[11px] leading-snug rounded-lg px-2.5 py-2 shadow-lg">
-        <span className="block font-bold mb-0.5">{info.titulo}</span>
-        {info.texto}
+    <>
+      <span ref={ref} className="inline-flex" onClick={e => e.stopPropagation()}
+        onMouseEnter={mostrar} onMouseLeave={() => setPos(null)}>
+        <AlertTriangle size={11} className={`${info.cor} cursor-help`} />
       </span>
-    </span>
+      {pos && (
+        <div
+          className="fixed z-[100] pointer-events-none bg-foreground text-background text-[11px] leading-snug rounded-lg px-2.5 py-2 shadow-xl"
+          style={{
+            left: pos.left,
+            top: pos.top,
+            width: LARGURA,
+            transform: pos.abaixo ? 'none' : 'translateY(-100%)',
+          }}
+        >
+          <span className="block font-bold mb-0.5">{info.titulo}</span>
+          {info.texto}
+        </div>
+      )}
+    </>
   );
 }
