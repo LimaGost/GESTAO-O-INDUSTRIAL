@@ -10,6 +10,7 @@ import {
 'lucide-react';
 import KanbanCard from '@/components/kanban/KanbanCard';
 import KanbanCardModal from '@/components/kanban/KanbanCardModal';
+import GrupoResumoCard from '@/components/kanban/GrupoResumoCard';
 import ModalTotalProducao from '@/components/kanban/ModalTotalProducao';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 import { readStagesLocal, loadKanbanFluxo, getIcon } from '@/lib/kanbanFluxo';
@@ -745,28 +746,9 @@ export default function Kanban() {
                       return (
                     <>
                       {Object.values(gruposEmColuna).map(({ grupo, ordens: ordensGrupo }) => (
-                        <div key={`grp-${grupo.id}`} className="border border-violet-300 rounded-2xl overflow-hidden mb-1.5">
-                          <div className="px-3 py-2 bg-violet-100 flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <span className="text-xs">🔗</span>
-                              <span className="text-xs font-bold text-violet-800 truncate">{grupo.cliente_nome}</span>
-                              <span className="text-[10px] text-violet-600">{(grupo.pedidos_numeros || []).map(n => `#${n}`).join(' · ')}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 flex-shrink-0">
-                              {grupo.ordem_producao_numero && (
-                                <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-semibold">
-                                  {grupo.ordem_producao_numero}
-                                </span>
-                              )}
-                              <span className="text-[10px] bg-violet-200 text-violet-700 px-1.5 py-0.5 rounded-full font-semibold">
-                                {ordensGrupo.length} OP{ordensGrupo.length !== 1 ? 's' : ''}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="bg-violet-50/40 p-1.5 space-y-1.5">
-                            {ordensGrupo.map(renderCard)}
-                          </div>
-                        </div>
+                        <GrupoResumoCard key={`grp-${grupo.id}`} grupo={grupo} ordens={ordensGrupo} accent={accent}>
+                          {ordensGrupo.map(renderCard)}
+                        </GrupoResumoCard>
                       ))}
                       {ordensNaoAgrupadas.map(renderCard)}
                     </>
