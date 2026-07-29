@@ -19,6 +19,7 @@ import { buildMapaCategorias, listarCategorias, registroTemCategoria } from '@/l
 import { movimentoDaEtapa } from '@/lib/movimentoEstoque';
 import BadgeMovimentoEstoque from '@/components/common/BadgeMovimentoEstoque';
 import DicaColuna from '@/components/common/DicaColuna';
+import { subtituloEtapa } from '@/lib/subtituloEtapa';
 
 const CORES_OPCOES = [
 { accent: '#64748B', bg: '#F8FAFC', border: '#CBD5E1', dot: '#94A3B8' },
@@ -671,6 +672,10 @@ export default function Kanban() {
                     <DicaColuna coluna={kanbanColunas.find((c) => c.key === key)} kanbanKey="producao" accent={accent}
                       proximoLabel={PROXIMOS[key] ? kanbanColunas.find((c) => c.key === PROXIMOS[key])?.label : null} />
                   </div>
+                  {(() => {
+                    const sub = subtituloEtapa(kanbanColunas.find((c) => c.key === key), 'producao');
+                    return sub ? <p className="text-[10px] mt-0.5 leading-tight opacity-70" style={{ color: accent }}>{sub}</p> : null;
+                  })()}
                   {movimento && <div className="mt-1"><BadgeMovimentoEstoque movimento={movimento} variante="coluna" /></div>}
                 </div>
                 <span className="text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full text-white"
