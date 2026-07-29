@@ -115,15 +115,6 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
           </div>
         )}
 
-        {/* Alocação parcial: reservado x em produção */}
-        {(ordem.quantidade_reservada_estoque > 0) && (
-          <div className="text-[10px] font-semibold mb-1.5 px-2 py-1.5 rounded-lg bg-slate-50 border border-slate-200 space-y-0.5">
-            <p className="text-foreground">Pedido: {ordem.quantidade_pedido_total || (ordem.quantidade_reservada_estoque + qtdTotal)} un</p>
-            <p className="text-green-600">🟢 {ordem.quantidade_reservada_estoque} un reservadas na Separação</p>
-            <p className="text-amber-600">🟡 {qtdTotal} un em Produção</p>
-          </div>
-        )}
-
         {/* Urgência */}
         {(urgente || atencao) && (
           <div className={`flex items-center gap-1 text-[10px] font-semibold mb-2 px-1.5 py-1 rounded-lg ${urgente ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'}`}>
@@ -169,6 +160,15 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
         )}
         {ordem.observacoes && (
           <p className="text-[10px] text-muted-foreground italic line-clamp-1 mb-2">{ordem.observacoes}</p>
+        )}
+
+        {/* Alocação parcial: reservado x em produção — sempre no final do card */}
+        {(ordem.quantidade_reservada_estoque > 0) && (
+          <div className="text-[10px] font-semibold mb-2 px-2 py-1.5 rounded-lg bg-slate-50 border border-slate-200 space-y-0.5">
+            <p className="text-foreground">Pedido: {ordem.quantidade_pedido_total || (ordem.quantidade_reservada_estoque + qtdTotal)} un</p>
+            <p className="text-green-600">🟢 {ordem.quantidade_reservada_estoque} un reservadas na Separação</p>
+            <p className="text-amber-600">🟡 {qtdTotal} un em Produção</p>
+          </div>
         )}
 
         {/* Progress bar */}
