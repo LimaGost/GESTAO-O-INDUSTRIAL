@@ -14,6 +14,7 @@ import AlertaSeparacao from '@/components/expedicao/AlertaSeparacao';
 import ModalItensPedido from '@/components/expedicao/ModalItensPedido';
 import ModalCheckoutConferencia from '@/components/expedicao/ModalCheckoutConferencia';
 import OrdenarPor from '@/components/common/OrdenarPor';
+import DicaColuna from '@/components/common/DicaColuna';
 import { ordenarCards } from '@/lib/ordenacaoCards';
 const EXP_COLUNAS_DEFAULT = [
   { key: 'a_expedir', label: 'A Expedir',    cor: 4, desc: 'OPs prontas para NF',     fixo: true },
@@ -914,6 +915,8 @@ export default function Expedicao() {
                   <span className="text-xs font-bold tracking-wide" style={{ color: coluna.accent }}>
                     {coluna.label.toUpperCase()}
                   </span>
+                  <DicaColuna coluna={coluna} kanbanKey="expedicao" accent={coluna.accent}
+                    proximoLabel={colunasExp[colunasExp.findIndex(c => c.key === coluna.key) + 1]?.label || null} />
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground hidden lg:inline">{coluna.desc}</span>

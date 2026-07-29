@@ -7,6 +7,7 @@ import FranqueadoCard from '@/components/galpao/FranqueadoCard';
 import FranqueadosKpis from '@/components/galpao/FranqueadosKpis';
 import ModalPedidoFranqueado from '@/components/galpao/ModalPedidoFranqueado';
 import { readStagesLocal, buildColunas, loadKanbanFluxo } from '@/lib/kanbanFluxo';
+import DicaColuna from '@/components/common/DicaColuna';
 
 const FRANQUEADOS = [
   'Raio do Sol Artigos Religiosos',
@@ -172,6 +173,8 @@ export default function KanbanFranqueados() {
                   <div className="flex items-center gap-2">
                     <Icon size={13} style={{ color: accent }} />
                     <span className="text-xs font-bold tracking-wide" style={{ color: accent }}>{label.toUpperCase()}</span>
+                    <DicaColuna coluna={colunas.find(c => c.key === key)} kanbanKey="pedidos_franqueados" accent={accent}
+                      proximoLabel={colunas.find(c => c.key === key)?.proximoLabel?.replace('→ ', '') || null} />
                   </div>
                   <span className="text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full text-white"
                     style={{ background: accent, opacity: colPedidos.length === 0 ? 0.4 : 1 }}>{colPedidos.length}</span>

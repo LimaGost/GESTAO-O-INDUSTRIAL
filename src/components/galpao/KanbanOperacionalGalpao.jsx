@@ -6,6 +6,7 @@ import { ClipboardCheck } from 'lucide-react';
 import GalpaoCard from '@/components/galpao/GalpaoCard';
 import { useRealtimeEntity } from '@/hooks/useRealtimeEntity';
 import { readStagesLocal, buildColunas, loadKanbanFluxo } from '@/lib/kanbanFluxo';
+import DicaColuna from '@/components/common/DicaColuna';
 
 const DATA_POR_STATUS = {
   em_separacao: 'data_inicio_separacao',
@@ -107,6 +108,8 @@ export default function KanbanOperacionalGalpao() {
                   <div className="w-2 h-2 rounded-full" style={{ background: dot }} />
                   <Icon size={13} style={{ color: accent }} />
                   <span className="text-xs font-bold tracking-wide" style={{ color: accent }}>{label.toUpperCase()}</span>
+                  <DicaColuna coluna={colunas[idx]} kanbanKey="separacao_galpao" accent={accent}
+                    proximoLabel={colunas[idx + 1]?.label || null} />
                 </div>
                 <span className="text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full text-white"
                   style={{ background: accent, opacity: colSeps.length === 0 ? 0.4 : 1 }}>{colSeps.length}</span>

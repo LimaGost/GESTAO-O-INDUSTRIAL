@@ -9,6 +9,7 @@ import ModalProcessarBling from '@/components/pedidos/ModalProcessarBling';
 import ModalProcessarPortal from '@/components/pedidos/ModalProcessarPortal';
 import ModalNovoPedido from '@/components/pedidos/ModalNovoPedido';
 import PedidoKanbanCard from '@/components/pedidos/PedidoKanbanCard';
+import DicaColuna from '@/components/common/DicaColuna';
 import ModalDetalhesPedido from '@/components/pedidos/ModalDetalhesPedido';
 import ModalSincronizarBling from '@/components/pedidos/ModalSincronizarBling';
 import { gerarNumero, gerarLote } from '@/lib/numeracao';
@@ -505,6 +506,8 @@ export default function Pedidos() {
                   <span className="text-xs font-bold tracking-wide" style={{ color: coluna.color }}>
                     {coluna.label.toUpperCase()}
                   </span>
+                  <DicaColuna coluna={coluna} kanbanKey="pedidos" accent={coluna.color}
+                    proximoLabel={COLUNAS_KANBAN[COLUNAS_KANBAN.findIndex(c => c.key === coluna.key) + 1]?.label || null} />
                 </div>
                 <span className="text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full text-white"
                   style={{ background: coluna.color, opacity: count === 0 ? 0.4 : 1 }}>

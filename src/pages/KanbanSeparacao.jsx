@@ -16,6 +16,7 @@ import OrdenarPor from '@/components/common/OrdenarPor';
 import { ordenarCards } from '@/lib/ordenacaoCards';
 import { movimentoDaEtapa } from '@/lib/movimentoEstoque';
 import BadgeMovimentoEstoque from '@/components/common/BadgeMovimentoEstoque';
+import DicaColuna from '@/components/common/DicaColuna';
 import { ClipboardCheck, Plus, X, Search, RefreshCw } from 'lucide-react';
 
 function buildSepColunas() {
@@ -306,6 +307,8 @@ export default function KanbanSeparacao() {
                     <div className="w-2 h-2 rounded-full" style={{ background: dot }} />
                     <Icon size={13} style={{ color: accent }} />
                     <span className="text-xs font-bold tracking-wide" style={{ color: accent }}>{label.toUpperCase()}</span>
+                    <DicaColuna coluna={colunas.find(c => c.key === key)} kanbanKey="separacao" accent={accent}
+                      proximoLabel={colunas.find(c => c.key === key)?.proximoLabel?.replace('→ ', '') || null} />
                   </div>
                   {movimento && <div className="mt-1"><BadgeMovimentoEstoque movimento={movimento} variante="coluna" /></div>}
                 </div>

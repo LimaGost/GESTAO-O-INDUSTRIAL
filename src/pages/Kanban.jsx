@@ -18,6 +18,7 @@ import { useRealtimeEntity } from '@/hooks/useRealtimeEntity';
 import { buildMapaCategorias, listarCategorias, registroTemCategoria } from '@/lib/categoriaFiltro';
 import { movimentoDaEtapa } from '@/lib/movimentoEstoque';
 import BadgeMovimentoEstoque from '@/components/common/BadgeMovimentoEstoque';
+import DicaColuna from '@/components/common/DicaColuna';
 
 const CORES_OPCOES = [
 { accent: '#64748B', bg: '#F8FAFC', border: '#CBD5E1', dot: '#94A3B8' },
@@ -667,6 +668,8 @@ export default function Kanban() {
                     <div className="w-2 h-2 rounded-full" style={{ background: dot }} />
                     <Icon size={13} style={{ color: accent }} />
                     <span className="text-xs font-bold tracking-wide" style={{ color: accent }}>{label.toUpperCase()}</span>
+                    <DicaColuna coluna={kanbanColunas.find((c) => c.key === key)} kanbanKey="producao" accent={accent}
+                      proximoLabel={PROXIMOS[key] ? kanbanColunas.find((c) => c.key === PROXIMOS[key])?.label : null} />
                   </div>
                   {movimento && <div className="mt-1"><BadgeMovimentoEstoque movimento={movimento} variante="coluna" /></div>}
                 </div>
