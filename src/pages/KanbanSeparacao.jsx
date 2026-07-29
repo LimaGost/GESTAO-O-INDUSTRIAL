@@ -98,30 +98,10 @@ export default function KanbanSeparacao() {
     const colProx = colunas.find(c => c.key === proximo);
     const acoesProx = Array.isArray(colProx?.acoes) && colProx.acoes.length > 0
       ? colProx.acoes
-      : (proximo === 'separado' ? ['gerar_etiquetas']
-        : proximo === 'liberado_expedicao' ? ['saida_estoque', 'marcar_pedido_separado'] : []);
+      : (proximo === 'liberado_expedicao' ? ['saida_estoque', 'marcar_pedido_separado'] : []);
     const temAcao = (a) => acoesProx.includes(a);
 
     try {
-      // Gerar etiquetas dos itens
-      if (temAcao('gerar_etiquetas') && sep.itens?.length > 0) {
-        const produtos = await base44.entities.Produto.list();
-        const lote = gerarLote(sep.id);
-        const dataProducao = hojeData();
-        await Promise.all((sep.itens || []).map(async (item) => {
-          const prod = produtos.find(p => p.id === item.produto_id);
-          await base44.entities.Etiqueta.create({
-            ordem_producao_id: sep.ordem_producao_id || null,
-            produto_id: item.produto_id || null,
-            produto_nome: item.produto_nome,
-            quantidade: item.quantidade,
-            lote, data_producao: dataProducao,
-            codigo_barras: prod?.codigo ? String(prod.codigo) : '',
-            impresso: false,
-          }).catch(() => {});
-        }));
-      }
-
       // Saída de estoque — quantidade reservada ao pedido
       // (exceto quando o estoque já foi reservado/baixado na criação do pedido)
       if (temAcao('saida_estoque') && sep.itens?.length > 0 && !sep.estoque_ja_reservado) {

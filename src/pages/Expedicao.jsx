@@ -440,6 +440,8 @@ export default function Expedicao() {
 
     await load();
     setEmitindoOpId(null);
+    // Etiqueta de endereço é impressa no momento em que a NF é emitida (coluna "NF Emitida")
+    setEtiquetaExpedicao(expedicao);
   };
 
   const criarExpedicao = async ({ pedidoId, transportadora, observacoes, itens, expedicaoExistenteId }) => {

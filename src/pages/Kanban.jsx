@@ -276,10 +276,8 @@ export default function Kanban() {
     // ── Embalagem: registrar data ───────────────────────────────────────────
     if (temAcao('registrar_data_embalagem')) updates.data_embalagem = agora;
 
-    // ── Em Separação: gerar etiqueta + saída do estoque ────────────────────
+    // ── Em Separação: saída do estoque ─────────────────────────────────────
     if (temAcao('saida_estoque')) {
-      const lote = ordem.lote || gerarLote(ordem.id);
-      const dataProducao = hojeData();
       cacheInvalidate('Produto');
       const produtosFrescos = await cachedFetch('Produto', () => base44.entities.Produto.list(), 0);
       
@@ -293,21 +291,29 @@ export default function Kanban() {
       }
       
       const itensOP = itensParaProcessar;
-      // Paralelo: atualiza estoque e cria etiquetas ao mesmo tempo
       await Promise.all(itensOP.map(async (item) => {
         const prod = produtosFrescos.find((p) => p.id === item.produto_id);
-        const sku = prod?.codigo ? String(prod.codigo) : '';
-        const [,] = await Promise.all([
-        prod ?
-        base44.entities.Produto.update(prod.id, { estoque_atual: Math.max(0, (prod.estoque_atual || 0) - item.quantidade) }).
-        then(() => registrarLog('Produto', prod.id, 'SAIDA_ESTOQUE', `Saída de ${item.quantidade} un de ${prod.nome} via separação OP ${ordem.numero}`).catch(() => {})) :
-        Promise.resolve(),
-        base44.entities.Etiqueta.create({
+        if (!prod) return;
+        await base44.entities.Produto.update(prod.id, { estoque_atual: Math.max(0, (prod.estoque_atual || 0) - item.quantidade) });
+        registrarLog('Produto', prod.id, 'SAIDA_ESTOQUE', `Saída de ${item.quantidade} un de ${prod.nome} via separação OP ${ordem.numero}`).catch(() => {});
+      }));
+    }
+
+    // ── Etiquetagem: gera as etiquetas dos itens ao entrar nesta coluna ─────
+    if (temAcao('gerar_etiquetas') || /etiqueta/i.test(colunaProximo?.label || '') || /etiqueta/i.test(proximo)) {
+      const lote = ordem.lote || gerarLote(ordem.id);
+      const dataProducao = hojeData();
+      const produtosEtq = await cachedFetch('Produto', () => base44.entities.Produto.list(), 60_000);
+      const itensEtq = ordem.itens && ordem.itens.length > 0 ? ordem.itens :
+        ordem.produto_id ? [{ produto_id: ordem.produto_id, produto_nome: ordem.produto_nome, quantidade: ordem.quantidade }] : [];
+      await Promise.all(itensEtq.map((item) => {
+        const prod = produtosEtq.find((p) => p.id === item.produto_id);
+        return base44.entities.Etiqueta.create({
           ordem_producao_id: ordem.id, produto_id: item.produto_id,
           produto_nome: item.produto_nome, quantidade: item.quantidade,
-          lote, data_producao: dataProducao, codigo_barras: sku, impresso: false
-        })]
-        );
+          lote, data_producao: dataProducao,
+          codigo_barras: prod?.codigo ? String(prod.codigo) : '', impresso: false
+        }).catch(() => {});
       }));
     }
 
