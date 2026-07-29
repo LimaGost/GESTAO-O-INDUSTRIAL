@@ -225,8 +225,8 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
           </button>
         )}
 
-        {/* Imprimir Etiqueta — visível na coluna de separação */}
-        {acaoAtual === 'saida_estoque' && (
+        {/* Imprimir Etiqueta — apenas na coluna "Em Embalagem" */}
+        {(ordem.status === 'em_embalagem' || acaoAtual === 'registrar_data_embalagem') && (
           <button
             onClick={() => {
               const itensOP = ordem.itens?.length > 0 ? ordem.itens : (ordem.produto_id ? [{ produto_id: ordem.produto_id, produto_nome: ordem.produto_nome, quantidade: ordem.quantidade }] : []);

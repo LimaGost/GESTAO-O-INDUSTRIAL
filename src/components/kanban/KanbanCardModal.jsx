@@ -48,6 +48,8 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
   const checkKey = `${ordem.id}_${ordem.status}`;
 
   const isSeparacao = ordem.status === 'em_separacao';
+  const isEmbalagem = ordem.status === 'em_embalagem' ||
+    (kanbanColunas.find(c => c.key === ordem.status)?.acao === 'registrar_data_embalagem');
   const [itensEditados, setItensEditados] = useState(null);
   const [novoItem, setNovoItem] = useState({ produto_id: '', produto_nome: '', quantidade: 1, estoque: 0 });
   const [showAdicionarItem, setShowAdicionarItem] = useState(false);
@@ -529,20 +531,22 @@ export default function KanbanCardModal({ ordem, checklistConfigs = {}, produtos
                   </button>
                 )}
 
-                {/* Imprimir Etiquetas */}
-                <button onClick={() => {
-                  itensNormalizados.forEach(item => {
-                    imprimirEtiquetaProduto({
-                      produto_nome: item.produto_nome,
-                      quantidade: item.quantidade,
-                      lote: ordem.lote || '—',
-                      data_producao: ordem.data_embalagem?.slice(0, 10) || new Date().toISOString().slice(0, 10),
-                      codigo_barras: item.produto_id || item.produto_nome,
+                {/* Imprimir Etiquetas — apenas na etapa "Em Embalagem" */}
+                {isEmbalagem && (
+                  <button onClick={() => {
+                    itensNormalizados.forEach(item => {
+                      imprimirEtiquetaProduto({
+                        produto_nome: item.produto_nome,
+                        quantidade: item.quantidade,
+                        lote: ordem.lote || '—',
+                        data_producao: ordem.data_embalagem?.slice(0, 10) || new Date().toISOString().slice(0, 10),
+                        codigo_barras: item.produto_id || item.produto_nome,
+                      });
                     });
-                  });
-                }} className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold border border-primary/30 text-primary hover:bg-primary/10 transition-colors">
-                  <Printer size={13} /> Imprimir Etiquetas
-                </button>
+                  }} className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold border border-primary/30 text-primary hover:bg-primary/10 transition-colors">
+                    <Printer size={13} /> Imprimir Etiquetas
+                  </button>
+                )}
 
                 {/* Enviar sobra p/ Estoque Fracionado */}
                 <button onClick={() => setShowSobra(true)}
