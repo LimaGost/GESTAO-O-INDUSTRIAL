@@ -3,7 +3,7 @@ import { acoesEfetivas } from './movimentoEstoque';
 
 const SUBTITULO_ACAO = {
   registrar_data_inicio: 'Marca o início da produção',
-  registrar_data_fim_producao: 'Entrada no estoque',
+  registrar_data_fim_producao: 'Marca o final da produção',
   registrar_data_embalagem: 'Itens sendo embalados',
   finalizar_producao: 'Vai para a Separação',
   saida_estoque: 'Saída do estoque',
@@ -23,6 +23,8 @@ const SUBTITULO_PADRAO = {
   a_produzir: 'Aguardando início da produção',
   producao_planejada: 'Produção planejada, sem movimentação',
   em_producao: 'Marca o início da produção',
+  produzido: 'Marca o final da produção',
+  producao_finalizada: 'Marca o final da produção',
   aguardando_finalizacao: 'Aguardando conferência final',
 };
 
