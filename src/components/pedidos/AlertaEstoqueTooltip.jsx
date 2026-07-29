@@ -1,9 +1,10 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
 
 /**
- * Ícone de alerta com explicação em popup ao passar o mouse.
- * O popup é renderizado em posição fixa para não ser cortado por containers com scroll.
+ * Ícone de alerta com explicação em popup.
+ * Desktop: abre ao passar o mouse. Touch (celular/tablet): abre ao toque e fecha ao tocar fora ou rolar.
+ * Renderizado em posição fixa para não ser cortado por containers com scroll.
  */
 const TEXTOS = {
   sem_estoque: {
@@ -18,45 +19,65 @@ const TEXTOS = {
   },
 };
 
-const LARGURA = 240;
-
 export default function AlertaEstoqueTooltip({ tipo }) {
   const info = TEXTOS[tipo];
   const ref = useRef(null);
   const [pos, setPos] = useState(null);
 
-  if (!info) return null;
+  const fechar = () => setPos(null);
 
   const mostrar = () => {
     const r = ref.current?.getBoundingClientRect();
     if (!r) return;
+    const largura = Math.min(260, window.innerWidth - 24);
     const left = Math.min(
-      Math.max(8, r.left + r.width / 2 - LARGURA / 2),
-      window.innerWidth - LARGURA - 8
+      Math.max(12, r.left + r.width / 2 - largura / 2),
+      window.innerWidth - largura - 12
     );
-    const abaixo = r.top < 140;
-    setPos({ left, top: abaixo ? r.bottom + 8 : r.top - 8, abaixo });
+    const abaixo = r.top < 150;
+    setPos({ left, top: abaixo ? r.bottom + 8 : r.top - 8, abaixo, largura });
   };
+
+  useEffect(() => {
+    if (!pos) return;
+    window.addEventListener('scroll', fechar, true);
+    window.addEventListener('resize', fechar);
+    return () => {
+      window.removeEventListener('scroll', fechar, true);
+      window.removeEventListener('resize', fechar);
+    };
+  }, [pos]);
+
+  if (!info) return null;
 
   return (
     <>
-      <span ref={ref} className="inline-flex" onClick={e => e.stopPropagation()}
-        onMouseEnter={mostrar} onMouseLeave={() => setPos(null)}>
-        <AlertTriangle size={11} className={`${info.cor} cursor-help`} />
+      <span
+        ref={ref}
+        className="inline-flex items-center justify-center p-1 -m-1 touch-manipulation"
+        onClick={e => { e.stopPropagation(); pos ? fechar() : mostrar(); }}
+        onMouseEnter={mostrar}
+        onMouseLeave={fechar}
+      >
+        <AlertTriangle size={13} className={`${info.cor} cursor-help`} />
       </span>
       {pos && (
-        <div
-          className="fixed z-[100] pointer-events-none bg-foreground text-background text-[11px] leading-snug rounded-lg px-2.5 py-2 shadow-xl"
-          style={{
-            left: pos.left,
-            top: pos.top,
-            width: LARGURA,
-            transform: pos.abaixo ? 'none' : 'translateY(-100%)',
-          }}
-        >
-          <span className="block font-bold mb-0.5">{info.titulo}</span>
-          {info.texto}
-        </div>
+        <>
+          {/* camada para fechar ao tocar fora (mobile) */}
+          <div className="fixed inset-0 z-[99] md:hidden" onClick={e => { e.stopPropagation(); fechar(); }} />
+          <div
+            className="fixed z-[100] pointer-events-none bg-foreground text-background text-xs leading-snug rounded-lg px-3 py-2 shadow-xl"
+            style={{
+              left: pos.left,
+              top: pos.top,
+              width: pos.largura,
+              transform: pos.abaixo ? 'none' : 'translateY(-100%)',
+            }}
+          >
+            <span className="block font-bold mb-0.5">{info.titulo}</span>
+            {info.texto}
+          </div>
+        </>
       )}
     </>
   );
