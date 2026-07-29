@@ -67,10 +67,6 @@ export default function SeparacaoCard({ separacao, onAvancar, loading, labelBota
             )}
             {(separacao.sem_rotulo || (separacao.itens || []).some(i => i.sem_rotulo)) && <BadgeSemRotulo />}
             <BadgeMovimentoEstoque movimento={movimentoEstoque} />
-            <span className="text-[10px] px-1.5 py-0.5 rounded font-medium"
-              style={{ background: origem.bg, color: origem.color, border: `1px solid ${origem.border}` }}>
-              {origem.label}
-            </span>
           </div>
         </div>
 
