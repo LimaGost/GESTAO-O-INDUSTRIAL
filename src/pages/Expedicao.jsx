@@ -98,10 +98,7 @@ function OPFinalizadaCard({ op, clienteNome, onEmitirNF, emitindo, onVerPedido }
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-xs font-bold text-muted-foreground">{op.numero}</p>
-          <p className="text-sm font-bold text-foreground leading-tight mt-0.5">{op.produto_nome}</p>
-          {clienteNome && (
-            <p className="text-xs text-purple-600 mt-0.5">👤 {clienteNome}</p>
-          )}
+          <p className="text-sm font-bold text-foreground leading-tight mt-0.5">{clienteNome || op.produto_nome}</p>
         </div>
         <div className="text-right flex-shrink-0">
           <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${op._origem === 'galpao' ? 'bg-amber-100 text-amber-700' : 'bg-teal-100 text-teal-700'}`}>
@@ -171,7 +168,7 @@ function ExpedicaoCard({ exp, coluna, onAvancar, onVoltar, onImprimirNF, onImpri
               )}
               {isWL && <span className="text-[9px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-bold">WL</span>}
             </div>
-            <p className="text-sm font-bold text-foreground leading-tight truncate">{exp.cliente_nome}{exp.pedido_numero ? ` • ${exp.pedido_numero}` : ''}</p>
+            <p className="text-sm font-bold text-foreground leading-tight truncate">{exp.cliente_nome}</p>
             {exp.pedido_numero && (
               <p className="text-xs text-muted-foreground mt-0.5">Pedido <span className="font-semibold text-foreground">#{exp.pedido_numero}</span></p>
             )}
