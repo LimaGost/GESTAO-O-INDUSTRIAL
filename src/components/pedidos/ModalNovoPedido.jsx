@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { X, CheckCircle, ChevronRight, ChevronLeft, User, Package, FileText, Search, Tag, UserPlus, CreditCard } from 'lucide-react';
 import SeletorProdutos from './SeletorProdutos';
-import PagamentoPedido, { getPagamentoLabel, getStatusPagamentoLabel } from './PagamentoPedido';
+import PagamentoPedido, { getPagamentoLabel, getStatusPagamentoLabel, formaPagamentoObrigatoria } from './PagamentoPedido';
 import NovoClienteRapido from './NovoClienteRapido';
 import SelecaoItensSemRotulo from './SelecaoItensSemRotulo';
 import { DestinoForm, getDestinoLabel } from './DestinoPedido';
@@ -56,8 +56,10 @@ export default function ModalNovoPedido({ clientes, produtos, loading, onConfirm
     return true;
   };
 
+  const pagamentoOk = !formaPagamentoObrigatoria(form.status_pagamento) || !!form.forma_pagamento;
+
   const handleConfirmar = () => {
-    if (!form.cliente_nome || form.itens.length === 0 || !form.forma_pagamento) return;
+    if (!form.cliente_nome || form.itens.length === 0 || !pagamentoOk) return;
     onConfirmar(form);
   };
 
@@ -310,7 +312,7 @@ export default function ModalNovoPedido({ clientes, produtos, loading, onConfirm
                 Próximo <ChevronRight size={15} />
               </button>
             ) : (
-              <button onClick={handleConfirmar} disabled={loading || !form.cliente_nome || form.itens.length === 0 || !form.forma_pagamento}
+              <button onClick={handleConfirmar} disabled={loading || !form.cliente_nome || form.itens.length === 0 || !pagamentoOk}
                 className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity">
                 <CheckCircle size={15} />
                 {loading ? 'Processando...' : 'Confirmar Pedido'}
