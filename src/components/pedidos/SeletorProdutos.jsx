@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
-import { Search, Plus, Minus, X, AlertTriangle, Package } from 'lucide-react';
+import { Search, Plus, Minus, X, Package } from 'lucide-react';
 import FiltroCategorias from '@/components/common/FiltroCategorias';
+import AlertaEstoqueTooltip from './AlertaEstoqueTooltip';
 
 export default function SeletorProdutos({ produtos, itens, onChange }) {
   const [busca, setBusca] = useState('');
@@ -115,8 +116,8 @@ export default function SeletorProdutos({ produtos, itens, onChange }) {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
                             <p className="text-xs font-medium text-muted-foreground">{p.codigo}</p>
-                            {semEstoque && <AlertTriangle size={11} className="text-red-500" />}
-                            {ficaAbaixoMin && <AlertTriangle size={11} className="text-amber-500" />}
+                            {semEstoque && <AlertaEstoqueTooltip tipo="sem_estoque" />}
+                            {ficaAbaixoMin && <AlertaEstoqueTooltip tipo="abaixo_minimo" />}
                           </div>
                           <p className="text-sm font-medium text-foreground truncate">{p.nome}</p>
                           <p className="text-xs text-muted-foreground">Est: {estoque}{(p.preco_unitario || p.preco) > 0 && ` · R$ ${(p.preco_unitario || p.preco).toFixed(2)}`}</p>
