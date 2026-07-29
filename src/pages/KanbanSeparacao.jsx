@@ -65,7 +65,9 @@ export default function KanbanSeparacao() {
         base44.entities.GrupoPedidos.list().catch(() => []),
         base44.entities.Produto.list().catch(() => []),
       ]);
-      setSeparacoes(seps);
+      // Oculta cards órfãos (pedido excluído) ou de pedidos cancelados
+      const pedidosOk = new Set(peds.filter(p => p.status !== 'cancelado').map(p => p.id));
+      setSeparacoes(seps.filter(s => !s.pedido_id || pedidosOk.has(s.pedido_id)));
       setPedidos(peds);
       setProdutos(prods);
       setGrupos(gps.filter(g => g.status !== 'desfeito'));

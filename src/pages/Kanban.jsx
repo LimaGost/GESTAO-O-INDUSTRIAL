@@ -201,7 +201,9 @@ export default function Kanban() {
     cachedFetch('Pedido', () => base44.entities.Pedido.list(), 60_000),
     base44.entities.GrupoPedidos.list().catch(() => [])]
     );
-    setOrdens(ords);
+    // Oculta OPs órfãs (pedido excluído) ou de pedidos cancelados
+    const pedidosOk = new Set(peds.filter((p) => p.status !== 'cancelado').map((p) => p.id));
+    setOrdens(ords.filter((o) => !o.pedido_id || pedidosOk.has(o.pedido_id)));
     setProdutos(prods);
     const pm = {};
     for (const p of peds) pm[p.id] = { nome: p.cliente_nome, cliente_id: p.cliente_id, white_label: p.white_label, white_label_marca: p.white_label_marca, observacoes: p.observacoes };
