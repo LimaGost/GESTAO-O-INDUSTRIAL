@@ -81,21 +81,21 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
 
       {/* Header */}
       <div className="px-3 pt-3 pb-2">
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <div className="flex-1 min-w-0">
+        <div className="flex flex-col gap-1.5 mb-2">
+          <div className="min-w-0 order-1">
             <p className="text-sm font-bold text-foreground truncate leading-tight">
               {clienteNome || ordem.numero}
             </p>
             <div className="flex items-center gap-1.5 flex-wrap mt-1">
               {ordem.pedido_numero && (
-                <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-medium">📋 {ordem.pedido_numero}</span>
+                <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-medium whitespace-nowrap">📋 {ordem.pedido_numero}</span>
               )}
               {clienteNome && (
-                <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-medium">{ordem.numero}</span>
+                <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-medium whitespace-nowrap">{ordem.numero}</span>
               )}
             </div>
           </div>
-          <div className="flex items-center gap-1.5 flex-wrap justify-end flex-shrink-0">
+          <div className="flex items-center gap-1.5 flex-wrap order-2">
             {ordem.white_label && (
               <span className="inline-flex items-center gap-0.5 text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-bold">
                 <Tag size={8} /> WL
