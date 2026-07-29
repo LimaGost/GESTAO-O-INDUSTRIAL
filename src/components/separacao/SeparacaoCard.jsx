@@ -79,19 +79,6 @@ export default function SeparacaoCard({ separacao, onAvancar, loading, labelBota
           </div>
         )}
 
-        {/* Aguardando produção (alocação parcial) */}
-        {separacao.status === 'aguardando_producao' && (
-          <div className="text-[10px] font-semibold mb-1.5 px-2 py-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 space-y-0.5">
-            <p>🟡 Aguardando Produção — {separacao.quantidade_pendente_producao || 0} un em produção</p>
-            <p className="text-green-600">🟢 {separacao.quantidade_total || 0} un já reservadas</p>
-          </div>
-        )}
-        {separacao.producao_concluida && separacao.status === 'aguardando_separacao' && (
-          <div className="flex items-center gap-1 text-[10px] font-semibold mb-1.5 px-2 py-1 rounded-lg bg-green-50 text-green-700 border border-green-200">
-            <CheckCircle size={10} /> Pedido completo — Pronto para Separação
-          </div>
-        )}
-
         {/* Itens resumo */}
         {separacao.itens?.length > 0 && (
           <div className="space-y-0.5 mb-2">
@@ -151,6 +138,19 @@ export default function SeparacaoCard({ separacao, onAvancar, loading, labelBota
 
         {separacao.observacoes && (
           <p className="text-[10px] text-muted-foreground italic line-clamp-1 mb-1">{separacao.observacoes}</p>
+        )}
+
+        {/* Aguardando produção (alocação parcial) — sempre no final do card */}
+        {separacao.status === 'aguardando_producao' && (
+          <div className="text-[10px] font-semibold mt-2 px-2 py-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 space-y-0.5">
+            <p>🟡 Aguardando Produção — {separacao.quantidade_pendente_producao || 0} un em produção</p>
+            <p className="text-green-600">🟢 {separacao.quantidade_total || 0} un já reservadas</p>
+          </div>
+        )}
+        {separacao.producao_concluida && separacao.status === 'aguardando_separacao' && (
+          <div className="flex items-center gap-1 text-[10px] font-semibold mt-2 px-2 py-1 rounded-lg bg-green-50 text-green-700 border border-green-200">
+            <CheckCircle size={10} /> Pedido completo — Pronto para Separação
+          </div>
         )}
       </div>
 
