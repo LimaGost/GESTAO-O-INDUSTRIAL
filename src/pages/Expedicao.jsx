@@ -312,7 +312,11 @@ export default function Expedicao() {
       base44.entities.Pedido.list(),
       base44.entities.SeparacaoGalpao.list('-created_date').catch(() => []),
     ]);
-    setExpedicoes(exps);
+    const pedidosOk = new Set(pedidos.filter(p => p.status !== 'cancelado').map(p => p.id));
+    // Expedições órfãs (pedido excluído) ou de pedidos cancelados não devem aparecer
+    const expsValidas = exps.filter(e => !e.pedido_id || pedidosOk.has(e.pedido_id));
+
+    setExpedicoes(expsValidas);
     setGalpaoExpIds(new Set(sepsGalpao.map(s => s.expedicao_id).filter(Boolean)));
 
     const expPedidoIds = new Set(exps.map(e => e.pedido_id).filter(Boolean));
