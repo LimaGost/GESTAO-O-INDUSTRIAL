@@ -251,56 +251,13 @@ export default function Pedidos() {
   };
 
   const cancelarPedido = async (id, numero) => {
-    if (!confirm(`Cancelar pedido ${numero}?\n\nIsso irá cancelar as ordens de produção e expedição vinculadas, e restaurar o estoque dos itens já separados.`)) return;
+    if (!confirm(`Cancelar pedido ${numero}?\n\nIsso irá cancelar TODOS os cards vinculados (produção, separação e expedição) e restaurar o estoque dos itens já separados.`)) return;
 
     const pedidoParaCancelar = pedidos.find(p => p.id === id);
+    if (!pedidoParaCancelar) return;
 
-    const [todasOPs, todasExps] = await Promise.all([
-      base44.entities.OrdemProducao.list(),
-      base44.entities.Expedicao.list(),
-    ]);
-
-    const opsVinculadas = todasOPs.filter(o => o.pedido_id === id && !['finalizado', 'cancelado'].includes(o.status));
-    const expVinculada = todasExps.find(e => e.pedido_id === id);
-
-    // 1. Cancela o pedido
-    await base44.entities.Pedido.update(id, { status: 'cancelado' });
-
-    // 2. Cancela as OPs vinculadas
-    await Promise.all(opsVinculadas.map(op =>
-      base44.entities.OrdemProducao.update(op.id, { status: 'cancelado' })
-    ));
-
-    // 3. Cancela a expedição vinculada (deleta se não entregue)
-    if (expVinculada && expVinculada.status !== 'entregue') {
-      await base44.entities.Expedicao.delete(expVinculada.id);
-    }
-
-    // 4. Restaura o estoque reservado no momento do pedido
-    // A quantidade reservada = quantidade total do pedido MENOS o que ficou nas OPs (que ainda não baixou)
-    if (pedidoParaCancelar?.itens?.length > 0) {
-      const todosItensOPs = opsVinculadas.flatMap(op => op.itens || []);
-      const produtosAtuais = await base44.entities.Produto.list();
-      for (const item of pedidoParaCancelar.itens) {
-        if (!item.produto_id) continue;
-        const qtdNasOPs = todosItensOPs
-          .filter(oi => oi.produto_id === item.produto_id)
-          .reduce((s, oi) => s + (oi.quantidade || 0), 0);
-        // O que foi reservado em estoque = total do item - o que ainda está pendente nas OPs
-        const qtdRestaurar = Math.max(0, (item.quantidade || 0) - qtdNasOPs);
-        if (qtdRestaurar > 0) {
-          const produtoAtual = produtosAtuais.find(p => p.id === item.produto_id);
-          if (produtoAtual) {
-            await base44.entities.Produto.update(item.produto_id, { estoque_atual: (produtoAtual.estoque_atual || 0) + qtdRestaurar });
-            await registrarLog('Produto', item.produto_id, 'DEVOLUCAO_ESTOQUE', `Devolução de ${qtdRestaurar} un para pedido cancelado ${numero}`);
-          }
-        }
-      }
-    }
-
-    await registrarLog('Pedido', id, 'CANCELAMENTO',
-      `Pedido ${numero} cancelado. ${opsVinculadas.length} OP(s) cancelada(s).${expVinculada ? ' Expedição removida.' : ''}`
-    );
+    const { cancelarPedidoEmCascata } = await import('@/lib/cancelamentoCascata');
+    await cancelarPedidoEmCascata(pedidoParaCancelar);
     await load();
   };
 

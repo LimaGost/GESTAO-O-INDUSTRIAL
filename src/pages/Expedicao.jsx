@@ -317,9 +317,12 @@ export default function Expedicao() {
 
     const expPedidoIds = new Set(exps.map(e => e.pedido_id).filter(Boolean));
 
+    // Pedidos válidos (existentes e não cancelados) — cards órfãos ou cancelados não aparecem
+    const pedidosValidos = new Map(pedidos.filter(p => p.status !== 'cancelado').map(p => [p.id, p]));
+
     const finalizadas = ordens.filter(o => {
       if (!['finalizado', 'producao_finalizada'].includes(o.status)) return false;
-      if (!o.pedido_id) return false;
+      if (!o.pedido_id || !pedidosValidos.has(o.pedido_id)) return false;
       return !expPedidoIds.has(o.pedido_id);
     });
 
