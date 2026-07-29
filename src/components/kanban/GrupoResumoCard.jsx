@@ -1,25 +1,36 @@
 import { useState } from 'react';
-import { ExternalLink, X, Package, Hash, Layers } from 'lucide-react';
+import { ExternalLink, X, Package, Hash, Layers, ArrowRight } from 'lucide-react';
 
 const qtdDaOrdem = (o) => (o.itens?.length > 0 ? o.itens.reduce((s, i) => s + (i.quantidade || 0), 0) : (o.quantidade || 0));
 const fmtData = (iso) => iso ? new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : null;
 
 /**
  * Card único (consolidado) para pedidos agrupados.
- * Fora: apenas cliente, os pedidos com a data abaixo de cada um e os totais somados.
- * "Ver Detalhes" expande e mostra os cards individuais de cada pedido.
+ * Fora: cliente, pedidos com data e totais somados.
+ * "Ver Detalhes" abre um pop-up com os itens somados de todos os pedidos
+ * e uma única ação de avanço (os pedidos seguem o fluxo juntos).
  */
-export default function GrupoResumoCard({ grupo, ordens, accent = '#7C3AED', children }) {
+export default function GrupoResumoCard({ grupo, ordens, accent = '#7C3AED', onAvancar, onOpenOrdem, labelBotao, avancando }) {
   const [aberto, setAberto] = useState(false);
 
   const totalUn = ordens.reduce((s, o) => s + qtdDaOrdem(o), 0);
   const totalItens = ordens.reduce((s, o) => s + (o.itens?.length || 1), 0);
 
-  // Um bloco por pedido do grupo, com a data logo abaixo do número
   const pedidos = (grupo.pedidos_numeros || []).map((num) => {
     const op = ordens.find((o) => o.pedido_numero === num);
     return { numero: num, data: fmtData(op?.created_date) };
   });
+
+  // Itens somados de todos os pedidos do grupo
+  const itensSomados = Object.values(ordens.reduce((acc, o) => {
+    const lista = o.itens?.length > 0 ? o.itens : [{ produto_nome: o.produto_nome, quantidade: o.quantidade }];
+    for (const it of lista) {
+      const k = it.produto_nome || '—';
+      if (!acc[k]) acc[k] = { nome: k, quantidade: 0 };
+      acc[k].quantidade += it.quantidade || 0;
+    }
+    return acc;
+  }, {}));
 
   return (
     <div className="border border-violet-300 rounded-2xl overflow-hidden mb-1.5 bg-white">
@@ -59,25 +70,65 @@ export default function GrupoResumoCard({ grupo, ordens, accent = '#7C3AED', chi
           onClick={() => setAberto(false)}>
           <div onClick={(e) => e.stopPropagation()}
             className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl max-h-[88vh] flex flex-col">
+
+            {/* Header */}
             <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-border flex-shrink-0">
               <div className="min-w-0">
                 <p className="font-bold text-foreground truncate">{grupo.cliente_nome}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {ordens.length} pedido{ordens.length !== 1 ? 's' : ''} agrupado{ordens.length !== 1 ? 's' : ''} · {totalItens} itens · {totalUn} un
+                  {ordens.length} pedidos juntos · {totalItens} itens · {totalUn} un
                 </p>
-                <div className="flex flex-wrap gap-1 mt-1.5">
-                  {pedidos.map((p) => (
-                    <span key={p.numero} className="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded font-medium">
-                      PED-{p.numero.replace(/^PED-/, '')}{p.data ? ` · ${p.data}` : ''}
-                    </span>
-                  ))}
-                </div>
               </div>
               <button onClick={() => setAberto(false)} className="p-1.5 hover:bg-muted rounded-lg flex-shrink-0">
                 <X size={16} className="text-muted-foreground" />
               </button>
             </div>
-            <div className="p-3 overflow-y-auto space-y-2.5 bg-violet-50/30">{children}</div>
+
+            <div className="p-4 overflow-y-auto space-y-4">
+              {/* Itens somados */}
+              <div className="border border-border rounded-xl overflow-hidden">
+                <div className="px-3 py-2 bg-muted/50 flex items-center justify-between">
+                  <span className="text-xs font-bold text-foreground">Itens somados do grupo</span>
+                  <span className="text-xs font-semibold text-muted-foreground">{totalUn} un</span>
+                </div>
+                <div className="divide-y divide-border/50">
+                  {itensSomados.map((it) => (
+                    <div key={it.nome} className="flex items-center justify-between gap-2 px-3 py-2">
+                      <span className="text-xs text-foreground truncate">{it.nome}</span>
+                      <span className="text-xs font-bold text-foreground flex-shrink-0">{it.quantidade} un</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Pedidos do grupo */}
+              <div className="space-y-1.5">
+                <p className="text-xs font-bold text-foreground">Pedidos do grupo</p>
+                {ordens.map((o) => (
+                  <button key={o.id}
+                    onClick={() => { setAberto(false); onOpenOrdem?.(o); }}
+                    className="w-full flex items-center justify-between gap-2 border border-border rounded-xl px-3 py-2 hover:bg-muted/50 transition-colors text-left">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-blue-700">{o.pedido_numero || o.numero}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{o.numero} · {qtdDaOrdem(o)} un</p>
+                    </div>
+                    <ExternalLink size={12} className="text-muted-foreground flex-shrink-0" />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Ação única — os pedidos avançam juntos */}
+            {onAvancar && labelBotao && (
+              <div className="px-4 py-3 border-t border-border flex-shrink-0">
+                <button onClick={async () => { for (const o of ordens) await onAvancar(o); setAberto(false); }}
+                  disabled={avancando}
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  style={{ background: `${accent}18`, color: accent }}>
+                  <ArrowRight size={14} /> {labelBotao} — {ordens.length} pedidos
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -746,9 +746,11 @@ export default function Kanban() {
                       return (
                     <>
                       {Object.values(gruposEmColuna).map(({ grupo, ordens: ordensGrupo }) => (
-                        <GrupoResumoCard key={`grp-${grupo.id}`} grupo={grupo} ordens={ordensGrupo} accent={accent}>
-                          {ordensGrupo.map(renderCard)}
-                        </GrupoResumoCard>
+                        <GrupoResumoCard key={`grp-${grupo.id}`} grupo={grupo} ordens={ordensGrupo} accent={accent}
+                          onAvancar={readonly ? null : avancarStatus}
+                          onOpenOrdem={(o) => setOrdemSelecionada(o)}
+                          avancando={ordensGrupo.some((o) => loadingId === o.id)}
+                          labelBotao={PROXIMOS[key] ? `→ ${kanbanColunas.find((c) => c.key === PROXIMOS[key])?.label || ''}` : null} />
                       ))}
                       {ordensNaoAgrupadas.map(renderCard)}
                     </>
