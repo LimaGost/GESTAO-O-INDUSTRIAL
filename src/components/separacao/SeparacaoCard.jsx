@@ -72,6 +72,13 @@ export default function SeparacaoCard({ separacao, onAvancar, loading, labelBota
           </div>
         </div>
 
+        {/* Atraso */}
+        {atrasada && (
+          <div className="flex items-center gap-1 text-[10px] font-semibold mb-2 px-1.5 py-1 rounded-lg bg-red-50 text-red-600">
+            <Calendar size={10} /> Atrasada — {fmtData(separacao.data_prevista)}
+          </div>
+        )}
+
         {/* Aguardando produção (alocação parcial) */}
         {separacao.status === 'aguardando_producao' && (
           <div className="text-[10px] font-semibold mb-1.5 px-2 py-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 space-y-0.5">
@@ -82,13 +89,6 @@ export default function SeparacaoCard({ separacao, onAvancar, loading, labelBota
         {separacao.producao_concluida && separacao.status === 'aguardando_separacao' && (
           <div className="flex items-center gap-1 text-[10px] font-semibold mb-1.5 px-2 py-1 rounded-lg bg-green-50 text-green-700 border border-green-200">
             <CheckCircle size={10} /> Pedido completo — Pronto para Separação
-          </div>
-        )}
-
-        {/* Atraso */}
-        {atrasada && (
-          <div className="flex items-center gap-1 text-[10px] font-semibold mb-2 px-1.5 py-1 rounded-lg bg-red-50 text-red-600">
-            <Calendar size={10} /> Atrasada — {fmtData(separacao.data_prevista)}
           </div>
         )}
 
