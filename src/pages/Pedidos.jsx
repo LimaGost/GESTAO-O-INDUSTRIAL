@@ -9,6 +9,7 @@ import ModalProcessarBling from '@/components/pedidos/ModalProcessarBling';
 import ModalProcessarPortal from '@/components/pedidos/ModalProcessarPortal';
 import ModalNovoPedido from '@/components/pedidos/ModalNovoPedido';
 import PedidoKanbanCard from '@/components/pedidos/PedidoKanbanCard';
+import GrupoPedidosResumoCard from '@/components/pedidos/GrupoPedidosResumoCard';
 import DicaColuna from '@/components/common/DicaColuna';
 import ModalDetalhesPedido from '@/components/pedidos/ModalDetalhesPedido';
 import ModalSincronizarBling from '@/components/pedidos/ModalSincronizarBling';
@@ -313,6 +314,15 @@ export default function Pedidos() {
     });
   }, [pedidos, busca, filtroWL]);
 
+  // Mapa pedido_id → grupo ativo (para consolidar cards agrupados no Kanban)
+  const grupoPorPedido = useMemo(() => {
+    const m = {};
+    for (const g of grupos) {
+      for (const pid of (g.pedidos_ids || [])) m[pid] = g;
+    }
+    return m;
+  }, [grupos]);
+
   const totalPorStatus = useMemo(() => {
     const m = {};
     for (const c of COLUNAS_KANBAN) {
@@ -482,23 +492,48 @@ export default function Pedidos() {
                     </div>
                     <p className="text-xs text-muted-foreground">Sem pedidos</p>
                   </div>
-                ) : (
-                  cardsDaColuna.map(card => (
-                    <PedidoKanbanCard
-                      key={card.id}
-                      pedido={card}
-                      statusEfetivo={statusEfetivo(card)}
-                      ocultarValores={ocultarValores}
-                      readonly={readonly}
-                      onVerDetalhes={setPedidoDetalhes}
-                      onExpedir={expedir}
-                      onCancelar={cancelarPedido}
-                      onProcessarBling={setPedidoBlingProcessar}
-                      onProcessarPortal={setPedidoPortalProcessar}
-                      onAvancarSeparado={avancarParaSeparado}
-                    />
-                  ))
-                )}
+                ) : (() => {
+                  const gruposNaColuna = {};
+                  const soltos = [];
+                  for (const card of cardsDaColuna) {
+                    const g = grupoPorPedido[card.id];
+                    if (g) {
+                      if (!gruposNaColuna[g.id]) gruposNaColuna[g.id] = { grupo: g, pedidos: [] };
+                      gruposNaColuna[g.id].pedidos.push(card);
+                    } else {
+                      soltos.push(card);
+                    }
+                  }
+                  return (
+                    <>
+                      {Object.values(gruposNaColuna).map(({ grupo, pedidos: pedidosGrupo }) => (
+                        <GrupoPedidosResumoCard
+                          key={`grp-${grupo.id}`}
+                          grupo={grupo}
+                          pedidos={pedidosGrupo}
+                          accent={coluna.color}
+                          ocultarValores={ocultarValores}
+                          onVerPedido={setPedidoDetalhes}
+                        />
+                      ))}
+                      {soltos.map(card => (
+                        <PedidoKanbanCard
+                          key={card.id}
+                          pedido={card}
+                          statusEfetivo={statusEfetivo(card)}
+                          ocultarValores={ocultarValores}
+                          readonly={readonly}
+                          onVerDetalhes={setPedidoDetalhes}
+                          onExpedir={expedir}
+                          onCancelar={cancelarPedido}
+                          onProcessarBling={setPedidoBlingProcessar}
+                          onProcessarPortal={setPedidoPortalProcessar}
+                          onAvancarSeparado={avancarParaSeparado}
+                        />
+                      ))}
+                    </>
+                  );
+                })()}
               </div>
             </div>
           );
