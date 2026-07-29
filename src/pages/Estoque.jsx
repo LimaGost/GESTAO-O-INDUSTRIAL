@@ -6,7 +6,7 @@ import { gerarNumero } from '@/lib/numeracao';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 import PullToRefresh from '@/components/PullToRefresh';
 import SelectMobile, { SelectOption } from '@/components/ui/select-mobile';
-import { listarFracionado } from '@/lib/estoqueFracionado';
+import { listarFracionado, adicionarFracionado, retirarFracionado } from '@/lib/estoqueFracionado';
 import { calcularCaixas, formatarCaixas } from '@/lib/calculoCaixas';
 
 function StatusBadge({ zerado, alertaMax, alerta }) {
@@ -31,7 +31,7 @@ export default function Estoque() {
   const [produtos, setProdutos] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [showAjuste, setShowAjuste] = useState(false);
-  const [ajuste, setAjuste] = useState({ produto_id: '', tipo: 'entrada', quantidade: 1, motivo: '' });
+  const [ajuste, setAjuste] = useState({ produto_id: '', tipo: 'entrada', quantidade: 1, motivo: '', estoque: 'principal' });
   const [loading, setLoading] = useState(false);
   const [busca, setBusca] = useState('');
   const [fracionados, setFracionados] = useState({});
@@ -75,6 +75,32 @@ export default function Estoque() {
     const prod = produtos.find(p => p.id === ajuste.produto_id);
     if (!prod) return;
 
+    // ── Estoque Desmontado (fracionado) ──
+    if (ajuste.estoque === 'desmontado') {
+      setLoading(true);
+      try {
+        if (ajuste.tipo === 'entrada') {
+          await adicionarFracionado({
+            produto_id: prod.id, produto_nome: prod.nome, produto_codigo: prod.codigo,
+            quantidade: ajuste.quantidade, origem: `Ajuste manual — ${ajuste.motivo || 'sem motivo'}`,
+          });
+        } else {
+          await retirarFracionado({
+            produto_id: prod.id, produto_nome: prod.nome,
+            quantidade: ajuste.quantidade, motivo: `Ajuste manual — ${ajuste.motivo || 'sem motivo'}`,
+          });
+        }
+      } catch (e) {
+        setLoading(false);
+        return alert(`❌ ${e.message}`);
+      }
+      setShowAjuste(false);
+      setAjuste({ produto_id: '', tipo: 'entrada', quantidade: 1, motivo: '', estoque: 'principal' });
+      await load();
+      setLoading(false);
+      return;
+    }
+
     let novoEstoque = ajuste.tipo === 'entrada'
       ? (prod.estoque_atual || 0) + ajuste.quantidade
       : (prod.estoque_atual || 0) - ajuste.quantidade;
@@ -99,7 +125,7 @@ export default function Estoque() {
     }
 
     setShowAjuste(false);
-    setAjuste({ produto_id: '', tipo: 'entrada', quantidade: 1, motivo: '' });
+    setAjuste({ produto_id: '', tipo: 'entrada', quantidade: 1, motivo: '', estoque: 'principal' });
     await load();
     setLoading(false);
   };
@@ -296,7 +322,7 @@ export default function Estoque() {
                   const pct = p.estoque_minimo > 0 ? Math.min(100, Math.round((est / (p.estoque_minimo * 2)) * 100)) : 100;
                   return (
                     <tr key={p.id}
-                      onClick={() => { if (!readonly) { setAjuste({ produto_id: p.id, tipo: 'entrada', quantidade: 1, motivo: '' }); setShowAjuste(true); } }}
+                      onClick={() => { if (!readonly) { setAjuste({ produto_id: p.id, tipo: 'entrada', quantidade: 1, motivo: '', estoque: 'principal' }); setShowAjuste(true); } }}
                       className={`transition-colors ${readonly ? '' : 'cursor-pointer hover:bg-primary/5'} ${zerado ? 'bg-red-50/40' : alerta ? 'bg-amber-50/30' : ''}`}>
                       <td className="px-4 py-3">
                         <div className="flex flex-col gap-1 min-w-[140px]">
@@ -428,6 +454,23 @@ export default function Estoque() {
               </button>
             </div>
             <div className="p-6 space-y-4">
+              {/* Qual estoque */}
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block font-semibold">Estoque *</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { v: 'principal', l: '📦 Principal', sub: 'lacrado', cor: 'border-green-400 bg-green-50 text-green-700' },
+                    { v: 'desmontado', l: '🔓 Desmontado', sub: 'avulso', cor: 'border-amber-400 bg-amber-50 text-amber-700' },
+                  ].map(s => (
+                    <button key={s.v} onClick={() => setAjuste(a => ({ ...a, estoque: s.v }))}
+                      className={`py-2 rounded-xl text-xs font-bold border-2 transition-all ${ajuste.estoque === s.v ? s.cor : 'border-border text-muted-foreground'}`}>
+                      {s.l}
+                      <span className="block text-[10px] font-normal opacity-70">{s.sub}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Tipo entrada/saida */}
               <div className="grid grid-cols-2 gap-2">
                 {[{ v: 'entrada', l: '+ Entrada', cor: 'border-green-400 bg-green-50 text-green-700' }, { v: 'saida', l: '− Saída', cor: 'border-red-400 bg-red-50 text-red-600' }].map(t => (
@@ -447,26 +490,30 @@ export default function Estoque() {
                   isMobile={isMobileTela}
                 >
                   {produtos.map(p => (
-                    <SelectOption key={p.id} value={p.id}>{`${p.nome} — Atual: ${p.estoque_atual || 0}`}</SelectOption>
+                    <SelectOption key={p.id} value={p.id}>{`${p.nome} — Lacrado: ${p.estoque_atual || 0} · Avulso: ${fracionados[p.id] || 0}`}</SelectOption>
                   ))}
                 </SelectMobile>
-                {produtoAjuste && (
-                  <div className="mt-2 flex items-center gap-3 bg-muted/40 rounded-xl px-3 py-2">
-                    <div className="flex-1">
-                      <p className="text-xs text-muted-foreground">Estoque atual</p>
-                      <p className="text-lg font-bold text-foreground">{produtoAjuste.estoque_atual || 0} <span className="text-xs font-normal text-muted-foreground">{produtoAjuste.unidade || 'un'}</span></p>
+                {produtoAjuste && (() => {
+                  const saldo = ajuste.estoque === 'desmontado'
+                    ? (fracionados[produtoAjuste.id] || 0)
+                    : (produtoAjuste.estoque_atual || 0);
+                  return (
+                    <div className="mt-2 flex items-center gap-3 bg-muted/40 rounded-xl px-3 py-2">
+                      <div className="flex-1">
+                        <p className="text-xs text-muted-foreground">
+                          Saldo {ajuste.estoque === 'desmontado' ? 'avulso' : 'lacrado'}
+                        </p>
+                        <p className="text-lg font-bold text-foreground">{saldo} <span className="text-xs font-normal text-muted-foreground">{produtoAjuste.unidade || 'un'}</span></p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">Após ajuste</p>
+                        <p className={`text-lg font-bold ${ajuste.tipo === 'entrada' ? 'text-green-600' : 'text-red-500'}`}>
+                          {ajuste.tipo === 'entrada' ? saldo + (ajuste.quantidade || 0) : Math.max(0, saldo - (ajuste.quantidade || 0))}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Após ajuste</p>
-                      <p className={`text-lg font-bold ${ajuste.tipo === 'entrada' ? 'text-green-600' : 'text-red-500'}`}>
-                        {ajuste.tipo === 'entrada'
-                          ? (produtoAjuste.estoque_atual || 0) + (ajuste.quantidade || 0)
-                          : Math.max(0, (produtoAjuste.estoque_atual || 0) - (ajuste.quantidade || 0))
-                        }
-                      </p>
-                    </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
 
               <div>
