@@ -97,7 +97,8 @@ export default function SeparacaoCard({ separacao, onAvancar, loading, labelBota
         <div className="flex items-center gap-2 flex-wrap text-[10px] text-muted-foreground mb-2">
           <span className="flex items-center gap-0.5"><Hash size={9} />{separacao.quantidade_itens || 0} itens</span>
           <span className="flex items-center gap-0.5"><Package size={9} />{separacao.quantidade_total || 0} un</span>
-          {separacao.data_prevista && <span className="flex items-center gap-0.5"><Calendar size={9} />{fmtData(separacao.data_prevista)}</span>}
+          {separacao.created_date && <span className="flex items-center gap-0.5"><Clock size={9} />Pedido {fmtData(separacao.created_date)}</span>}
+          {separacao.data_prevista && <span className="flex items-center gap-0.5"><Calendar size={9} />Prev. {fmtData(separacao.data_prevista)}</span>}
         </div>
 
         {/* Entrega */}
