@@ -673,7 +673,7 @@ export default function Kanban() {
                       proximoLabel={PROXIMOS[key] ? kanbanColunas.find((c) => c.key === PROXIMOS[key])?.label : null} />
                   </div>
                   {(() => {
-                    const sub = subtituloEtapa(kanbanColunas.find((c) => c.key === key), 'producao');
+                    const sub = subtituloEtapa(kanbanColunas.find((c) => c.key === key), 'producao', kanbanColunas.findIndex((c) => c.key === key) + 1);
                     return sub ? <p className="text-[10px] mt-0.5 leading-tight opacity-70" style={{ color: accent }}>{sub}</p> : null;
                   })()}
                   {movimento && <div className="mt-1"><BadgeMovimentoEstoque movimento={movimento} variante="coluna" /></div>}

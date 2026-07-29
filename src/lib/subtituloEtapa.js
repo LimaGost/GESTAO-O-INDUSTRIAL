@@ -1,35 +1,37 @@
-// Subtítulo curto de cada coluna do Kanban — explica em uma linha o que ocorre na etapa.
+// Passo a passo de cada coluna do Kanban — instrução curta do que o usuário deve fazer na etapa.
 import { acoesEfetivas } from './movimentoEstoque';
 
-const SUBTITULO_ACAO = {
-  registrar_data_inicio: 'Marca o início da produção',
-  registrar_data_fim_producao: 'Entrada no estoque',
-  registrar_data_embalagem: 'Itens sendo embalados',
-  finalizar_producao: 'Vai para a Separação',
-  saida_estoque: 'Saída do estoque',
-  gerar_etiquetas: 'Gera as etiquetas',
-  entrada_estoque: 'Entrada no estoque',
-  criar_separacao: 'Cria card na Separação',
-  criar_separacao_galpao: 'Cria card na Separação Galpão',
-  criar_expedicao: 'Cria card na Expedição',
-  criar_producao: 'Cria a Ordem de Produção',
-  marcar_pedido_separado: 'Pedido marcado como separado',
-  finalizar_expedicao: 'Pronto para expedir',
-  finalizar_pedido: 'Pedido finalizado',
-  notificar_cliente: 'Notifica o cliente',
+const INSTRUCAO_ACAO = {
+  registrar_data_inicio: 'Inicie a produção das unidades',
+  registrar_data_fim_producao: 'Confira a quantidade produzida — as unidades entram no estoque',
+  registrar_data_embalagem: 'Embale os itens e confira as quantidades',
+  finalizar_producao: 'Finalize a produção — o card segue para a Separação',
+  saida_estoque: 'Separe os itens — as unidades saem do estoque',
+  gerar_etiquetas: 'Imprima e aplique as etiquetas nos itens',
+  entrada_estoque: 'Confira as unidades — elas entram no estoque',
+  criar_separacao: 'Ao avançar, o card é criado na Separação',
+  criar_separacao_galpao: 'Ao avançar, o card é criado na Separação Galpão',
+  criar_expedicao: 'Ao avançar, o card é criado na Expedição',
+  criar_producao: 'Ao avançar, a Ordem de Produção é criada',
+  marcar_pedido_separado: 'Confira o pedido e marque como separado',
+  finalizar_expedicao: 'Confira e libere o pedido para expedição',
+  finalizar_pedido: 'Finalize o pedido',
+  notificar_cliente: 'Ao avançar, o cliente é notificado',
 };
 
-const SUBTITULO_PADRAO = {
-  a_produzir: 'Aguardando início da produção',
-  producao_planejada: 'Produção planejada, sem movimentação',
-  em_producao: 'Marca o início da produção',
-  aguardando_finalizacao: 'Aguardando conferência final',
+const INSTRUCAO_PADRAO = {
+  a_produzir: 'Confira os itens e avance quando iniciar a produção',
+  producao_planejada: 'Programe a produção e avance quando começar',
+  produzido: 'Confira o resultado e avance para a próxima etapa',
+  aguardando_finalizacao: 'Faça a conferência final e avance',
 };
 
-/** Retorna um subtítulo curto para a coluna, ou null se não houver o que explicar. */
-export function subtituloEtapa(coluna, kanbanKey) {
+/** Instrução curta ("passo a passo") da coluna para o usuário. */
+export function subtituloEtapa(coluna, kanbanKey, passo) {
   if (!coluna) return null;
-  const textos = acoesEfetivas(coluna, kanbanKey).map((a) => SUBTITULO_ACAO[a]).filter(Boolean);
-  if (textos.length > 0) return textos.join(' · ');
-  return SUBTITULO_PADRAO[coluna.key] || 'Sem movimentação de estoque';
+  const textos = acoesEfetivas(coluna, kanbanKey).map((a) => INSTRUCAO_ACAO[a]).filter(Boolean);
+  const texto = textos.length > 0
+    ? textos.join(' · ')
+    : (INSTRUCAO_PADRAO[coluna.key] || 'Confira os itens e avance para a próxima etapa');
+  return passo ? `Passo ${passo}: ${texto}` : texto;
 }
