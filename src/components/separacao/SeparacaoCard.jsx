@@ -42,35 +42,32 @@ export default function SeparacaoCard({ separacao, onAvancar, loading, labelBota
       <div className="px-3 pt-3 pb-2">
         {/* Header */}
         <div className="flex items-start justify-between gap-2 mb-2">
-          <div className="flex items-center gap-1.5 flex-1 min-w-0 flex-wrap">
-            <span className="text-xs font-bold text-foreground truncate">
-              {separacao.cliente_nome && separacao.pedido_numero
-                ? `${separacao.cliente_nome} • ${separacao.pedido_numero}`
-                : separacao.numero}
-            </span>
-            {separacao.ordem_producao_numero && (
-              <span className="text-[10px] bg-green-50 text-green-600 px-1.5 py-0.5 rounded font-medium flex-shrink-0">🏭 {separacao.ordem_producao_numero}</span>
-            )}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-foreground truncate leading-tight">
+              {separacao.cliente_nome || separacao.grupo_cliente_nome || separacao.numero}
+            </p>
+            <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+              {separacao.pedido_numero && (
+                <span className="text-[10px] text-muted-foreground font-medium">#{separacao.pedido_numero}</span>
+              )}
+              {separacao.ordem_producao_numero && (
+                <span className="text-[10px] text-muted-foreground">🏭 {separacao.ordem_producao_numero}</span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap justify-end flex-shrink-0">
             {separacao.white_label && (
               <span className="inline-flex items-center gap-0.5 text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-bold flex-shrink-0">
                 <Tag size={8} /> WL
               </span>
             )}
             {(separacao.sem_rotulo || (separacao.itens || []).some(i => i.sem_rotulo)) && <BadgeSemRotulo />}
+            <span className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+              style={{ background: origem.bg, color: origem.color, border: `1px solid ${origem.border}` }}>
+              {origem.label}
+            </span>
           </div>
-          <span className="text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0"
-            style={{ background: origem.bg, color: origem.color, border: `1px solid ${origem.border}` }}>
-            {origem.label}
-          </span>
         </div>
-
-        {/* Vínculo com pedido */}
-        {separacao.pedido_numero && (
-          <div className="flex items-center gap-1 text-[10px] font-bold mb-1.5 px-2 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-200">
-            <ClipboardList size={10} className="flex-shrink-0" />
-            <span className="truncate">Pedido {separacao.pedido_numero}</span>
-          </div>
-        )}
 
         {/* Aguardando produção (alocação parcial) */}
         {separacao.status === 'aguardando_producao' && (
@@ -89,18 +86,6 @@ export default function SeparacaoCard({ separacao, onAvancar, loading, labelBota
         {atrasada && (
           <div className="flex items-center gap-1 text-[10px] font-semibold mb-2 px-1.5 py-1 rounded-lg bg-red-50 text-red-600">
             <Calendar size={10} /> Atrasada — {fmtData(separacao.data_prevista)}
-          </div>
-        )}
-
-        {/* Cliente */}
-        {separacao.cliente_nome && (
-          <div className="flex items-center gap-1 text-xs text-blue-600 mb-1.5 bg-blue-50 px-2 py-1 rounded-lg">
-            <User size={10} className="flex-shrink-0" /><span className="truncate font-medium">{separacao.cliente_nome}</span>
-          </div>
-        )}
-        {separacao.grupo_cliente_nome && !separacao.cliente_nome && (
-          <div className="flex items-center gap-1 text-xs text-violet-600 mb-1.5 bg-violet-50 px-2 py-1 rounded-lg">
-            <User size={10} className="flex-shrink-0" /><span className="truncate font-medium">{separacao.grupo_cliente_nome}</span>
           </div>
         )}
 

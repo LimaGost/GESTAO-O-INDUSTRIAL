@@ -80,19 +80,24 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
       {/* Header */}
       <div className="px-3 pt-3 pb-2">
         <div className="flex items-start justify-between gap-2 mb-2">
-          <div className="flex items-center gap-1.5 flex-1 min-w-0 flex-wrap">
-            <span className="text-xs font-bold text-foreground truncate">{ordem.numero}</span>
-            {ordem.pedido_numero && (
-              <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-medium flex-shrink-0">📋 {ordem.pedido_numero}</span>
-            )}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-foreground truncate leading-tight">
+              {clienteNome || ordem.numero}
+            </p>
+            <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+              {ordem.pedido_numero && (
+                <span className="text-[10px] text-muted-foreground font-medium">#{ordem.pedido_numero}</span>
+              )}
+              {clienteNome && <span className="text-[10px] text-muted-foreground">{ordem.numero}</span>}
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap justify-end flex-shrink-0">
             {ordem.white_label && (
-              <span className="inline-flex items-center gap-0.5 text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-bold flex-shrink-0">
+              <span className="inline-flex items-center gap-0.5 text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-bold">
                 <Tag size={8} /> WL
               </span>
             )}
             {(ordem.sem_rotulo || (ordem.itens || []).some(i => i.sem_rotulo)) && <BadgeSemRotulo />}
-          </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
             <span className="text-[10px] px-1.5 py-0.5 rounded font-medium"
               style={{ background: origemCfg.bg, color: origemCfg.color, border: `1px solid ${origemCfg.border}` }}>
               {origemCfg.label}
@@ -122,13 +127,6 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
           <div className={`flex items-center gap-1 text-[10px] font-semibold mb-2 px-1.5 py-1 rounded-lg ${urgente ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'}`}>
             <AlertTriangle size={10} />
             {urgente ? `Urgente — ${tempo?.text}` : `Atenção — ${tempo?.text}`}
-          </div>
-        )}
-
-        {/* Cliente */}
-        {clienteNome && (
-          <div className="flex items-center gap-1 text-xs text-blue-600 mb-1.5 bg-blue-50 px-2 py-1 rounded-lg">
-            <User size={10} className="flex-shrink-0" /><span className="truncate font-medium">{clienteNome}</span>
           </div>
         )}
 
