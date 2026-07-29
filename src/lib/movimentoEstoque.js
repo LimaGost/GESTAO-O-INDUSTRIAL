@@ -31,10 +31,7 @@ export function acoesEfetivas(coluna, kanbanKey) {
     ? coluna.acoes
     : (coluna?.acao && coluna.acao !== 'nenhuma' ? [coluna.acao] : []);
   if (acoes.length > 0) return acoes;
-  if (kanbanKey === 'separacao') {
-    if (coluna?.key === 'separado') return ['gerar_etiquetas'];
-    if (coluna?.key === 'liberado_expedicao') return ['saida_estoque'];
-  }
+  if (kanbanKey === 'separacao' && coluna?.key === 'liberado_expedicao') return ['saida_estoque'];
   return [];
 }
 

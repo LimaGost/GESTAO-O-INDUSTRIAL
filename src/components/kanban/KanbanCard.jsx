@@ -3,6 +3,7 @@ import { imprimirEtiquetaProduto } from '@/lib/imprimirEtiquetaProduto';
 import CardChecklist from './CardChecklist';
 import BadgeSemRotulo from '@/components/common/BadgeSemRotulo';
 import BadgeMovimentoEstoque from '@/components/common/BadgeMovimentoEstoque';
+import BadgeEtiqueta from '@/components/common/BadgeEtiqueta';
 
 function fmtData(iso) {
   if (!iso) return null;
@@ -45,7 +46,7 @@ function tempoDecorrido(dataISO) {
   return { text: `${m}min`, hours };
 }
 
-export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, checklistOk, setChecklistOk, onAvancar, loading, onOpenModal, labelBotao, acaoAtual, onCancelar, etapasKeys, colunaLabel, movimentoEstoque }) {
+export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, checklistOk, setChecklistOk, onAvancar, loading, onOpenModal, labelBotao, acaoAtual, onCancelar, etapasKeys, colunaLabel, movimentoEstoque, etiquetaEtapa }) {
   const origem = ordem.origem || 'manual';
   const origemCfg = ORIGEM_CONFIG[origem] || ORIGEM_CONFIG.manual;
   const checkKey = `${ordem.id}_${ordem.status}`;
@@ -102,6 +103,7 @@ export default function KanbanCard({ ordem, clienteNome, checklistConfigs = {}, 
             )}
             {(ordem.sem_rotulo || (ordem.itens || []).some(i => i.sem_rotulo)) && <BadgeSemRotulo />}
             <BadgeMovimentoEstoque movimento={movimentoEstoque} />
+            <BadgeEtiqueta etiqueta={etiquetaEtapa} />
             <span className="text-[10px] px-1.5 py-0.5 rounded font-medium"
               style={{ background: origemCfg.bg, color: origemCfg.color, border: `1px solid ${origemCfg.border}` }}>
               {origemCfg.label}

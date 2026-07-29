@@ -20,6 +20,8 @@ import { movimentoDaEtapa } from '@/lib/movimentoEstoque';
 import BadgeMovimentoEstoque from '@/components/common/BadgeMovimentoEstoque';
 import DicaColuna from '@/components/common/DicaColuna';
 import { subtituloEtapa } from '@/lib/subtituloEtapa';
+import { etiquetaDaEtapa } from '@/lib/etiquetaEtapa';
+import BadgeEtiqueta from '@/components/common/BadgeEtiqueta';
 
 const CORES_OPCOES = [
 { accent: '#64748B', bg: '#F8FAFC', border: '#CBD5E1', dot: '#94A3B8' },
@@ -660,6 +662,7 @@ export default function Kanban() {
       <div className={`flex gap-3 overflow-x-auto pb-4 flex-1 min-h-0 items-start ${isMobile ? 'snap-x snap-mandatory' : ''}`}>
         {COLUNAS.map(({ key, label, icon: Icon, accent, bg, border, dot }) => {
           const movimento = movimentoDaEtapa(kanbanColunas.find((c) => c.key === key), 'producao');
+          const etiquetaEtapa = etiquetaDaEtapa(kanbanColunas.find((c) => c.key === key), 'producao');
           const colOrdens = ordensFiltradas.filter((o) => o.status === key);
           const total = ordens.filter((o) => o.status === key).length;
           const colWidth = isMobile ? 'w-80 sm:w-96' : 'w-72';
@@ -682,7 +685,12 @@ export default function Kanban() {
                     const sub = subtituloEtapa(kanbanColunas.find((c) => c.key === key), 'producao');
                     return sub ? <p className="text-[10px] mt-0.5 leading-tight opacity-70" style={{ color: accent }}>{sub}</p> : null;
                   })()}
-                  {movimento && <div className="mt-1"><BadgeMovimentoEstoque movimento={movimento} variante="coluna" /></div>}
+                  {(movimento || etiquetaEtapa) && (
+                    <div className="mt-1 flex items-center gap-1 flex-wrap">
+                      {movimento && <BadgeMovimentoEstoque movimento={movimento} variante="coluna" />}
+                      {etiquetaEtapa && <BadgeEtiqueta etiqueta={etiquetaEtapa} variante="coluna" />}
+                    </div>
+                  )}
                 </div>
                 <span className="text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full text-white"
                 style={{ background: accent, opacity: total === 0 ? 0.4 : 1 }}>{total}</span>
@@ -729,6 +737,7 @@ export default function Kanban() {
                       acaoAtual={kanbanColunas.find((c) => c.key === key)?.acao || ''}
                       colunaLabel={kanbanColunas.find((c) => c.key === key)?.label || ''}
                       movimentoEstoque={movimento}
+                      etiquetaEtapa={etiquetaEtapa}
                       onCancelar={key === 'a_produzir' && podeGerenciarProducao && !readonly ? cancelarOP : null}
                       />
                       );

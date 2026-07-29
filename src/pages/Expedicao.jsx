@@ -15,6 +15,8 @@ import ModalItensPedido from '@/components/expedicao/ModalItensPedido';
 import ModalCheckoutConferencia from '@/components/expedicao/ModalCheckoutConferencia';
 import OrdenarPor from '@/components/common/OrdenarPor';
 import DicaColuna from '@/components/common/DicaColuna';
+import BadgeEtiqueta from '@/components/common/BadgeEtiqueta';
+import { etiquetaDaEtapa } from '@/lib/etiquetaEtapa';
 import { ordenarCards } from '@/lib/ordenacaoCards';
 const EXP_COLUNAS_DEFAULT = [
   { key: 'a_expedir', label: 'A Expedir',    cor: 4, desc: 'OPs prontas para NF',     fixo: true },
@@ -911,14 +913,19 @@ export default function Expedicao() {
               {/* Coluna header */}
               <div className="px-4 py-3 flex items-center justify-between sticky top-0 z-10"
                 style={{ background: coluna.bg, borderBottom: `1px solid ${coluna.border}` }}>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full" style={{ background: coluna.dot }} />
-                  <Icon size={13} style={{ color: coluna.accent }} />
-                  <span className="text-xs font-bold tracking-wide" style={{ color: coluna.accent }}>
-                    {coluna.label.toUpperCase()}
-                  </span>
-                  <DicaColuna coluna={coluna} kanbanKey="expedicao" accent={coluna.accent}
-                    proximoLabel={colunasExp[colunasExp.findIndex(c => c.key === coluna.key) + 1]?.label || null} />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full" style={{ background: coluna.dot }} />
+                    <Icon size={13} style={{ color: coluna.accent }} />
+                    <span className="text-xs font-bold tracking-wide whitespace-nowrap" style={{ color: coluna.accent }}>
+                      {coluna.label.toUpperCase()}
+                    </span>
+                    <DicaColuna coluna={coluna} kanbanKey="expedicao" accent={coluna.accent}
+                      proximoLabel={colunasExp[colunasExp.findIndex(c => c.key === coluna.key) + 1]?.label || null} />
+                  </div>
+                  {etiquetaDaEtapa(coluna, 'expedicao') && (
+                    <div className="mt-1"><BadgeEtiqueta etiqueta={etiquetaDaEtapa(coluna, 'expedicao')} variante="coluna" /></div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground hidden lg:inline">{coluna.desc}</span>
