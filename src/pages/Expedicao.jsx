@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { gerarDANFEHTML } from '@/lib/danfeGenerator';
 import { gerarDocumentoTransporteHTML } from '@/lib/documentoTransporte';
-import { Truck, FileText, CheckCircle, Plus, Search, X, Send, Printer, ExternalLink, RefreshCw, Package, ArrowRight, Eye, Tag, MapPin, Factory, Building2, Home, SlidersHorizontal, ChevronDown } from 'lucide-react';
+import { Truck, FileText, CheckCircle, Plus, Search, X, Send, Printer, ExternalLink, RefreshCw, Package, ArrowRight, Eye, Tag, MapPin, Factory, Building2, Home, SlidersHorizontal, ChevronDown, Calendar } from 'lucide-react';
 import { getDestinoLabel, DestinoBadge } from '@/components/pedidos/DestinoPedido';
 import { gerarNumero } from '@/lib/numeracao';
 import { registrarLog } from '@/lib/audit';
@@ -94,40 +94,48 @@ function OPFinalizadaCard({ op, clienteNome, onEmitirNF, emitindo, onVerPedido }
     : (op.quantidade || 0);
 
   return (
-    <div className="bg-white rounded-2xl border border-border shadow-sm p-4 space-y-3 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="text-xs font-bold text-muted-foreground">{op.numero}</p>
-          <p className="text-sm font-bold text-foreground leading-tight mt-0.5">{op.produto_nome}</p>
-          {clienteNome && (
-            <p className="text-xs text-purple-600 mt-0.5">👤 {clienteNome}</p>
-          )}
+    <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden p-3 space-y-2"
+      style={{ border: '1px solid #E2E8F0', borderLeftWidth: '3px', borderLeftColor: '#A855F7' }}>
+      {/* Header — cliente em destaque + chips */}
+      <div className="flex flex-col gap-1.5">
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-foreground truncate leading-tight">
+            {clienteNome || op.produto_nome}
+          </p>
+          <div className="flex items-center gap-1.5 flex-wrap mt-1">
+            {op.pedido_numero && (
+              <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-medium whitespace-nowrap">📋 {op.pedido_numero}</span>
+            )}
+            <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-medium whitespace-nowrap">{op.numero}</span>
+          </div>
         </div>
-        <div className="text-right flex-shrink-0">
-          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${op._origem === 'galpao' ? 'bg-amber-100 text-amber-700' : 'bg-teal-100 text-teal-700'}`}>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${op._origem === 'galpao' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-teal-50 text-teal-700 border border-teal-200'}`}>
             {op._origem === 'galpao' ? '🏪 Galpão' : '🏭 Industria'}
           </span>
-          <p className="text-xs text-muted-foreground mt-1">{qtdTotal} un</p>
         </div>
       </div>
 
-      {op.pedido_numero && (
-        <p className="text-xs text-muted-foreground">📦 Pedido <strong className="text-foreground">#{op.pedido_numero}</strong></p>
-      )}
-      {op.data_finalizacao && (
-        <p className="text-xs text-muted-foreground">✅ Finalizado em: <strong className="text-foreground">{fmtDate(op.data_finalizacao)}</strong></p>
-      )}
-
+      {/* Produtos */}
       {op.itens?.length > 0 && (
-        <div className="bg-muted/30 rounded-xl px-3 py-2">
-          {op.itens.slice(0, 2).map((item, i) => (
-            <p key={i} className="text-xs text-foreground truncate">{item.produto_nome} × {item.quantidade}</p>
+        <div className="space-y-0.5">
+          {op.itens.slice(0, 3).map((item, i) => (
+            <div key={i} className="flex items-center justify-between text-xs px-1.5 py-0.5 rounded">
+              <span className="truncate flex-1 text-foreground">{item.produto_nome}</span>
+              <span className="font-semibold text-foreground ml-2 flex-shrink-0">{item.quantidade}</span>
+            </div>
           ))}
-          {op.itens.length > 2 && <p className="text-xs text-muted-foreground">+{op.itens.length - 2} mais...</p>}
+          {op.itens.length > 3 && <p className="text-[10px] text-muted-foreground">+{op.itens.length - 3} mais</p>}
         </div>
       )}
 
-      <div className="flex gap-2">
+      {/* Métricas */}
+      <div className="flex items-center gap-2 flex-wrap text-[10px] text-muted-foreground">
+        <span className="flex items-center gap-0.5"><Package size={9} />{qtdTotal} un</span>
+        {op.data_finalizacao && <span className="flex items-center gap-0.5"><Calendar size={9} />Finalizado {fmtDate(op.data_finalizacao)}</span>}
+      </div>
+
+      <div className="flex gap-2 pt-0.5">
         {onVerPedido && op.pedido_id && (
           <button
             onClick={() => onVerPedido(op.pedido_id)}
@@ -158,61 +166,75 @@ function ExpedicaoCard({ exp, coluna, onAvancar, onVoltar, onImprimirNF, onImpri
   const isWL = exp._pedidoDestino?.white_label || exp.white_label;
 
   return (
-    <div className="bg-white rounded-2xl border border-border shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-      <div className="px-4 pt-4 pb-3 space-y-1.5">
+    <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+      style={{ border: '1px solid #E2E8F0', borderLeftWidth: '3px', borderLeftColor: coluna?.accent || '#64748B' }}>
+      {/* Header — cliente em destaque + chips */}
+      <div className="px-3 pt-3 pb-2 space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">NF {exp.numero_nf}</p>
-              {exp._fluxo && (
-                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${exp._fluxo === 'galpao' ? 'bg-amber-100 text-amber-700' : 'bg-teal-100 text-teal-700'}`}>
-                  {exp._fluxo === 'galpao' ? '🏪 Galpão' : '🏭 Industria'}
-                </span>
+            <p className="text-sm font-bold text-foreground truncate leading-tight">{exp.cliente_nome}</p>
+            <div className="flex items-center gap-1.5 flex-wrap mt-1">
+              {exp.pedido_numero && (
+                <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-medium whitespace-nowrap">📋 {exp.pedido_numero}</span>
               )}
-              {isWL && <span className="text-[9px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-bold">WL</span>}
+              <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-medium whitespace-nowrap">NF {exp.numero_nf}</span>
+              {exp._opNumero && (
+                <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-medium whitespace-nowrap">OP {exp._opNumero}</span>
+              )}
             </div>
-            <p className="text-sm font-bold text-foreground leading-tight truncate">{exp.cliente_nome}{exp.pedido_numero ? ` • ${exp.pedido_numero}` : ''}</p>
-            {exp.pedido_numero && (
-              <p className="text-xs text-muted-foreground mt-0.5">Pedido <span className="font-semibold text-foreground">#{exp.pedido_numero}</span></p>
-            )}
           </div>
           <div className="flex-shrink-0 text-right">
             <p className="text-sm font-bold text-foreground">{fmtR(exp.valor_total)}</p>
-            <p className="text-[10px] text-muted-foreground">{totalItens} un</p>
           </div>
         </div>
-      </div>
 
-      {/* Detalhes */}
-      <div className="px-4 pb-3 space-y-1.5">
-        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          <span>📅 {fmtDate(exp.data_emissao)}</span>
-          {exp._pedidoDestino?.data_entrega_prevista && <span>🗓 Prev. {fmtDate(exp._pedidoDestino.data_entrega_prevista)}</span>}
-          {exp.transportadora && <span>🚛 {exp.transportadora}</span>}
-          {exp.data_envio && <span>📤 {fmtDate(exp.data_envio)}</span>}
-          {exp.data_entrega && <span>✅ {fmtDate(exp.data_entrega)}</span>}
-          {exp._opNumero && <span>🏭 OP {exp._opNumero}</span>}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {exp._fluxo && (
+            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${exp._fluxo === 'galpao' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-teal-50 text-teal-700 border border-teal-200'}`}>
+              {exp._fluxo === 'galpao' ? '🏪 Galpão' : '🏭 Industria'}
+            </span>
+          )}
+          {isWL && (
+            <span className="inline-flex items-center gap-0.5 text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-bold">
+              <Tag size={8} /> WL
+            </span>
+          )}
         </div>
+
+        {/* Produtos */}
+        {(exp.itens || []).length > 0 && (
+          <div className="space-y-0.5">
+            {exp.itens.slice(0, 3).map((item, i) => (
+              <div key={i} className="flex items-center justify-between text-xs px-1.5 py-0.5 rounded">
+                <span className="truncate flex-1 text-foreground">{item.produto_nome}</span>
+                <span className="font-semibold text-foreground ml-2 flex-shrink-0">{item.quantidade}</span>
+              </div>
+            ))}
+            {exp.itens.length > 3 && <p className="text-[10px] text-muted-foreground">+{exp.itens.length - 3} mais</p>}
+          </div>
+        )}
+
+        {/* Métricas */}
+        <div className="flex items-center gap-2 flex-wrap text-[10px] text-muted-foreground">
+          <span className="flex items-center gap-0.5"><Package size={9} />{totalItens} un</span>
+          <span className="flex items-center gap-0.5"><Calendar size={9} />NF {fmtDate(exp.data_emissao)}</span>
+          {exp._pedidoDestino?.data_entrega_prevista && <span className="flex items-center gap-0.5"><Calendar size={9} />Prev. {fmtDate(exp._pedidoDestino.data_entrega_prevista)}</span>}
+          {exp.transportadora && <span className="flex items-center gap-0.5"><Truck size={9} />{exp.transportadora}</span>}
+          {exp.data_envio && <span className="flex items-center gap-0.5"><Send size={9} />{fmtDate(exp.data_envio)}</span>}
+          {exp.data_entrega && <span className="flex items-center gap-0.5"><CheckCircle size={9} />{fmtDate(exp.data_entrega)}</span>}
+        </div>
+
         {exp._pedidoDestino && <DestinoBadge pedido={exp._pedidoDestino} />}
 
         {exp.confirmado_pelo_cliente && (
-          <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold text-[10px]">
+          <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 border border-green-200 px-1.5 py-0.5 rounded font-semibold text-[10px]">
             ✓ Confirmado pelo cliente
           </span>
-        )}
-
-        {(exp.itens || []).length > 0 && (
-          <div className="bg-muted/30 rounded-lg px-2.5 py-2 mt-1">
-            {exp.itens.slice(0, 2).map((item, i) => (
-              <p key={i} className="text-xs text-foreground truncate">{item.produto_nome} × {item.quantidade}</p>
-            ))}
-            {exp.itens.length > 2 && <p className="text-xs text-muted-foreground">+{exp.itens.length - 2} mais...</p>}
-          </div>
         )}
       </div>
 
       {/* Ações */}
-      <div className="border-t border-border px-4 py-3 space-y-2">
+      <div className="border-t border-border px-3 py-3 space-y-2">
         {/* Linha 1: ações secundárias */}
         <div className="flex gap-1.5 flex-wrap">
           <button onClick={() => onImprimirDocTransporte(exp)}
