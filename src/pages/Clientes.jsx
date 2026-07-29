@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Plus, Edit2, X, Check, Users, Eye, TrendingUp, Search, Tag } from 'lucide-react';
+import { Plus, Edit2, X, Check, Users, Eye, TrendingUp, Search, Tag, Trash2 } from 'lucide-react';
 import PerfilCliente from '@/components/clientes/PerfilCliente';
 import CampoCNPJ from '@/components/clientes/CampoCNPJ';
 import CrmDashboard from '@/components/clientes/CrmDashboard';
@@ -49,6 +49,16 @@ export default function Clientes() {
     setForm(emptyForm);
     await load();
     setLoading(false);
+  };
+
+  const excluir = async (c) => {
+    const temPedidos = pedidos.some(p => p.cliente_id === c.id);
+    const msg = temPedidos
+      ? `"${c.nome}" possui pedidos no sistema. Os pedidos não serão apagados, mas ficarão sem vínculo com o cliente.\n\nDeseja excluir mesmo assim?`
+      : `Excluir o cliente "${c.nome}"? Esta ação não pode ser desfeita.`;
+    if (!window.confirm(msg)) return;
+    await base44.entities.Cliente.delete(c.id);
+    await load();
   };
 
   const startEdit = (c) => {
@@ -222,9 +232,14 @@ export default function Clientes() {
                         <Eye size={14} className="text-sky-blue" />
                       </button>
                       {!readonly && (
-                        <button onClick={() => startEdit(c)} className="p-1.5 hover:bg-muted rounded-lg transition-colors" title="Editar">
-                          <Edit2 size={14} className="text-muted-foreground" />
-                        </button>
+                        <>
+                          <button onClick={() => startEdit(c)} className="p-1.5 hover:bg-muted rounded-lg transition-colors" title="Editar">
+                            <Edit2 size={14} className="text-muted-foreground" />
+                          </button>
+                          <button onClick={() => excluir(c)} className="p-1.5 hover:bg-red-50 rounded-lg transition-colors" title="Excluir">
+                            <Trash2 size={14} className="text-red-500" />
+                          </button>
+                        </>
                       )}
                     </div>
                   </td>
