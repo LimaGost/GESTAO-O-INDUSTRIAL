@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { registrarLog } from '@/lib/audit';
 import { gerarLote, gerarNumero } from '@/lib/numeracao';
 import { agoraISO, hojeData } from '@/lib/brasilia';
+import { avancarStatusOP } from '@/lib/avancoProducao';
 import {
   Factory, Clock, CheckCircle, Package, Flag, Plus, X,
   RefreshCw, Search, SlidersHorizontal, ArrowUpDown, Eye, EyeOff, ChevronDown, BarChart2 } from
