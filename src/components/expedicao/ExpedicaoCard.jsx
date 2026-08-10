@@ -14,7 +14,7 @@ function fmtData(str) {
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
 }
 
-export default function ExpedicaoCard({ exp, onAtualizarStatus, onImprimirNF, onConfirmarRecebimento }) {
+export default function ExpedicaoCard({ exp, onAtualizarStatus, onImprimirNF, onConfirmarRecebimento, ocultarValores }) {
   const [expandido, setExpandido] = useState(false);
   const st = STATUS_CONFIG[exp.status] || STATUS_CONFIG.emitida;
   const StatusIcon = st.icon;
@@ -49,7 +49,7 @@ export default function ExpedicaoCard({ exp, onAtualizarStatus, onImprimirNF, on
                 <span>{fmtData(exp.data_emissao)}</span>
                 <span>{totalItens} un</span>
                 {exp.transportadora && <span>🚚 {exp.transportadora}</span>}
-                <span className="font-semibold text-foreground">R$ {(exp.valor_total || 0).toFixed(2)}</span>
+                <span className="font-semibold text-foreground">{ocultarValores ? '••••••' : `R$ ${(exp.valor_total || 0).toFixed(2)}`}</span>
               </div>
             </div>
           </div>
@@ -117,13 +117,13 @@ export default function ExpedicaoCard({ exp, onAtualizarStatus, onImprimirNF, on
                         {item.sem_rotulo && <span className="ml-1.5 inline-block align-middle"><BadgeSemRotulo size="sm" /></span>}
                       </td>
                       <td className="py-1.5 pr-3">{item.quantidade}</td>
-                      <td className="py-1.5 pr-3">R$ {(item.preco_unitario || 0).toFixed(2)}</td>
-                      <td className="py-1.5 font-medium text-foreground">R$ {(item.total || 0).toFixed(2)}</td>
+                      <td className="py-1.5 pr-3">{ocultarValores ? '••••••' : `R$ ${(item.preco_unitario || 0).toFixed(2)}`}</td>
+                      <td className="py-1.5 font-medium text-foreground">{ocultarValores ? '••••••' : `R$ ${(item.total || 0).toFixed(2)}`}</td>
                     </tr>
                   ))}
                   <tr>
                     <td colSpan={3} className="pt-2 text-right font-semibold text-muted-foreground text-xs">Total</td>
-                    <td className="pt-2 font-bold text-foreground">R$ {(exp.valor_total || 0).toFixed(2)}</td>
+                    <td className="pt-2 font-bold text-foreground">{ocultarValores ? '••••••' : `R$ ${(exp.valor_total || 0).toFixed(2)}`}</td>
                   </tr>
                 </tbody>
               </table>
