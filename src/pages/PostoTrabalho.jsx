@@ -6,7 +6,7 @@ import { avancarStatusOP } from '@/lib/avancoProducao';
 import { avancarStatusSeparacao } from '@/lib/avancoSeparacao';
 import {
   Factory, ArrowUp, ArrowDown, Lock, CheckCircle2, ChevronDown,
-  Package, Layers, Boxes, RefreshCw, AlertTriangle, Save, X, Check,
+  Package, Layers, Boxes, RefreshCw, AlertTriangle, Save, X, Check, ClipboardCheck,
 } from 'lucide-react';
 
 const SUBSTEP_POR_LINHA = {
@@ -661,7 +661,8 @@ export default function PostoTrabalho() {
   const isTarugo = maquinaAtual.tipo_produto === 'tarugo';
   const isSeparacao = maquinaAtual.tipo === 'separacao';
   const subStep = SUBSTEP_POR_LINHA[maquinaAtual.tipo_produto];
-  const HeaderIcon = maquinaAtual.virtual ? (maquinaAtual.icon === 'Boxes' ? Boxes : maquinaAtual.icon === 'ClipboardCheck' ? undefined : Package) : Factory;
+  const ICONES = { Boxes, Package, ClipboardCheck };
+  const HeaderIcon = maquinaAtual.virtual ? (ICONES[maquinaAtual.icon] || Package) : Factory;
   const proximosSeparacao = useMemo(() => {
     const map = {};
     for (let i = 0; i < kanbanColunasSeparacao.length - 1; i++) map[kanbanColunasSeparacao[i].key] = kanbanColunasSeparacao[i + 1].key;
