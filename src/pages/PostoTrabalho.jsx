@@ -241,6 +241,42 @@ function OPCard({ ordem, produto, produtos, cliente, dataPedido, subStep, onConc
   );
 }
 
+function SeparacaoCard({ sep, colunas, onConcluir, processando }) {
+  const proximo = colunas.find((c) => c.key === sep.status)?.proximo;
+  const bloqueada = sep.status === 'aguardando_producao';
+  const labelProximo = proximo ? STATUS_LABEL[proximo] || proximo : null;
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-3">
+      <div className="flex items-start justify-between mb-2">
+        <div>
+          <p className="text-xs font-bold text-slate-400">SEP {sep.numero}</p>
+          <p className="text-lg font-bold text-slate-800">{sep.cliente_nome || sep.grupo_cliente_nome || sep.pedido_numero}</p>
+          <p className="text-sm text-slate-500">{sep.quantidade_total || sep.quantidade_itens || 0} itens</p>
+        </div>
+        <span className="text-[11px] font-bold px-2 py-1 rounded-full bg-slate-100 text-slate-600">
+          {STATUS_LABEL[sep.status] || sep.status}
+        </span>
+      </div>
+      {bloqueada ? (
+        <div className="mt-2 text-xs font-semibold text-amber-700 bg-amber-50 px-2.5 py-2 rounded-lg">
+          Bloqueada — aguardando a produção concluir
+        </div>
+      ) : labelProximo && (
+        <button
+          onClick={() => onConcluir(sep)}
+          disabled={processando}
+          className="w-full mt-2 py-3.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50"
+          style={{ background: '#0D3B45' }}
+        >
+          <CheckCircle2 size={18} />
+          {processando ? 'Processando...' : `Concluir → ${labelProximo}`}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function TarugoCard({ maquina, onRegistrarEstoque }) {
   const estoque = maquina.estoque_atual ?? 0;
   const ultimaContagem = maquina.estoque_ultima_contagem;
