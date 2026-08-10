@@ -6,7 +6,7 @@ import CampoCNPJ from '@/components/clientes/CampoCNPJ';
 import CrmDashboard from '@/components/clientes/CrmDashboard';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 
-const emptyForm = { nome: '', cnpj_cpf: '', email: '', telefone: '', endereco: '', bairro: '', cep: '', cidade: '', estado: '', ativo: true, white_label: false };
+const emptyForm = { nome: '', cnpj_cpf: '', email: '', telefone: '', endereco: '', bairro: '', cep: '', cidade: '', estado: '', ativo: true, white_label: false, tipo_cliente: '', forma_embalagem: '' };
 
 export default function Clientes() {
   const { somenteLeitura } = usePermissoes();
@@ -62,7 +62,7 @@ export default function Clientes() {
   };
 
   const startEdit = (c) => {
-    setForm({ nome: c.nome, cnpj_cpf: c.cnpj_cpf || '', email: c.email || '', telefone: c.telefone || '', endereco: c.endereco || '', bairro: c.bairro || '', cep: c.cep || '', cidade: c.cidade || '', estado: c.estado || '', ativo: c.ativo !== false, white_label: c.white_label || false });
+    setForm({ nome: c.nome, cnpj_cpf: c.cnpj_cpf || '', email: c.email || '', telefone: c.telefone || '', endereco: c.endereco || '', bairro: c.bairro || '', cep: c.cep || '', cidade: c.cidade || '', estado: c.estado || '', ativo: c.ativo !== false, white_label: c.white_label || false, tipo_cliente: c.tipo_cliente || '', forma_embalagem: c.forma_embalagem || '' });
     setEditing(c.id);
     setShowForm(true);
   };
@@ -184,6 +184,24 @@ export default function Clientes() {
                 </div>
                 {form.white_label && <span className="ml-auto text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-bold">WL</span>}
               </label>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Prioridade de Produção</label>
+              <select value={form.tipo_cliente} onChange={e => setForm({ ...form, tipo_cliente: e.target.value })}
+                className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
+                <option value="">Sem classificação (FIFO)</option>
+                <option value="A">A — Grande quantidade / alta frequência</option>
+                <option value="B">B — Pequena quantidade / alta frequência</option>
+                <option value="C">C — Pequena quantidade / baixa frequência</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Forma de Embalagem</label>
+              <select value={form.forma_embalagem} onChange={e => setForm({ ...form, forma_embalagem: e.target.value })}
+                className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
+                <option value="">Padrão (máquina quando aplicável)</option>
+                <option value="manual">Sempre manual (Mesa de Embalagem)</option>
+              </select>
             </div>
           </div>
           <div className="flex gap-3 pt-2">
