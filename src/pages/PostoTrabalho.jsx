@@ -20,8 +20,9 @@ const SUBSTEP_POR_LINHA = {
 // QUALQUER máquina de origem, então ficam fora da lista de Maquina e filtram
 // diretamente por status da OrdemProducao.
 const POSTOS_VIRTUAIS = [
-  { id: '__embalagem__', nome: 'Embalagem', virtual: true, statusFiltro: 'em_embalagem', icon: 'Package' },
-  { id: '__etiquetagem__', nome: 'Etiquetagem', virtual: true, statusFiltro: 'em_etiquetagem', icon: 'Boxes' },
+  { id: '__maquina_embalagem_7dias__', nome: 'Máquina de Embalagem (7 dias)', virtual: true, statusFiltro: 'em_embalagem', filtroLinha: '7dias', icon: 'Package' },
+  { id: '__mesa_embalagem__', nome: 'Mesa de Embalagem', virtual: true, statusFiltro: 'em_embalagem', filtroLinha: null, icon: 'Package' },
+  { id: '__etiquetagem__', nome: 'Etiquetagem', virtual: true, statusFiltro: 'em_etiquetagem', filtroLinha: null, icon: 'Boxes' },
 ];
 
 const STATUS_LABEL = {
