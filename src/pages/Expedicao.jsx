@@ -506,6 +506,7 @@ export default function Expedicao() {
       const expedicao = await base44.entities.Expedicao.create({
         numero_nf, pedido_id: pedidoId,
         pedido_numero: pedInfo.numero,
+        pedido_criado_por_id: pedInfo.created_by_id || null,
         cliente_id: pedInfo.cliente_id || '',
         cliente_nome: pedInfo.nome,
         itens: itensExp,
