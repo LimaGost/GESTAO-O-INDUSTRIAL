@@ -25,6 +25,11 @@ export const MODULO_PATH = {
 // Módulos cujos valores monetários ficam ocultos em modo "view"
 export const MODULOS_FINANCEIROS = ['Relatorios', 'Faturamento', 'Precos', 'Dashboard', 'Pedidos'];
 
+// Papéis que podem ver valores monetários em qualquer tela do sistema.
+// Todos os demais papéis (produção, estoque, motorista, conferência etc.)
+// nunca veem R$ em nenhuma tela interna, independentemente do módulo.
+export const GRUPO_VALORES_VISIVEIS = ['admin', 'diretor', 'vendedor', 'vendedor_industria', 'vendedor_loja'];
+
 const DEFAULTS = {
   admin:            null,
   gerente_producao: { Dashboard: 'full', Pedidos: 'full', Kanban: 'full', Separacao: 'full', SeparacaoGalpao: 'full', Estoque: 'full', Embalagem: 'full', Etiquetas: 'full', Expedicao: 'full', Clientes: 'view', Produtos: 'full', Relatorios: 'full', Perdas: 'full', Faturamento: 'view', Precos: 'view', Auditoria: 'view', Configuracoes: 'none', PostoTrabalho: 'view' },
@@ -71,8 +76,11 @@ export function PermissoesProvider({ user, children }) {
 
   const temAcesso = (modulo) => getNivel(modulo) !== 'none';
   const somenteLeitura = (modulo) => getNivel(modulo) === 'view';
-  // Retorna true se o usuário NÃO pode ver valores financeiros (nível 'view' em módulo financeiro)
-  const ocultarFinanceiro = (modulo) => MODULOS_FINANCEIROS.includes(modulo) && getNivel(modulo) === 'view';
+  // Retorna true se o usuário NÃO pode ver valores monetários em nenhuma tela —
+  // regra por papel (vendedores + admin/diretor veem; todo o resto não), válida
+  // em qualquer módulo. O parâmetro é mantido só por compatibilidade com quem
+  // já chama ocultarFinanceiro('Modulo').
+  const ocultarFinanceiro = () => !(user && GRUPO_VALORES_VISIVEIS.includes(user.role));
   const isLoading = modulos === undefined && user?.role !== 'admin' && user?.role !== 'diretor';
 
   return (
