@@ -96,7 +96,7 @@ function PinModal({ titulo, descricao, onConfirmar, onCancelar, loading, erro })
   );
 }
 
-function OPCard({ ordem, produto, cliente, subStep, onConcluir, onToggleItem, processando }) {
+function OPCard({ ordem, produto, produtos, cliente, subStep, onConcluir, onToggleItem, processando }) {
   const etapa = ordem.etapa_atual;
   let botaoLabel = null;
   let acao = null;
@@ -145,28 +145,37 @@ function OPCard({ ordem, produto, cliente, subStep, onConcluir, onToggleItem, pr
       )}
 
       {mostrarChecklist && (
-        <div className="mb-3 mt-1 border border-slate-100 rounded-xl overflow-hidden divide-y divide-slate-100">
-          <div className="px-3 py-2 bg-slate-50 flex items-center justify-between">
-            <p className="text-xs font-bold text-slate-500">
-              {ordem.itens.filter((i) => i.embalado).length}/{ordem.itens.length} itens embalados
-            </p>
-          </div>
-          {ordem.itens.map((item, idx) => (
-            <button
-              key={idx}
-              onClick={() => onToggleItem(ordem, idx)}
-              disabled={processando}
-              className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left disabled:opacity-50"
-            >
-              <span className={`shrink-0 w-5 h-5 rounded-md border-2 flex items-center justify-center ${item.embalado ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300'}`}>
-                {item.embalado && <Check size={13} className="text-white" strokeWidth={3} />}
-              </span>
-              <span className={`flex-1 text-sm ${item.embalado ? 'text-slate-400 line-through' : 'text-slate-700 font-medium'}`}>
-                {item.produto_nome}
-              </span>
-              <span className="text-xs font-bold text-slate-400 shrink-0">{item.quantidade} cx</span>
-            </button>
-          ))}
+        <div className="mb-3 mt-1 space-y-2.5">
+          <p className="text-xs font-bold text-slate-500 px-0.5">
+            {ordem.itens.filter((i) => i.embalado).length}/{ordem.itens.length} itens embalados
+          </p>
+          {agruparItensPorLinha(ordem.itens, produtos).map(([linha, itensGrupo]) => {
+            const info = LINHA_LABEL[linha] || SEM_LINHA_LABEL;
+            return (
+              <div key={linha} className="border border-slate-100 rounded-xl overflow-hidden divide-y divide-slate-100">
+                <div className="px-3 py-2 bg-slate-50 flex items-center justify-between gap-2">
+                  <p className="text-xs font-bold text-slate-600">{info.nome} ({itensGrupo.length})</p>
+                  <p className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full whitespace-nowrap">→ {info.destino}</p>
+                </div>
+                {itensGrupo.map((item) => (
+                  <button
+                    key={item._idx}
+                    onClick={() => onToggleItem(ordem, item._idx)}
+                    disabled={processando}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left disabled:opacity-50"
+                  >
+                    <span className={`shrink-0 w-5 h-5 rounded-md border-2 flex items-center justify-center ${item.embalado ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300'}`}>
+                      {item.embalado && <Check size={13} className="text-white" strokeWidth={3} />}
+                    </span>
+                    <span className={`flex-1 text-sm ${item.embalado ? 'text-slate-400 line-through' : 'text-slate-700 font-medium'}`}>
+                      {item.produto_nome}
+                    </span>
+                    <span className="text-xs font-bold text-slate-400 shrink-0">{item.quantidade} cx</span>
+                  </button>
+                ))}
+              </div>
+            );
+          })}
         </div>
       )}
 
