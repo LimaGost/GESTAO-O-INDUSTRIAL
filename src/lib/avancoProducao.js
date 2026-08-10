@@ -86,6 +86,53 @@ export async function avancarStatusOP(ordem, contexto) {
   // ── Embalagem: registrar data ───────────────────────────────────────────
   if (temAcao('registrar_data_embalagem')) updates.data_embalagem = agora;
 
+  // ── Saindo de "Em Embalagem": abate estoque de caixa (ModeloCaixa) ────────
+  // Não trava a produção mesmo se o estoque for insuficiente/zerado ─ só
+  // registra o consumo (pode ficar negativo, é sinal de alerta, não bloqueio).
+  if (ordem.status === 'em_embalagem') {
+    try {
+      const [modelosCaixa, produtosCaixa] = await Promise.all([
+        base44.entities.ModeloCaixa.list(),
+        cachedFetch('Produto', () => base44.entities.Produto.list(), 60_000),
+      ]);
+      const itensEmb = ordem.itens && ordem.itens.length > 0 ? ordem.itens :
+        ordem.produto_id ? [{ produto_id: ordem.produto_id, quantidade: ordem.quantidade }] : [];
+
+      const pedInfoEmb = ordem.pedido_id ? pedidoMap[ordem.pedido_id] : null;
+      const clienteIdPedido = pedInfoEmb?.cliente_id || null;
+
+      // Agrupa consumo por modelo de caixa
+      const consumoPorModelo = new Map();
+      for (const item of itensEmb) {
+        const prod = produtosCaixa.find((p) => p.id === item.produto_id);
+        const linha = prod?.linha_producao;
+        if (!linha) continue;
+        const formato = linha === 'numero7' ? (prod.unidade === 'KG' ? 'kg' : 'pacotes') : null;
+
+        // Prioriza modelo específico do cliente (rótulo próprio); senão, modelo padrão Raio do Sol
+        let modelo = clienteIdPedido ?
+          modelosCaixa.find((m) => m.linha_producao === linha && m.cliente_id === clienteIdPedido && (!formato || m.formato === formato)) :
+          null;
+        if (!modelo) {
+          modelo = modelosCaixa.find((m) => m.linha_producao === linha && !m.cliente_id && (!formato || m.formato === formato));
+        }
+        if (!modelo) continue;
+
+        consumoPorModelo.set(modelo.id, (consumoPorModelo.get(modelo.id) || 0) + (item.quantidade || 0));
+      }
+
+      await Promise.all(
+        [...consumoPorModelo.entries()].map(([modeloId, qtd]) => {
+          const modelo = modelosCaixa.find((m) => m.id === modeloId);
+          return base44.entities.ModeloCaixa.update(modeloId, { estoque_atual: (modelo.estoque_atual || 0) - qtd }).then(() =>
+            registrarLog('ModeloCaixa', modeloId, 'SAIDA_ESTOQUE_CAIXA', `Consumo de ${qtd} caixas de "${modelo.nome}" via OP ${ordem.numero}`).catch(() => {}));
+        })
+      );
+    } catch (e) {
+      console.warn('Erro ao abater estoque de caixa (não bloqueante):', e.message);
+    }
+  }
+
   // ── Em Separação: saída do estoque ─────────────────────────────────────
   if (temAcao('saida_estoque')) {
     cacheInvalidate('Produto');
