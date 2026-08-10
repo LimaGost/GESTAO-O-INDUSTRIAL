@@ -595,6 +595,19 @@ export default function PostoTrabalho() {
     }
   };
 
+  const concluirSeparacao = async (sep) => {
+    setProcessandoId(sep.id);
+    try {
+      await avancarStatusSeparacao(sep, { colunas: kanbanColunasSeparacao });
+      await carregar();
+    } catch (e) {
+      console.error('Erro ao concluir etapa de separação:', e);
+      alert('Erro ao concluir etapa: ' + e.message);
+    } finally {
+      setProcessandoId(null);
+    }
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center h-64"><RefreshCw className="animate-spin text-slate-400" size={28} /></div>;
   }
