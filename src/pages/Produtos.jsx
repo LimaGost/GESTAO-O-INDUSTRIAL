@@ -57,8 +57,9 @@ function exportarProdutos(produtos) {
 
 
 export default function Produtos() {
-  const { somenteLeitura } = usePermissoes();
+  const { somenteLeitura, ocultarFinanceiro } = usePermissoes();
   const readonly = somenteLeitura('Produtos');
+  const ocultarValores = ocultarFinanceiro('Produtos');
   const [user, setUser] = useState(null);
   const [produtos, setProdutos] = useState([]);
   const [categorias, setCategorias] = useState([]);
@@ -536,7 +537,7 @@ export default function Produtos() {
                               <p className="text-xs font-bold text-foreground leading-tight truncate">{p.nome}</p>
                               <div className="flex items-center justify-between mt-0.5">
                                 <p className="text-[10px] text-muted-foreground font-mono">{p.codigo || '—'}</p>
-                                <p className="text-[10px] text-muted-foreground">{p.unidade || 'un'} · R$ {(p.preco_unitario || 0).toFixed(2)}</p>
+                                <p className="text-[10px] text-muted-foreground">{p.unidade || 'un'}{!ocultarValores && ` · R$ ${(p.preco_unitario || 0).toFixed(2)}`}</p>
                               </div>
 
                               {/* Estoque + barra */}
@@ -600,7 +601,7 @@ export default function Produtos() {
                     <td className="px-3 py-2 text-muted-foreground text-xs">{p.unidade || '—'}</td>
                     <td className="px-3 py-2 font-bold text-foreground">{semControle ? '—' : (p.estoque_atual || 0)}</td>
                     <td className="px-3 py-2 text-muted-foreground">{semControle ? '—' : (p.estoque_minimo || 0)}</td>
-                    <td className="px-3 py-2 text-muted-foreground">R$ {(p.preco_unitario || 0).toFixed(2)}</td>
+                    <td className="px-3 py-2 text-muted-foreground">{ocultarValores ? '••••••' : `R$ ${(p.preco_unitario || 0).toFixed(2)}`}</td>
                     <td className="px-3 py-2">
                       <span className={`text-[10px] px-2 py-1 rounded-full font-semibold ${semControle ? 'bg-slate-200 text-slate-600' : zerado ? 'bg-rainbow-red/10 text-rainbow-red' : alerta ? 'bg-sun-yellow/10 text-sun-yellow' : 'bg-rainbow-green/10 text-rainbow-green'}`}>
                         {semControle ? 'Sem controle' : zerado ? 'Zerado' : alerta ? 'Alerta' : 'OK'}
