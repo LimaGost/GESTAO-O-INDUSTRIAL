@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { cachedFetch, cacheInvalidate, cacheSet, cacheGet } from '@/lib/entityCache';
 import { base44 } from '@/api/base44Client';
 import { registrarLog } from '@/lib/audit';
-import { gerarLote, gerarNumero } from '@/lib/numeracao';
-import { agoraISO, hojeData } from '@/lib/brasilia';
+import { gerarNumero } from '@/lib/numeracao';
 import { avancarStatusOP } from '@/lib/avancoProducao';
 import {
   Factory, Clock, CheckCircle, Package, Flag, Plus, X,
