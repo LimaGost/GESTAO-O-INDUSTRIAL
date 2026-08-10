@@ -19,6 +19,7 @@ export const MODULO_PATH = {
   Configuracoes: '/Configuracoes',
   Faturamento:  '/Relatorios',
   Precos:       '/Produtos',
+  PostoTrabalho: '/PostoTrabalho',
 };
 
 // Módulos cujos valores monetários ficam ocultos em modo "view"
