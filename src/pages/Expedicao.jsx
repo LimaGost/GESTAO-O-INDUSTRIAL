@@ -153,7 +153,7 @@ function OPFinalizadaCard({ op, clienteNome, onEmitirNF, emitindo, onVerPedido }
 }
 
 // Card para expedições existentes
-function ExpedicaoCard({ exp, coluna, onAvancar, onVoltar, onImprimirNF, onImprimirEtiqueta, onConfirmarRecebimento, advancing, onVerPedido, onImprimirDocTransporte }) {
+function ExpedicaoCard({ exp, coluna, onAvancar, onVoltar, onImprimirNF, onImprimirEtiqueta, onConfirmarRecebimento, advancing, onVerPedido, onImprimirDocTransporte, ocultarValores }) {
   const totalItens = (exp.itens || []).reduce((s, i) => s + (i.quantidade || 0), 0);
   const isWL = exp._pedidoDestino?.white_label || exp.white_label;
 
@@ -177,7 +177,7 @@ function ExpedicaoCard({ exp, coluna, onAvancar, onVoltar, onImprimirNF, onImpri
             )}
           </div>
           <div className="flex-shrink-0 text-right">
-            <p className="text-sm font-bold text-foreground">{fmtR(exp.valor_total)}</p>
+            <p className="text-sm font-bold text-foreground">{ocultarValores ? '••••••' : fmtR(exp.valor_total)}</p>
             <p className="text-[10px] text-muted-foreground">{totalItens} un</p>
           </div>
         </div>
