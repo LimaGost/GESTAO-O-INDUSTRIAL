@@ -59,6 +59,36 @@ function agruparItensPorLinha(itens, produtos) {
   });
 }
 
+function prioridadeTier(ordem, pedidoInfo) {
+  if (ordem.sem_rotulo) return -1;
+  const tipo = pedidoInfo?.tipo_cliente;
+  if (tipo === 'A') return 0;
+  if (tipo === 'B') return 1;
+  if (tipo === 'C') return 2;
+  if (ordem.pedido_id) return 3; // pedido sem classificação de cliente: FIFO
+  return 4; // OP criada manualmente no Kanban, sem pedido vinculado
+}
+
+function ordenarFila(ordens, pedidoMap) {
+  return [...ordens].sort((a, b) => {
+    const aPos = a.posicao_fila;
+    const bPos = b.posicao_fila;
+    // Reordenação manual do gerente sempre vence quando definida
+    if (aPos != null && bPos != null) return aPos - bPos;
+    if (aPos != null) return -1;
+    if (bPos != null) return 1;
+
+    const tierA = prioridadeTier(a, pedidoMap[a.pedido_id]);
+    const tierB = prioridadeTier(b, pedidoMap[b.pedido_id]);
+    if (tierA !== tierB) return tierA - tierB;
+
+    // Dentro do mesmo nível: mais antigo primeiro (FIFO)
+    const dateA = new Date(a.created_date || 0).getTime();
+    const dateB = new Date(b.created_date || 0).getTime();
+    return dateA - dateB;
+  });
+}
+
 function PinModal({ titulo, descricao, onConfirmar, onCancelar, loading, erro }) {
   const [pin, setPin] = useState('');
   return (
