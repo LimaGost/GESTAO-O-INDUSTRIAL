@@ -89,7 +89,7 @@ const AuthenticatedApp = () => {
           <Route path="/PostoTrabalho"  element={<RotaProtegida modulo="PostoTrabalho"> <PostoTrabalho />  </RotaProtegida>} />
           <Route path="/KanbanSeparacao" element={<RotaProtegida modulo="Separacao">     <KanbanSeparacao /> </RotaProtegida>} />
           <Route path="/KanbanGalpao"    element={<RotaProtegida modulo="SeparacaoGalpao">     <KanbanGalpao />    </RotaProtegida>} />
-          <Route path="/PedidosFranqueados" element={<RotaProtegida modulo="SeparacaoGalpao">  <PedidosFranqueados /> </RotaProtegida>} />
+          <Route path="/PedidosFranqueados" element={<RotaProtegida modulo="PedidosFranqueados">  <PedidosFranqueados /> </RotaProtegida>} />
           <Route path="/Estoque"        element={<RotaProtegida modulo="Estoque">        <Estoque />        </RotaProtegida>} />
           <Route path="/Embalagem"      element={<RotaProtegida modulo="Embalagem">      <Embalagem />      </RotaProtegida>} />
           <Route path="/Etiquetas"      element={<RotaProtegida modulo="Etiquetas">      <Etiquetas />      </RotaProtegida>} />
