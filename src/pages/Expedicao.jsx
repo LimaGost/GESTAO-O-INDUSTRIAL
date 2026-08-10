@@ -273,8 +273,9 @@ function ExpedicaoCard({ exp, coluna, onAvancar, onVoltar, onImprimirNF, onImpri
 }
 
 export default function Expedicao() {
-  const { somenteLeitura } = usePermissoes();
+  const { somenteLeitura, ocultarFinanceiro } = usePermissoes();
   const readonly = somenteLeitura('Expedicao');
+  const ocultarValores = ocultarFinanceiro('Expedicao');
 
   const [colunasExp, setColunasExp] = useState(buildColunasExp);
   const [expedicoes, setExpedicoes] = useState([]);
