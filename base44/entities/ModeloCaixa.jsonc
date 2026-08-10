@@ -1,0 +1,112 @@
+{
+  "name": "ModeloCaixa",
+  "properties": {
+    "ativo": {
+      "default": true,
+      "type": "boolean"
+    },
+    "cliente_id": {
+      "description": "Preenchido apenas quando a caixa \u00e9 espec\u00edfica de um cliente com r\u00f3tulo pr\u00f3prio (ex: Dr. Jos\u00e9 Pilintra). Vazio = caixa Raio do Sol padr\u00e3o.",
+      "type": "string"
+    },
+    "estoque_atual": {
+      "default": 0,
+      "type": "number"
+    },
+    "estoque_ultima_contagem": {
+      "type": "number"
+    },
+    "estoque_ultima_contagem_em": {
+      "type": "string"
+    },
+    "formato": {
+      "description": "Apenas para linha numero7: pacotes | kg",
+      "type": "string"
+    },
+    "linha_producao": {
+      "description": "7dias | numero7 | super7 | super25 | 21dias",
+      "type": "string"
+    },
+    "nome": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "nome",
+    "linha_producao"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "gerente_producao"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "gerente_producao"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "diretor"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "gerente_producao"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "maquinista"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "embalador"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "gerente_producao"
+          }
+        }
+      ]
+    }
+  },
+  "type": "object"
+}
