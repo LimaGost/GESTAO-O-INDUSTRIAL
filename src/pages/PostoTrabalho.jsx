@@ -295,17 +295,30 @@ export default function PostoTrabalho() {
     setLoading(false);
   }, []);
 
-  const carregarOrdens = useCallback(async (maq) => {
-    if (!maq || maq.tipo_produto === 'tarugo') { setOrdens([]); return; }
-    const todas = await base44.entities.OrdemProducao.filter({ maquina_id: maq.id });
-    const ativas = todas.filter((o) => ['em_producao', 'produzido', 'em_embalagem', 'em_etiquetagem'].includes(o.status));
+  const carregarOrdens = useCallback(async (posto) => {
+    if (!posto) { setOrdens([]); return; }
+    if (posto.tipo_produto === 'tarugo') { setOrdens([]); return; }
+
+    if (posto.virtual) {
+      // Embalagem/Etiquetagem: OPs de qualquer máquina de origem, filtradas por status
+      const todas = await base44.entities.OrdemProducao.filter({ status: posto.statusFiltro });
+      todas.sort((a, b) => (a.posicao_fila ?? 999) - (b.posicao_fila ?? 999));
+      setOrdens(todas);
+      return;
+    }
+
+    // Máquina física: apenas as etapas de produção (em_producao/produzido).
+    // Embalagem/Etiquetagem são tratadas nos postos virtuais acima, não aqui.
+    const todas = await base44.entities.OrdemProducao.filter({ maquina_id: posto.id });
+    const ativas = todas.filter((o) => ['em_producao', 'produzido'].includes(o.status));
     ativas.sort((a, b) => (a.posicao_fila ?? 999) - (b.posicao_fila ?? 999));
     setOrdens(ativas);
   }, []);
 
   useEffect(() => { carregar(); }, [carregar]);
 
-  const maquinaAtual = useMemo(() => maquinas.find((m) => m.id === maquinaId) || null, [maquinas, maquinaId]);
+  const postosDisponiveis = useMemo(() => [...POSTOS_VIRTUAIS, ...maquinas.filter((m) => m.ativo !== false)], [maquinas]);
+  const maquinaAtual = useMemo(() => postosDisponiveis.find((m) => m.id === maquinaId) || null, [postosDisponiveis, maquinaId]);
 
   useEffect(() => {
     if (maquinaAtual) carregarOrdens(maquinaAtual);
