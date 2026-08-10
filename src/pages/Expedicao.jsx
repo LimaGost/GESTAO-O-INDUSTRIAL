@@ -375,6 +375,7 @@ export default function Expedicao() {
       destino_endereco: p.destino_endereco,
       white_label: p.white_label,
       data_entrega_prevista: p.data_entrega_prevista,
+      created_by_id: p.created_by_id,
       op_numero: ordens.find(o => o.pedido_id === p.id)?.numero || null,
     };
     setPedidoMap(pm);
