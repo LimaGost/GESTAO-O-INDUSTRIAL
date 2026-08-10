@@ -404,7 +404,7 @@ export default function PostoTrabalho() {
     const clientePorId = {};
     for (const c of clientes) clientePorId[c.id] = c;
     const pm = {};
-    for (const p of peds) pm[p.id] = { nome: p.cliente_nome, cliente_id: p.cliente_id, forma_embalagem: p.cliente_id ? clientePorId[p.cliente_id]?.forma_embalagem : null };
+    for (const p of peds) pm[p.id] = { nome: p.cliente_nome, cliente_id: p.cliente_id, forma_embalagem: p.cliente_id ? clientePorId[p.cliente_id]?.forma_embalagem : null, data_pedido: p.data_pedido || p.created_date };
     setPedidoMap(pm);
     const gmById = {};
     for (const g of gps) gmById[g.id] = g;
