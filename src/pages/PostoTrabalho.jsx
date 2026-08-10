@@ -34,6 +34,31 @@ const STATUS_LABEL = {
   finalizado: 'Finalizado',
 };
 
+const LINHA_LABEL = {
+  '7dias': { nome: '7 Dias', destino: 'Máquina de Embalagem (7 dias)' },
+  'numero7': { nome: 'Número 7', destino: 'Mesa de Embalagem' },
+  'super7': { nome: 'Super 7', destino: 'Mesa de Embalagem' },
+  'super25': { nome: 'Super 25', destino: 'Mesa de Embalagem' },
+  '21dias': { nome: '21 Dias', destino: 'Mesa de Embalagem' },
+};
+const SEM_LINHA_LABEL = { nome: 'Outros (não-vela / sem linha definida)', destino: 'Verificar manualmente' };
+
+function agruparItensPorLinha(itens, produtos) {
+  const grupos = new Map();
+  itens.forEach((item, idx) => {
+    const prod = produtos.find((p) => p.id === item.produto_id);
+    const linha = prod?.linha_producao || '__sem_linha__';
+    if (!grupos.has(linha)) grupos.set(linha, []);
+    grupos.get(linha).push({ ...item, _idx: idx });
+  });
+  // Ordena: linhas conhecidas primeiro, "sem linha" por último
+  return [...grupos.entries()].sort(([a], [b]) => {
+    if (a === '__sem_linha__') return 1;
+    if (b === '__sem_linha__') return -1;
+    return a.localeCompare(b);
+  });
+}
+
 function PinModal({ titulo, descricao, onConfirmar, onCancelar, loading, erro }) {
   const [pin, setPin] = useState('');
   return (
