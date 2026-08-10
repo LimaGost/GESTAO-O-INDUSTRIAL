@@ -1,0 +1,127 @@
+{
+  "name": "Maquina",
+  "properties": {
+    "ativo": {
+      "default": true,
+      "type": "boolean"
+    },
+    "capacidade_por_lado": {
+      "type": "number"
+    },
+    "capacidade_por_remessa": {
+      "type": "number"
+    },
+    "consome_insumo_de": {
+      "type": "string"
+    },
+    "estoque_atual": {
+      "description": "Estoque atual (usado apenas na Maquina Tarugo)",
+      "type": "number"
+    },
+    "estoque_ultima_contagem": {
+      "description": "\u00daltimo valor de estoque informado pelo gerente de produ\u00e7\u00e3o",
+      "type": "number"
+    },
+    "estoque_ultima_contagem_em": {
+      "description": "Data/hora da \u00faltima contagem de estoque",
+      "type": "string"
+    },
+    "nome": {
+      "type": "string"
+    },
+    "posto_fisico_compartilhado_com": {
+      "type": "string"
+    },
+    "tem_lados": {
+      "default": false,
+      "type": "boolean"
+    },
+    "tempo_remessa_min": {
+      "type": "number"
+    },
+    "tipo_produto": {
+      "type": "string"
+    },
+    "unidade_capacidade": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "nome",
+    "tipo_produto"
+  ],
+  "type": "object",
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "gerente_producao"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "gerente_producao"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "diretor"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "gerente_producao"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "maquinista"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "embalador"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "gerente_producao"
+          }
+        }
+      ]
+    }
+  }
+}
