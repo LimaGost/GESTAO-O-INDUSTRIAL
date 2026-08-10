@@ -3,6 +3,8 @@ import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { loadKanbanFluxo } from '@/lib/kanbanFluxo';
 import { avancarStatusOP } from '@/lib/avancoProducao';
+import { avancarStatusSeparacao, buildProximosSeparacao } from '@/lib/avancoSeparacao';
+import { loadKanbanFluxo as loadKanbanFluxoSep } from '@/lib/kanbanFluxo';
 import {
   Factory, ArrowUp, ArrowDown, Lock, CheckCircle2, ChevronDown,
   Package, Layers, Boxes, RefreshCw, AlertTriangle, Save, X, Check,
