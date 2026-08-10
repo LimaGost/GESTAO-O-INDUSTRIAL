@@ -389,19 +389,22 @@ export default function PostoTrabalho() {
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    const [maqs, prods, peds, gps, stages, caixas] = await Promise.all([
+    const [maqs, prods, peds, gps, stages, caixas, clientes] = await Promise.all([
       base44.entities.Maquina.list(),
       base44.entities.Produto.list(),
       base44.entities.Pedido.list(),
       base44.entities.GrupoPedidos.list().catch(() => []),
       loadKanbanFluxo('producao'),
       base44.entities.ModeloCaixa.list().catch(() => []),
+      base44.entities.Cliente.list().catch(() => []),
     ]);
     setMaquinas(maqs);
     setProdutos(prods);
     setModelosCaixa(caixas);
+    const clientePorId = {};
+    for (const c of clientes) clientePorId[c.id] = c;
     const pm = {};
-    for (const p of peds) pm[p.id] = { nome: p.cliente_nome, cliente_id: p.cliente_id };
+    for (const p of peds) pm[p.id] = { nome: p.cliente_nome, cliente_id: p.cliente_id, forma_embalagem: p.cliente_id ? clientePorId[p.cliente_id]?.forma_embalagem : null };
     setPedidoMap(pm);
     const gmById = {};
     for (const g of gps) gmById[g.id] = g;
@@ -410,7 +413,7 @@ export default function PostoTrabalho() {
     setLoading(false);
   }, []);
 
-  const carregarOrdens = useCallback(async (posto, produtosList) => {
+  const carregarOrdens = useCallback(async (posto, produtosList, pedidoMapAtual) => {
     if (!posto) { setOrdens([]); return; }
     if (posto.tipo_produto === 'tarugo') { setOrdens([]); return; }
 
@@ -419,6 +422,13 @@ export default function PostoTrabalho() {
       let todas = await base44.entities.OrdemProducao.filter({ status: posto.statusFiltro });
       if (posto.filtroLinha) {
         todas = todas.filter((o) => produtosList.find((p) => p.id === o.produto_id)?.linha_producao === posto.filtroLinha);
+      }
+      // Máquina de Embalagem (7 dias): exclui clientes marcados como "embalagem manual"
+      if (posto.id === '__maquina_embalagem_7dias__') {
+        todas = todas.filter((o) => {
+          const info = o.pedido_id ? pedidoMapAtual[o.pedido_id] : null;
+          return info?.forma_embalagem !== 'manual';
+        });
       }
       todas.sort((a, b) => (a.posicao_fila ?? 999) - (b.posicao_fila ?? 999));
       setOrdens(todas);
@@ -439,8 +449,8 @@ export default function PostoTrabalho() {
   const maquinaAtual = useMemo(() => postosDisponiveis.find((m) => m.id === maquinaId) || null, [postosDisponiveis, maquinaId]);
 
   useEffect(() => {
-    if (maquinaAtual) carregarOrdens(maquinaAtual, produtos);
-  }, [maquinaAtual, carregarOrdens, produtos]);
+    if (maquinaAtual) carregarOrdens(maquinaAtual, produtos, pedidoMap);
+  }, [maquinaAtual, carregarOrdens, produtos, pedidoMap]);
 
   const escolherMaquina = (id) => {
     localStorage.setItem('posto_trabalho_maquina_id', id);
@@ -488,7 +498,7 @@ export default function PostoTrabalho() {
       } else if (acao === 'concluir_etiquetagem') {
         await avancarStatusOP(ordem, contexto); // em_etiquetagem -> finalizado
       }
-      await carregarOrdens(maquinaAtual, produtos);
+      await carregarOrdens(maquinaAtual, produtos, pedidoMap);
     } catch (e) {
       console.error('Erro ao concluir etapa:', e);
       alert('Erro ao concluir etapa: ' + e.message);
@@ -615,7 +625,7 @@ export default function PostoTrabalho() {
           maquina={maquinaAtual}
           ordens={ordens}
           onClose={() => setShowReordenar(false)}
-          onSalvo={() => carregarOrdens(maquinaAtual, produtos)}
+          onSalvo={() => carregarOrdens(maquinaAtual, produtos, pedidoMap)}
         />
       )}
     </div>
