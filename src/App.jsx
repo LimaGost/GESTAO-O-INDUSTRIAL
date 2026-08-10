@@ -10,6 +10,7 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Pedidos from './pages/Pedidos.jsx';
 import Kanban from './pages/Kanban.jsx';
+import PostoTrabalho from './pages/PostoTrabalho.jsx';
 import KanbanSeparacao from './pages/KanbanSeparacao.jsx';
 import KanbanGalpao from './pages/KanbanGalpao.jsx';
 import PedidosFranqueados from './pages/PedidosFranqueados.jsx';
@@ -85,6 +86,7 @@ const AuthenticatedApp = () => {
           <Route path="/Dashboard"      element={<RotaProtegida modulo="Dashboard">     <Dashboard />     </RotaProtegida>} />
           <Route path="/Pedidos"        element={<RotaProtegida modulo="Pedidos">        <Pedidos />        </RotaProtegida>} />
           <Route path="/Kanban"         element={<RotaProtegida modulo="Kanban">         <Kanban />         </RotaProtegida>} />
+          <Route path="/PostoTrabalho"  element={<RotaProtegida modulo="PostoTrabalho"> <PostoTrabalho />  </RotaProtegida>} />
           <Route path="/KanbanSeparacao" element={<RotaProtegida modulo="Separacao">     <KanbanSeparacao /> </RotaProtegida>} />
           <Route path="/KanbanGalpao"    element={<RotaProtegida modulo="SeparacaoGalpao">     <KanbanGalpao />    </RotaProtegida>} />
           <Route path="/PedidosFranqueados" element={<RotaProtegida modulo="SeparacaoGalpao">  <PedidosFranqueados /> </RotaProtegida>} />
