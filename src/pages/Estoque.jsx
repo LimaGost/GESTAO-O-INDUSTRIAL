@@ -99,6 +99,7 @@ export default function Estoque() {
       }
       setShowAjuste(false);
       setAjuste({ produto_id: '', tipo: 'entrada', quantidade: 1, motivo: '', estoque: 'principal' });
+      setBuscaProdutoAjuste('');
       await load();
       setLoading(false);
       return;
