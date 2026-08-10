@@ -468,7 +468,6 @@ export default function PostoTrabalho() {
           return info?.forma_embalagem !== 'manual';
         });
       }
-      todas.sort((a, b) => 0); // placeholder substituído abaixo
       todas = ordenarFila(todas, pedidoMapAtual);
       setOrdens(todas);
       return;
