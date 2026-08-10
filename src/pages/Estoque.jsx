@@ -550,7 +550,6 @@ export default function Estoque() {
                       <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                       <input
                         ref={inputBipagemRef}
-                        autoFocus
                         value={buscaProdutoAjuste}
                         onChange={e => { setBuscaProdutoAjuste(e.target.value); setMostrarListaAjuste(true); }}
                         onFocus={() => setMostrarListaAjuste(true)}
