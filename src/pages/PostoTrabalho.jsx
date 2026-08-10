@@ -241,8 +241,8 @@ function OPCard({ ordem, produto, produtos, cliente, dataPedido, subStep, onConc
   );
 }
 
-function SeparacaoCard({ sep, colunas, onConcluir, processando }) {
-  const proximo = colunas.find((c) => c.key === sep.status)?.proximo;
+function SeparacaoCard({ sep, proximos, onConcluir, processando }) {
+  const proximo = proximos[sep.status];
   const bloqueada = sep.status === 'aguardando_producao';
   const labelProximo = proximo ? STATUS_LABEL[proximo] || proximo : null;
 
