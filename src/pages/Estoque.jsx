@@ -524,16 +524,59 @@ export default function Estoque() {
 
               <div>
                 <label className="text-xs text-muted-foreground mb-1.5 block font-semibold">Produto *</label>
-                <SelectMobile
-                  value={ajuste.produto_id}
-                  onValueChange={v => setAjuste(a => ({ ...a, produto_id: v }))}
-                  placeholder="Selecione..."
-                  isMobile={isMobileTela}
-                >
-                  {produtos.map(p => (
-                    <SelectOption key={p.id} value={p.id}>{`${p.nome} — Lacrado: ${p.estoque_atual || 0} · Avulso: ${fracionados[p.id] || 0}`}</SelectOption>
-                  ))}
-                </SelectMobile>
+                {produtoAjuste ? (
+                  <div className="flex items-center gap-2 bg-muted/40 border border-border rounded-xl px-3 py-2.5">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">{produtoAjuste.nome}</p>
+                      <p className="text-xs text-muted-foreground font-mono">{produtoAjuste.codigo || '—'}</p>
+                    </div>
+                    <button
+                      onClick={() => { setAjuste(a => ({ ...a, produto_id: '' })); setBuscaProdutoAjuste(''); setTimeout(() => inputBipagemRef.current?.focus(), 0); }}
+                      className="p-1.5 hover:bg-muted rounded-lg text-muted-foreground flex-shrink-0"
+                    >
+                      <X size={15} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <div className="relative">
+                      <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                      <input
+                        ref={inputBipagemRef}
+                        autoFocus
+                        value={buscaProdutoAjuste}
+                        onChange={e => { setBuscaProdutoAjuste(e.target.value); setMostrarListaAjuste(true); }}
+                        onFocus={() => setMostrarListaAjuste(true)}
+                        onBlur={() => setTimeout(() => setMostrarListaAjuste(false), 150)}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleEnterBusca(); } }}
+                        placeholder="Digite o nome, bipe ou digite o código..."
+                        className="w-full border border-border rounded-xl pl-9 pr-3 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                    {mostrarListaAjuste && produtosFiltradosAjuste.length > 0 && (
+                      <div className="absolute z-10 mt-1 w-full bg-card border border-border rounded-xl shadow-lg max-h-56 overflow-y-auto">
+                        {produtosFiltradosAjuste.map(p => (
+                          <button
+                            key={p.id}
+                            onClick={() => selecionarProdutoAjuste(p)}
+                            className="w-full text-left px-3 py-2 hover:bg-muted transition-colors flex items-center justify-between gap-2"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-sm text-foreground truncate">{p.nome}</p>
+                              <p className="text-xs text-muted-foreground font-mono">{p.codigo || '—'}</p>
+                            </div>
+                            <span className="text-xs text-muted-foreground flex-shrink-0">Lacrado: {p.estoque_atual || 0} · Avulso: {fracionados[p.id] || 0}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {mostrarListaAjuste && buscaProdutoAjuste.trim() && produtosFiltradosAjuste.length === 0 && (
+                      <div className="absolute z-10 mt-1 w-full bg-card border border-border rounded-xl shadow-lg px-3 py-3 text-xs text-muted-foreground">
+                        Nenhum produto encontrado para "{buscaProdutoAjuste}"
+                      </div>
+                    )}
+                  </div>
+                )}
                 {produtoAjuste && (() => {
                   const saldo = ajuste.estoque === 'desmontado'
                     ? (fracionados[produtoAjuste.id] || 0)
