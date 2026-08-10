@@ -96,7 +96,7 @@ function PinModal({ titulo, descricao, onConfirmar, onCancelar, loading, erro })
   );
 }
 
-function OPCard({ ordem, produto, produtos, cliente, subStep, onConcluir, onToggleItem, processando }) {
+function OPCard({ ordem, produto, produtos, cliente, dataPedido, subStep, onConcluir, onToggleItem, processando }) {
   const etapa = ordem.etapa_atual;
   let botaoLabel = null;
   let acao = null;
@@ -132,6 +132,9 @@ function OPCard({ ordem, produto, produtos, cliente, subStep, onConcluir, onTogg
           <p className="text-xs font-bold text-slate-400">OP {ordem.numero || ordem.id?.slice(-6)}</p>
           <p className="text-lg font-bold text-slate-800">{ordem.produto_nome}</p>
           <p className="text-sm text-slate-500">{ordem.quantidade} un{cliente ? ` · ${cliente}` : ''}</p>
+          {dataPedido && (
+            <p className="text-xs text-slate-400 mt-0.5">Pedido criado em {new Date(dataPedido).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</p>
+          )}
         </div>
         <span className="text-[11px] font-bold px-2 py-1 rounded-full bg-slate-100 text-slate-600">
           {STATUS_LABEL[ordem.status] || ordem.status}
