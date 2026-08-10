@@ -38,7 +38,7 @@ const fmtRShort = (v) => {
   return `R$ ${(v || 0).toFixed(0)}`;
 };
 
-export default function CrmDashboard({ clientes, pedidos, onVerCliente }) {
+export default function CrmDashboard({ clientes, pedidos, onVerCliente, ocultarValores }) {
   const [periodo, setPeriodo] = useState('semestre');
   const [ordenarPor, setOrdenarPor] = useState('valor_desc');
   const [abaAtiva, setAbaAtiva] = useState('lista');
@@ -119,9 +119,9 @@ export default function CrmDashboard({ clientes, pedidos, onVerCliente }) {
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: 'Faturamento', value: fmtRShort(totalPeriodoGeral), sub: 'no período', icon: DollarSign, color: 'bg-green-500' },
+          { label: 'Faturamento', value: ocultarValores ? '••••••' : fmtRShort(totalPeriodoGeral), sub: 'no período', icon: DollarSign, color: 'bg-green-500' },
           { label: 'Pedidos', value: totalPedidosPeriodo, sub: 'no período', icon: ShoppingCart, color: 'bg-sky-500' },
-          { label: 'Ticket Médio', value: fmtRShort(ticketMedioGeral), sub: 'por pedido', icon: TrendingUp, color: 'bg-purple-500' },
+          { label: 'Ticket Médio', value: ocultarValores ? '••••••' : fmtRShort(ticketMedioGeral), sub: 'por pedido', icon: TrendingUp, color: 'bg-purple-500' },
           { label: 'Total Clientes', value: clientes.length, sub: `${resumo.ativo} ativos`, icon: Users, color: 'bg-amber-500' },
         ].map(({ label, value, sub, icon: Icon, color }) => (
           <div key={label} className="bg-card border border-border rounded-2xl p-4">
@@ -173,8 +173,8 @@ export default function CrmDashboard({ clientes, pedidos, onVerCliente }) {
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={topRanking} onClick={e => e?.activePayload && onVerCliente(e.activePayload[0]?.payload?.fullCliente)}>
                   <XAxis dataKey="nome" tick={{ fontSize: 11 }} />
-                  <YAxis tickFormatter={v => fmtRShort(v)} tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={(v) => fmtR(v)} />
+                  <YAxis tickFormatter={v => ocultarValores ? '••' : fmtRShort(v)} tick={{ fontSize: 11 }} />
+                  <Tooltip formatter={(v) => ocultarValores ? '••••••' : fmtR(v)} />
                   <Bar dataKey="total" radius={[6,6,0,0]}>
                     {topRanking.map((entry, i) => (
                       <Cell key={i} fill={RISCO_CONFIG[entry.risco]?.barColor || '#94A3B8'} />
@@ -188,7 +188,7 @@ export default function CrmDashboard({ clientes, pedidos, onVerCliente }) {
                     className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-muted transition-colors text-left">
                     <span className="w-6 text-center text-xs font-bold text-muted-foreground">{i + 1}</span>
                     <span className="flex-1 text-sm font-medium text-foreground">{c.fullCliente?.nome}</span>
-                    <span className="text-sm font-bold text-foreground">{fmtRShort(c.total)}</span>
+                    <span className="text-sm font-bold text-foreground">{ocultarValores ? '••••••' : fmtRShort(c.total)}</span>
                   </button>
                 ))}
               </div>
