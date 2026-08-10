@@ -535,6 +535,11 @@ export default function PostoTrabalho() {
 
   const postosDisponiveis = useMemo(() => [...POSTOS_VIRTUAIS, ...maquinas.filter((m) => m.ativo !== false)], [maquinas]);
   const maquinaAtual = useMemo(() => postosDisponiveis.find((m) => m.id === maquinaId) || null, [postosDisponiveis, maquinaId]);
+  const proximosSeparacao = useMemo(() => {
+    const map = {};
+    for (let i = 0; i < kanbanColunasSeparacao.length - 1; i++) map[kanbanColunasSeparacao[i].key] = kanbanColunasSeparacao[i + 1].key;
+    return map;
+  }, [kanbanColunasSeparacao]);
 
   useEffect(() => {
     if (maquinaAtual) carregarOrdens(maquinaAtual, produtos, pedidoMap);
@@ -680,11 +685,6 @@ export default function PostoTrabalho() {
   const subStep = SUBSTEP_POR_LINHA[maquinaAtual.tipo_produto];
   const ICONES = { Boxes, Package, ClipboardCheck };
   const HeaderIcon = maquinaAtual.virtual ? (ICONES[maquinaAtual.icon] || Package) : Factory;
-  const proximosSeparacao = useMemo(() => {
-    const map = {};
-    for (let i = 0; i < kanbanColunasSeparacao.length - 1; i++) map[kanbanColunasSeparacao[i].key] = kanbanColunasSeparacao[i + 1].key;
-    return map;
-  }, [kanbanColunasSeparacao]);
 
   return (
     <div className="max-w-lg mx-auto pb-8">
@@ -702,6 +702,25 @@ export default function PostoTrabalho() {
 
       {isTarugo ? (
         <TarugoCard maquina={maquinaAtual} onRegistrarEstoque={carregar} />
+      ) : isSeparacao ? (
+        <>
+          {separacoes.length === 0 ? (
+            <div className="text-center py-16 text-slate-400">
+              <ClipboardCheck size={36} className="mx-auto mb-2 opacity-40" />
+              <p className="font-semibold">Nenhuma separação ativa</p>
+            </div>
+          ) : (
+            separacoes.map((sep) => (
+              <SeparacaoCard
+                key={sep.id}
+                sep={sep}
+                proximos={proximosSeparacao}
+                onConcluir={concluirSeparacao}
+                processando={processandoId === sep.id}
+              />
+            ))
+          )}
+        </>
       ) : (
         <>
           {maquinaAtual.virtual && (maquinaAtual.id === '__maquina_embalagem_7dias__' || maquinaAtual.id === '__mesa_embalagem__') && (
