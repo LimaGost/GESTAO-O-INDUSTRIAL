@@ -7,6 +7,7 @@ export const MODULO_PATH = {
   Kanban:       '/Kanban',
   Separacao:    '/KanbanSeparacao',
   SeparacaoGalpao: '/KanbanGalpao',
+  PedidosFranqueados: '/PedidosFranqueados',
   Estoque:      '/Estoque',
   Embalagem:    '/Embalagem',
   Etiquetas:    '/Etiquetas',
@@ -70,8 +71,12 @@ export function PermissoesProvider({ user, children }) {
     if (!user) return 'none';
     if (user.role === 'admin' || user.role === 'diretor') return 'full';
     if (modulos === undefined) return 'full';
-    // Compatibilidade: perfis salvos antes da separação Industria/Galpão herdam o nível de 'Separacao'
-    return modulos[modulo] ?? (modulo === 'SeparacaoGalpao' ? modulos['Separacao'] : undefined) ?? 'none';
+    // Compatibilidade: perfis salvos antes da separação Industria/Galpão herdam o nível de 'Separacao'.
+    // Perfis salvos antes de Pedidos Franqueados virar módulo próprio herdam o nível de 'SeparacaoGalpao'.
+    if (modulos[modulo] !== undefined) return modulos[modulo];
+    if (modulo === 'SeparacaoGalpao') return modulos['Separacao'] ?? 'none';
+    if (modulo === 'PedidosFranqueados') return modulos['SeparacaoGalpao'] ?? modulos['Separacao'] ?? 'none';
+    return 'none';
   };
 
   const temAcesso = (modulo) => getNivel(modulo) !== 'none';
