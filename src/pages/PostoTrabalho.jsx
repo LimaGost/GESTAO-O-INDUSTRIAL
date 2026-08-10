@@ -442,7 +442,7 @@ export default function PostoTrabalho() {
     const clientePorId = {};
     for (const c of clientes) clientePorId[c.id] = c;
     const pm = {};
-    for (const p of peds) pm[p.id] = { nome: p.cliente_nome, cliente_id: p.cliente_id, forma_embalagem: p.cliente_id ? clientePorId[p.cliente_id]?.forma_embalagem : null, data_pedido: p.data_pedido || p.created_date };
+    for (const p of peds) pm[p.id] = { nome: p.cliente_nome, cliente_id: p.cliente_id, forma_embalagem: p.cliente_id ? clientePorId[p.cliente_id]?.forma_embalagem : null, tipo_cliente: p.cliente_id ? clientePorId[p.cliente_id]?.tipo_cliente : null, data_pedido: p.data_pedido || p.created_date };
     setPedidoMap(pm);
     const gmById = {};
     for (const g of gps) gmById[g.id] = g;
@@ -468,7 +468,8 @@ export default function PostoTrabalho() {
           return info?.forma_embalagem !== 'manual';
         });
       }
-      todas.sort((a, b) => (a.posicao_fila ?? 999) - (b.posicao_fila ?? 999));
+      todas.sort((a, b) => 0); // placeholder substituído abaixo
+      todas = ordenarFila(todas, pedidoMapAtual);
       setOrdens(todas);
       return;
     }
@@ -477,8 +478,7 @@ export default function PostoTrabalho() {
     // Embalagem/Etiquetagem são tratadas nos postos virtuais acima, não aqui.
     const todas = await base44.entities.OrdemProducao.filter({ maquina_id: posto.id });
     const ativas = todas.filter((o) => ['em_producao', 'produzido'].includes(o.status));
-    ativas.sort((a, b) => (a.posicao_fila ?? 999) - (b.posicao_fila ?? 999));
-    setOrdens(ativas);
+    setOrdens(ordenarFila(ativas, pedidoMapAtual));
   }, []);
 
   useEffect(() => { carregar(); }, [carregar]);
