@@ -86,8 +86,8 @@ export const DEFAULTS = {
       { key: 'aguardando_separacao', label: 'Aguardando Separação', cor: 0, icone: 'Clock',          responsaveis: ['estoquista'] },
       { key: 'em_separacao',         label: 'Em Separação',         cor: 1, icone: 'ClipboardCheck', responsaveis: ['estoquista'] },
       { key: 'separado',             label: 'Separado',             cor: 2, icone: 'CheckCircle',    responsaveis: ['estoquista'] },
-      { key: 'em_conferencia',       label: 'Em Conferência',       cor: 3, icone: 'ClipboardList', responsaveis: ['embalador'] },
-      { key: 'conferido',            label: 'Conferido',            cor: 7, icone: 'BadgeCheck',     responsaveis: ['embalador'] },
+      { key: 'em_conferencia',       label: 'Em Conferência',       cor: 3, icone: 'ClipboardList', responsaveis: ['estoquista'] },
+      { key: 'conferido',            label: 'Conferido',            cor: 7, icone: 'BadgeCheck',     responsaveis: ['estoquista'] },
       { key: 'liberado_expedicao',   label: 'Liberado p/ Expedição',cor: 4, icone: 'Send',          responsaveis: ['gerente_producao'] },
     ],
     automacoes: [
