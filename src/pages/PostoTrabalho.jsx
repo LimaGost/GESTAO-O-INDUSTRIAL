@@ -505,6 +505,7 @@ export default function PostoTrabalho() {
   const carregarOrdens = useCallback(async (posto, produtosList, pedidoMapAtual) => {
     if (!posto) { setOrdens([]); return; }
     if (posto.tipo_produto === 'tarugo') { setOrdens([]); return; }
+    if (posto.tipo === 'separacao') { setOrdens([]); return; } // dados vêm de `separacoes`, já carregados em carregar()
 
     if (posto.virtual) {
       // Embalagem/Etiquetagem: OPs de qualquer máquina de origem, filtradas por status
