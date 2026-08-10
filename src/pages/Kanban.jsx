@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { cachedFetch, cacheInvalidate, cacheSet, cacheGet } from '@/lib/entityCache';
+import { cachedFetch, cacheInvalidate } from '@/lib/entityCache';
 import { base44 } from '@/api/base44Client';
 import { registrarLog } from '@/lib/audit';
 import { gerarNumero } from '@/lib/numeracao';
