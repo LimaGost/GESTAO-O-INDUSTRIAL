@@ -106,7 +106,7 @@ const PATH_MODULO = {
   '/Kanban':       'Kanban',
   '/KanbanSeparacao': 'Separacao',
   '/KanbanGalpao': 'SeparacaoGalpao',
-  '/PedidosFranqueados': 'SeparacaoGalpao',
+  '/PedidosFranqueados': 'PedidosFranqueados',
   '/Estoque':      'Estoque',
   '/Embalagem':    'Embalagem',
   '/Etiquetas':    'Etiquetas',
