@@ -627,7 +627,7 @@ export default function Estoque() {
                   className="flex-1 flex items-center justify-center gap-2 bg-primary text-primary-foreground py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity">
                   <Check size={15} /> {loading ? 'Salvando...' : 'Confirmar Ajuste'}
                 </button>
-                <button onClick={() => setShowAjuste(false)}
+                <button onClick={fecharModalAjuste}
                   className="px-5 border border-border rounded-xl text-sm text-muted-foreground hover:bg-muted transition-colors">
                   Cancelar
                 </button>
