@@ -451,7 +451,7 @@ export default function PostoTrabalho() {
           {ordens.length === 0 ? (
             <div className="text-center py-16 text-slate-400">
               <Package size={36} className="mx-auto mb-2 opacity-40" />
-              <p className="font-semibold">Nenhuma OP na fila desta máquina</p>
+              <p className="font-semibold">Nenhuma OP na fila deste posto</p>
             </div>
           ) : (
             ordens.map((ordem) => (
