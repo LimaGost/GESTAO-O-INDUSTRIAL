@@ -8,7 +8,7 @@ import {
   LayoutDashboard, ShoppingCart, Factory, Package,
   Truck, Settings, ChevronLeft, ChevronRight, ChevronUp,
   Bell, Tag, Users, Archive, SlidersHorizontal, BarChart2,
-  Database, MoreHorizontal, RefreshCw, Trash2, MessageCircle, LogOut, User, AlertTriangle, HeadphonesIcon, ClipboardCheck, Printer, Store, GraduationCap, Crown
+  Database, MoreHorizontal, RefreshCw, Trash2, MessageCircle, LogOut, User, AlertTriangle, HeadphonesIcon, ClipboardCheck, Printer, Store, GraduationCap, Crown, Tablet
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
@@ -25,6 +25,12 @@ const bottomTabs = [
 ];
 
 const navGroups = [
+  {
+    label: 'CHÃO DE FÁBRICA',
+    items: [
+      { path: '/PostoTrabalho', label: 'Posto de Trabalho', icon: Tablet },
+    ],
+  },
   {
     label: 'PRINCIPAL',
     items: [
@@ -69,6 +75,7 @@ const navGroups = [
 ];
 
 const allNavItems = [
+  { path: '/PostoTrabalho', label: 'Posto de Trabalho', icon: Tablet },
   { path: '/Dashboard',      label: 'Dashboard',        icon: LayoutDashboard },
   { path: '/Pedidos',        label: 'Pedidos',           icon: ShoppingCart },
   { path: '/Kanban',         label: 'Kanban Produção',   icon: Factory },
@@ -93,6 +100,7 @@ const allNavItems = [
 ];
 
 const PATH_MODULO = {
+  '/PostoTrabalho': 'PostoTrabalho',
   '/Dashboard':    'Dashboard',
   '/Pedidos':      'Pedidos',
   '/Kanban':       'Kanban',
