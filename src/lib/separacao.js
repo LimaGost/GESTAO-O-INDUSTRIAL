@@ -10,13 +10,15 @@ function calcularTotais(itens) {
 }
 
 export async function criarSeparacaoFromOP(ordem, statusInicial = 'aguardando_separacao') {
+  // A Separação Indústria é só para pedidos de clientes — OPs criadas manualmente
+  // no Kanban de Produção (sem pedido_id) não devem gerar card aqui.
+  if (!ordem.pedido_id) return null;
+
   let pedido = null;
-  if (ordem.pedido_id) {
-    try {
-      const peds = await base44.entities.Pedido.filter({ id: ordem.pedido_id });
-      pedido = peds[0] || null;
-    } catch {}
-  }
+  try {
+    const peds = await base44.entities.Pedido.filter({ id: ordem.pedido_id });
+    pedido = peds[0] || null;
+  } catch {}
   const itens = (ordem.itens && ordem.itens.length > 0)
     ? ordem.itens.map(i => ({ produto_id: i.produto_id, produto_nome: i.produto_nome, quantidade: i.quantidade }))
     : (ordem.produto_id ? [{ produto_id: ordem.produto_id, produto_nome: ordem.produto_nome, quantidade: ordem.quantidade }] : []);
