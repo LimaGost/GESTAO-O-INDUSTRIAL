@@ -408,6 +408,7 @@ export default function Expedicao() {
       numero_nf,
       pedido_id: op.pedido_id || '',
       pedido_numero: pedInfo?.numero || op.pedido_numero || '',
+      pedido_criado_por_id: pedInfo?.created_by_id || null,
       cliente_nome: pedInfo?.nome || op.produto_nome,
       ordem_producao_id: ['pedido', 'galpao'].includes(op._origem) ? '' : op.id,
       itens: pedInfo?.itens || op.itens || [{ produto_nome: op.produto_nome, quantidade: op.quantidade }],
