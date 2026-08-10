@@ -620,7 +620,7 @@ export default function PostoTrabalho() {
 
         <p className="text-xs font-bold text-slate-400 mb-2 mt-1">EMBALAGEM</p>
         <div className="space-y-2 mb-5">
-          {POSTOS_VIRTUAIS.map((m) => {
+          {POSTOS_VIRTUAIS.filter((m) => m.tipo !== 'separacao').map((m) => {
             const Icon = m.icon === 'Boxes' ? Boxes : Package;
             return (
               <button
@@ -636,6 +636,23 @@ export default function PostoTrabalho() {
               </button>
             );
           })}
+        </div>
+
+        <p className="text-xs font-bold text-slate-400 mb-2">SEPARAÇÃO</p>
+        <div className="space-y-2 mb-5">
+          {POSTOS_VIRTUAIS.filter((m) => m.tipo === 'separacao').map((m) => (
+            <button
+              key={m.id}
+              onClick={() => escolherMaquina(m.id)}
+              className="w-full text-left p-4 rounded-xl border-2 border-slate-200 hover:border-amber-400 flex items-center gap-3"
+            >
+              <ClipboardCheck size={20} className="text-slate-500" />
+              <div>
+                <p className="font-bold text-slate-800">{m.nome}</p>
+                <p className="text-xs text-slate-400">Todas as separações ativas</p>
+              </div>
+            </button>
+          ))}
         </div>
 
         <p className="text-xs font-bold text-slate-400 mb-2">MÁQUINAS DE PRODUÇÃO</p>
