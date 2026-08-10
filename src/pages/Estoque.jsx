@@ -5,7 +5,6 @@ import { registrarLog } from '@/lib/audit';
 import { gerarNumero } from '@/lib/numeracao';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 import PullToRefresh from '@/components/PullToRefresh';
-import SelectMobile, { SelectOption } from '@/components/ui/select-mobile';
 import { listarFracionado, adicionarFracionado, retirarFracionado } from '@/lib/estoqueFracionado';
 import { calcularCaixas, formatarCaixas } from '@/lib/calculoCaixas';
 
