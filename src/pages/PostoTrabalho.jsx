@@ -16,6 +16,14 @@ const SUBSTEP_POR_LINHA = {
   'super25': { key: 'jogar_grade', label: 'Jogar Grade' },
 };
 
+// Postos que não são máquinas físicas: embalagem e etiquetagem atendem OPs de
+// QUALQUER máquina de origem, então ficam fora da lista de Maquina e filtram
+// diretamente por status da OrdemProducao.
+const POSTOS_VIRTUAIS = [
+  { id: '__embalagem__', nome: 'Embalagem', virtual: true, statusFiltro: 'em_embalagem', icon: 'Package' },
+  { id: '__etiquetagem__', nome: 'Etiquetagem', virtual: true, statusFiltro: 'em_etiquetagem', icon: 'Boxes' },
+];
+
 const STATUS_LABEL = {
   a_produzir: 'Aguardando Produção',
   em_producao: 'Em Produção',
