@@ -9,8 +9,9 @@ import { usePermissoes } from '@/lib/usePermissoes.jsx';
 const emptyForm = { nome: '', cnpj_cpf: '', email: '', telefone: '', endereco: '', bairro: '', cep: '', cidade: '', estado: '', ativo: true, white_label: false, tipo_cliente: '', forma_embalagem: '' };
 
 export default function Clientes() {
-  const { somenteLeitura } = usePermissoes();
+  const { somenteLeitura, ocultarFinanceiro } = usePermissoes();
   const readonly = somenteLeitura('Clientes');
+  const ocultarValores = ocultarFinanceiro('Clientes');
   const [clientes, setClientes] = useState([]);
   const [pedidos, setPedidos] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -122,7 +123,7 @@ export default function Clientes() {
       </div>
 
       {aba === 'crm' && (
-        <CrmDashboard clientes={clientes} pedidos={pedidos} onVerCliente={(c) => setPerfilCliente(c)} />
+        <CrmDashboard clientes={clientes} pedidos={pedidos} onVerCliente={(c) => setPerfilCliente(c)} ocultarValores={ocultarValores} />
       )}
 
       {aba === 'lista' && (
@@ -275,6 +276,7 @@ export default function Clientes() {
         <PerfilCliente
           cliente={perfilCliente}
           onClose={() => setPerfilCliente(null)}
+          ocultarValores={ocultarValores}
           onSave={(atualizado) => {
             setPerfilCliente(atualizado);
             setClientes(prev => prev.map(c => c.id === atualizado.id ? atualizado : c));
