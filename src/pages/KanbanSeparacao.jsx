@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { registrarLog } from '@/lib/audit';
-import { agoraISO, hojeData } from '@/lib/brasilia';
-import { gerarLote } from '@/lib/numeracao';
+import { hojeData } from '@/lib/brasilia';
 import { avancarStatusSeparacao } from '@/lib/avancoSeparacao';
 import { criarSeparacaoFromPedido, criarSeparacaoFromGrupo } from '@/lib/separacao';
 import { buildColunas, readStagesLocal } from '@/lib/kanbanFluxo';
