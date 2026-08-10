@@ -375,8 +375,30 @@ export default function PostoTrabalho() {
   if (!maquinaAtual || showTrocarMaquina) {
     return (
       <div className="max-w-md mx-auto py-8">
-        <h2 className="text-xl font-bold text-slate-800 mb-1">Selecione a Máquina</h2>
-        <p className="text-sm text-slate-500 mb-5">Este tablet vai representar este posto de trabalho.</p>
+        <h2 className="text-xl font-bold text-slate-800 mb-1">Selecione o Posto de Trabalho</h2>
+        <p className="text-sm text-slate-500 mb-5">Este tablet vai representar este posto.</p>
+
+        <p className="text-xs font-bold text-slate-400 mb-2 mt-1">EMBALAGEM</p>
+        <div className="space-y-2 mb-5">
+          {POSTOS_VIRTUAIS.map((m) => {
+            const Icon = m.icon === 'Boxes' ? Boxes : Package;
+            return (
+              <button
+                key={m.id}
+                onClick={() => escolherMaquina(m.id)}
+                className="w-full text-left p-4 rounded-xl border-2 border-slate-200 hover:border-amber-400 flex items-center gap-3"
+              >
+                <Icon size={20} className="text-slate-500" />
+                <div>
+                  <p className="font-bold text-slate-800">{m.nome}</p>
+                  <p className="text-xs text-slate-400">Todas as OPs nesta etapa</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <p className="text-xs font-bold text-slate-400 mb-2">MÁQUINAS DE PRODUÇÃO</p>
         <div className="space-y-2">
           {maquinas.filter((m) => m.ativo !== false).map((m) => (
             <button
