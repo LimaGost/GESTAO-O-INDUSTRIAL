@@ -192,6 +192,47 @@ function TarugoCard({ maquina, onRegistrarEstoque }) {
   );
 }
 
+function CaixaMiniCard({ modelo, onAtualizado }) {
+  const estoque = modelo.estoque_atual ?? 0;
+  const [showPin, setShowPin] = useState(false);
+  const [showQtd, setShowQtd] = useState(false);
+  const [qtd, setQtd] = useState('');
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 p-3 flex items-center justify-between gap-2">
+      <div>
+        <p className="text-xs font-semibold text-slate-500">{modelo.nome}</p>
+        <p className={`text-xl font-black ${estoque <= 0 ? 'text-red-600' : 'text-slate-800'}`}>{estoque} <span className="text-xs font-medium text-slate-400">cx</span></p>
+      </div>
+      {!showQtd ? (
+        <button onClick={() => setShowQtd(true)} className="p-2 rounded-lg bg-slate-100 text-slate-600"><Lock size={16} /></button>
+      ) : (
+        <div className="flex items-center gap-1">
+          <input
+            type="number"
+            inputMode="numeric"
+            autoFocus
+            value={qtd}
+            onChange={(e) => setQtd(e.target.value)}
+            className="w-16 border-2 border-slate-200 rounded-lg px-1.5 py-1 text-center text-sm"
+          />
+          <button onClick={() => setShowQtd(false)} className="p-1.5 rounded-lg bg-slate-100"><X size={14} /></button>
+          <button onClick={() => setShowPin(true)} disabled={!qtd} className="p-1.5 rounded-lg bg-amber-500 text-white disabled:opacity-50"><Save size={14} /></button>
+        </div>
+      )}
+      {showPin && (
+        <PinConfirmWrapper
+          titulo="Confirmar contagem de caixa"
+          descricao={`${modelo.nome}: registrar ${qtd} caixas.`}
+          onCancelar={() => setShowPin(false)}
+          onSucesso={() => { setShowPin(false); setShowQtd(false); setQtd(''); onAtualizado(); }}
+          invocar={(pin) => base44.functions.invoke('registrarEstoqueCaixa', { modelo_caixa_id: modelo.id, quantidade: Number(qtd), pin })}
+        />
+      )}
+    </div>
+  );
+}
+
 function PinConfirmWrapper({ titulo, descricao, onCancelar, onSucesso, invocar }) {
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState('');
