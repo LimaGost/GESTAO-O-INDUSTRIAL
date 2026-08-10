@@ -5,7 +5,7 @@ import { loadKanbanFluxo } from '@/lib/kanbanFluxo';
 import { avancarStatusOP } from '@/lib/avancoProducao';
 import {
   Factory, ArrowUp, ArrowDown, Lock, CheckCircle2, ChevronDown,
-  Package, Layers, Boxes, RefreshCw, AlertTriangle, Save, X,
+  Package, Layers, Boxes, RefreshCw, AlertTriangle, Save, X, Check,
 } from 'lucide-react';
 
 const SUBSTEP_POR_LINHA = {
@@ -71,10 +71,13 @@ function PinModal({ titulo, descricao, onConfirmar, onCancelar, loading, erro })
   );
 }
 
-function OPCard({ ordem, produto, cliente, subStep, onConcluir, processando }) {
+function OPCard({ ordem, produto, cliente, subStep, onConcluir, onToggleItem, processando }) {
   const etapa = ordem.etapa_atual;
   let botaoLabel = null;
   let acao = null;
+
+  const temMultiplosItens = Array.isArray(ordem.itens) && ordem.itens.length > 1;
+  const todosItensEmbalados = temMultiplosItens ? ordem.itens.every((i) => i.embalado) : true;
 
   if (ordem.status === 'em_producao') {
     if (!etapa || etapa === 'producao') {
@@ -84,7 +87,6 @@ function OPCard({ ordem, produto, cliente, subStep, onConcluir, processando }) {
       botaoLabel = `Concluir ${subStep.label}`;
       acao = 'concluir_substep';
     } else if (etapa) {
-      // Sub-etapa registrada na OP mas não configurada neste posto — permite concluir mesmo assim
       botaoLabel = `Concluir ${etapa.replace(/_/g, ' ')}`;
       acao = 'concluir_substep';
     }
@@ -95,6 +97,8 @@ function OPCard({ ordem, produto, cliente, subStep, onConcluir, processando }) {
     botaoLabel = 'Concluir Etiquetagem';
     acao = 'concluir_etiquetagem';
   }
+
+  const mostrarChecklist = ordem.status === 'em_embalagem' && temMultiplosItens;
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-3">
@@ -108,20 +112,48 @@ function OPCard({ ordem, produto, cliente, subStep, onConcluir, processando }) {
           {STATUS_LABEL[ordem.status] || ordem.status}
         </span>
       </div>
+
       {subStep && etapa === subStep.key && (
         <div className="mb-2 inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full">
           <Layers size={13} /> Aguardando {subStep.label}
         </div>
       )}
+
+      {mostrarChecklist && (
+        <div className="mb-3 mt-1 border border-slate-100 rounded-xl overflow-hidden divide-y divide-slate-100">
+          <div className="px-3 py-2 bg-slate-50 flex items-center justify-between">
+            <p className="text-xs font-bold text-slate-500">
+              {ordem.itens.filter((i) => i.embalado).length}/{ordem.itens.length} itens embalados
+            </p>
+          </div>
+          {ordem.itens.map((item, idx) => (
+            <button
+              key={idx}
+              onClick={() => onToggleItem(ordem, idx)}
+              disabled={processando}
+              className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left disabled:opacity-50"
+            >
+              <span className={`shrink-0 w-5 h-5 rounded-md border-2 flex items-center justify-center ${item.embalado ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300'}`}>
+                {item.embalado && <Check size={13} className="text-white" strokeWidth={3} />}
+              </span>
+              <span className={`flex-1 text-sm ${item.embalado ? 'text-slate-400 line-through' : 'text-slate-700 font-medium'}`}>
+                {item.produto_nome}
+              </span>
+              <span className="text-xs font-bold text-slate-400 shrink-0">{item.quantidade} cx</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {botaoLabel && (
         <button
           onClick={() => onConcluir(ordem, acao)}
-          disabled={processando}
-          className="w-full mt-2 py-3.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50"
+          disabled={processando || (mostrarChecklist && !todosItensEmbalados)}
+          className="w-full mt-2 py-3.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 disabled:opacity-40"
           style={{ background: '#0D3B45' }}
         >
           <CheckCircle2 size={18} />
-          {processando ? 'Processando...' : botaoLabel}
+          {processando ? 'Processando...' : mostrarChecklist && !todosItensEmbalados ? 'Marque todos os itens' : botaoLabel}
         </button>
       )}
     </div>
@@ -309,6 +341,7 @@ function ReordenarFilaModal({ maquina, ordens, onClose, onSalvo }) {
 export default function PostoTrabalho() {
   const { user } = useAuth();
   const [maquinas, setMaquinas] = useState([]);
+  const [modelosCaixa, setModelosCaixa] = useState([]);
   const [maquinaId, setMaquinaId] = useState(() => localStorage.getItem('posto_trabalho_maquina_id') || '');
   const [ordens, setOrdens] = useState([]);
   const [produtos, setProdutos] = useState([]);
@@ -322,15 +355,17 @@ export default function PostoTrabalho() {
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    const [maqs, prods, peds, gps, stages] = await Promise.all([
+    const [maqs, prods, peds, gps, stages, caixas] = await Promise.all([
       base44.entities.Maquina.list(),
       base44.entities.Produto.list(),
       base44.entities.Pedido.list(),
       base44.entities.GrupoPedidos.list().catch(() => []),
       loadKanbanFluxo('producao'),
+      base44.entities.ModeloCaixa.list().catch(() => []),
     ]);
     setMaquinas(maqs);
     setProdutos(prods);
+    setModelosCaixa(caixas);
     const pm = {};
     for (const p of peds) pm[p.id] = { nome: p.cliente_nome, cliente_id: p.cliente_id };
     setPedidoMap(pm);
@@ -341,13 +376,16 @@ export default function PostoTrabalho() {
     setLoading(false);
   }, []);
 
-  const carregarOrdens = useCallback(async (posto) => {
+  const carregarOrdens = useCallback(async (posto, produtosList) => {
     if (!posto) { setOrdens([]); return; }
     if (posto.tipo_produto === 'tarugo') { setOrdens([]); return; }
 
     if (posto.virtual) {
       // Embalagem/Etiquetagem: OPs de qualquer máquina de origem, filtradas por status
-      const todas = await base44.entities.OrdemProducao.filter({ status: posto.statusFiltro });
+      let todas = await base44.entities.OrdemProducao.filter({ status: posto.statusFiltro });
+      if (posto.filtroLinha) {
+        todas = todas.filter((o) => produtosList.find((p) => p.id === o.produto_id)?.linha_producao === posto.filtroLinha);
+      }
       todas.sort((a, b) => (a.posicao_fila ?? 999) - (b.posicao_fila ?? 999));
       setOrdens(todas);
       return;
@@ -367,8 +405,8 @@ export default function PostoTrabalho() {
   const maquinaAtual = useMemo(() => postosDisponiveis.find((m) => m.id === maquinaId) || null, [postosDisponiveis, maquinaId]);
 
   useEffect(() => {
-    if (maquinaAtual) carregarOrdens(maquinaAtual);
-  }, [maquinaAtual, carregarOrdens]);
+    if (maquinaAtual) carregarOrdens(maquinaAtual, produtos);
+  }, [maquinaAtual, carregarOrdens, produtos]);
 
   const escolherMaquina = (id) => {
     localStorage.setItem('posto_trabalho_maquina_id', id);
@@ -377,6 +415,17 @@ export default function PostoTrabalho() {
   };
 
   const produtoDe = (ordem) => produtos.find((p) => p.id === ordem.produto_id);
+
+  const toggleItem = async (ordem, idx) => {
+    const novosItens = ordem.itens.map((it, i) => i === idx ? { ...it, embalado: !it.embalado } : it);
+    setOrdens((prev) => prev.map((o) => o.id === ordem.id ? { ...o, itens: novosItens } : o));
+    try {
+      await base44.entities.OrdemProducao.update(ordem.id, { itens: novosItens });
+    } catch (e) {
+      console.error('Erro ao marcar item:', e);
+      setOrdens((prev) => prev.map((o) => o.id === ordem.id ? { ...o, itens: ordem.itens } : o));
+    }
+  };
 
   const concluir = async (ordem, acao) => {
     setProcessandoId(ordem.id);
@@ -405,7 +454,7 @@ export default function PostoTrabalho() {
       } else if (acao === 'concluir_etiquetagem') {
         await avancarStatusOP(ordem, contexto); // em_etiquetagem -> finalizado
       }
-      await carregarOrdens(maquinaAtual);
+      await carregarOrdens(maquinaAtual, produtos);
     } catch (e) {
       console.error('Erro ao concluir etapa:', e);
       alert('Erro ao concluir etapa: ' + e.message);
@@ -486,6 +535,16 @@ export default function PostoTrabalho() {
         <TarugoCard maquina={maquinaAtual} onRegistrarEstoque={carregar} />
       ) : (
         <>
+          {maquinaAtual.virtual && (maquinaAtual.id === '__maquina_embalagem_7dias__' || maquinaAtual.id === '__mesa_embalagem__') && (
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              {modelosCaixa
+                .filter((m) => maquinaAtual.id === '__maquina_embalagem_7dias__' ? m.linha_producao === '7dias' : true)
+                .map((m) => (
+                  <CaixaMiniCard key={m.id} modelo={m} onAtualizado={carregar} />
+                ))}
+            </div>
+          )}
+
           {ordens.length > 1 && (
             <button
               onClick={() => setShowReordenar(true)}
@@ -508,6 +567,7 @@ export default function PostoTrabalho() {
                 cliente={ordem.pedido_id ? pedidoMap[ordem.pedido_id]?.nome : null}
                 subStep={subStep}
                 onConcluir={concluir}
+                onToggleItem={toggleItem}
                 processando={processandoId === ordem.id}
               />
             ))
@@ -520,7 +580,7 @@ export default function PostoTrabalho() {
           maquina={maquinaAtual}
           ordens={ordens}
           onClose={() => setShowReordenar(false)}
-          onSalvo={() => carregarOrdens(maquinaAtual)}
+          onSalvo={() => carregarOrdens(maquinaAtual, produtos)}
         />
       )}
     </div>
