@@ -24,6 +24,7 @@ const POSTOS_VIRTUAIS = [
   { id: '__maquina_embalagem_7dias__', nome: 'Máquina de Embalagem (7 dias)', virtual: true, statusFiltro: 'em_embalagem', filtroLinha: '7dias', icon: 'Package' },
   { id: '__mesa_embalagem__', nome: 'Mesa de Embalagem', virtual: true, statusFiltro: 'em_embalagem', filtroLinha: null, icon: 'Package' },
   { id: '__etiquetagem__', nome: 'Etiquetagem', virtual: true, statusFiltro: 'em_etiquetagem', filtroLinha: null, icon: 'Boxes' },
+  { id: '__separacao_industria__', nome: 'Separação Indústria', virtual: true, tipo: 'separacao', icon: 'ClipboardCheck' },
 ];
 
 const STATUS_LABEL = {
@@ -33,6 +34,13 @@ const STATUS_LABEL = {
   em_embalagem: 'Em Embalagem',
   em_etiquetagem: 'Em Etiquetagem',
   finalizado: 'Finalizado',
+  aguardando_producao: 'Aguardando Produção',
+  aguardando_separacao: 'Aguardando Separação',
+  em_separacao: 'Em Separação',
+  separado: 'Separado',
+  em_conferencia: 'Em Conferência',
+  conferido: 'Conferido',
+  liberado_expedicao: 'Liberado p/ Expedição',
 };
 
 const LINHA_LABEL = {
