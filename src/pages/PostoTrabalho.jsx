@@ -598,6 +598,7 @@ export default function PostoTrabalho() {
                 key={ordem.id}
                 ordem={ordem}
                 produto={produtoDe(ordem)}
+                produtos={produtos}
                 cliente={ordem.pedido_id ? pedidoMap[ordem.pedido_id]?.nome : null}
                 subStep={subStep}
                 onConcluir={concluir}
