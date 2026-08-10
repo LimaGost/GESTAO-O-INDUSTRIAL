@@ -80,8 +80,12 @@ function OPCard({ ordem, produto, cliente, subStep, onConcluir, processando }) {
     if (!etapa || etapa === 'producao') {
       botaoLabel = 'Concluir Produção na Máquina';
       acao = 'concluir_maquina';
-    } else if (etapa === subStep?.key) {
+    } else if (subStep && etapa === subStep.key) {
       botaoLabel = `Concluir ${subStep.label}`;
+      acao = 'concluir_substep';
+    } else if (etapa) {
+      // Sub-etapa registrada na OP mas não configurada neste posto — permite concluir mesmo assim
+      botaoLabel = `Concluir ${etapa.replace(/_/g, ' ')}`;
       acao = 'concluir_substep';
     }
   } else if (ordem.status === 'em_embalagem') {
@@ -104,7 +108,7 @@ function OPCard({ ordem, produto, cliente, subStep, onConcluir, processando }) {
           {STATUS_LABEL[ordem.status] || ordem.status}
         </span>
       </div>
-      {etapa === subStep?.key && (
+      {subStep && etapa === subStep.key && (
         <div className="mb-2 inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full">
           <Layers size={13} /> Aguardando {subStep.label}
         </div>
@@ -305,7 +309,6 @@ function ReordenarFilaModal({ maquina, ordens, onClose, onSalvo }) {
 export default function PostoTrabalho() {
   const { user } = useAuth();
   const [maquinas, setMaquinas] = useState([]);
-  const [modelosCaixa, setModelosCaixa] = useState([]);
   const [maquinaId, setMaquinaId] = useState(() => localStorage.getItem('posto_trabalho_maquina_id') || '');
   const [ordens, setOrdens] = useState([]);
   const [produtos, setProdutos] = useState([]);
@@ -319,17 +322,15 @@ export default function PostoTrabalho() {
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    const [maqs, prods, peds, gps, stages, caixas] = await Promise.all([
+    const [maqs, prods, peds, gps, stages] = await Promise.all([
       base44.entities.Maquina.list(),
       base44.entities.Produto.list(),
       base44.entities.Pedido.list(),
       base44.entities.GrupoPedidos.list().catch(() => []),
       loadKanbanFluxo('producao'),
-      base44.entities.ModeloCaixa.list().catch(() => []),
     ]);
     setMaquinas(maqs);
     setProdutos(prods);
-    setModelosCaixa(caixas);
     const pm = {};
     for (const p of peds) pm[p.id] = { nome: p.cliente_nome, cliente_id: p.cliente_id };
     setPedidoMap(pm);
@@ -340,16 +341,13 @@ export default function PostoTrabalho() {
     setLoading(false);
   }, []);
 
-  const carregarOrdens = useCallback(async (posto, produtosList) => {
+  const carregarOrdens = useCallback(async (posto) => {
     if (!posto) { setOrdens([]); return; }
     if (posto.tipo_produto === 'tarugo') { setOrdens([]); return; }
 
     if (posto.virtual) {
       // Embalagem/Etiquetagem: OPs de qualquer máquina de origem, filtradas por status
-      let todas = await base44.entities.OrdemProducao.filter({ status: posto.statusFiltro });
-      if (posto.filtroLinha) {
-        todas = todas.filter((o) => produtosList.find((p) => p.id === o.produto_id)?.linha_producao === posto.filtroLinha);
-      }
+      const todas = await base44.entities.OrdemProducao.filter({ status: posto.statusFiltro });
       todas.sort((a, b) => (a.posicao_fila ?? 999) - (b.posicao_fila ?? 999));
       setOrdens(todas);
       return;
@@ -369,8 +367,8 @@ export default function PostoTrabalho() {
   const maquinaAtual = useMemo(() => postosDisponiveis.find((m) => m.id === maquinaId) || null, [postosDisponiveis, maquinaId]);
 
   useEffect(() => {
-    if (maquinaAtual) carregarOrdens(maquinaAtual, produtos);
-  }, [maquinaAtual, carregarOrdens, produtos]);
+    if (maquinaAtual) carregarOrdens(maquinaAtual);
+  }, [maquinaAtual, carregarOrdens]);
 
   const escolherMaquina = (id) => {
     localStorage.setItem('posto_trabalho_maquina_id', id);
@@ -407,7 +405,7 @@ export default function PostoTrabalho() {
       } else if (acao === 'concluir_etiquetagem') {
         await avancarStatusOP(ordem, contexto); // em_etiquetagem -> finalizado
       }
-      await carregarOrdens(maquinaAtual, produtos);
+      await carregarOrdens(maquinaAtual);
     } catch (e) {
       console.error('Erro ao concluir etapa:', e);
       alert('Erro ao concluir etapa: ' + e.message);
@@ -488,15 +486,6 @@ export default function PostoTrabalho() {
         <TarugoCard maquina={maquinaAtual} onRegistrarEstoque={carregar} />
       ) : (
         <>
-          {maquinaAtual.virtual && (maquinaAtual.id === '__maquina_embalagem_7dias__' || maquinaAtual.id === '__mesa_embalagem__') && (
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              {modelosCaixa
-                .filter((m) => maquinaAtual.id === '__maquina_embalagem_7dias__' ? m.linha_producao === '7dias' : true)
-                .map((m) => (
-                  <CaixaMiniCard key={m.id} modelo={m} onAtualizado={carregar} />
-                ))}
-            </div>
-          )}
           {ordens.length > 1 && (
             <button
               onClick={() => setShowReordenar(true)}
@@ -531,7 +520,7 @@ export default function PostoTrabalho() {
           maquina={maquinaAtual}
           ordens={ordens}
           onClose={() => setShowReordenar(false)}
-          onSalvo={() => carregarOrdens(maquinaAtual, produtos)}
+          onSalvo={() => carregarOrdens(maquinaAtual)}
         />
       )}
     </div>
