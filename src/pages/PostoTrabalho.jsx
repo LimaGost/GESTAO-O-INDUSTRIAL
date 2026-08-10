@@ -613,6 +613,7 @@ export default function PostoTrabalho() {
                 produto={produtoDe(ordem)}
                 produtos={produtos}
                 cliente={ordem.pedido_id ? pedidoMap[ordem.pedido_id]?.nome : null}
+                dataPedido={ordem.pedido_id ? pedidoMap[ordem.pedido_id]?.data_pedido : null}
                 subStep={subStep}
                 onConcluir={concluir}
                 onToggleItem={toggleItem}
