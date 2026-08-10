@@ -181,6 +181,12 @@ export default function Estoque() {
     setMostrarListaAjuste(false);
   };
 
+  const fecharModalAjuste = () => {
+    setShowAjuste(false);
+    setAjuste({ produto_id: '', tipo: 'entrada', quantidade: 1, motivo: '', estoque: 'principal' });
+    setBuscaProdutoAjuste('');
+  };
+
   // Bipagem ou Enter: se o texto bater exatamente com um código, seleciona na hora.
   // Senão, se sobrou só 1 produto no filtro, seleciona ele também.
   const handleEnterBusca = () => {
@@ -488,11 +494,11 @@ export default function Estoque() {
       {/* Modal Ajuste */}
       {showAjuste && !readonly && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-          onClick={() => setShowAjuste(false)}>
+          onClick={fecharModalAjuste}>
           <div className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
               <h3 className="font-bold text-foreground">Ajuste de Estoque</h3>
-              <button onClick={() => setShowAjuste(false)} className="p-1.5 hover:bg-muted rounded-lg">
+              <button onClick={fecharModalAjuste} className="p-1.5 hover:bg-muted rounded-lg">
                 <X size={15} className="text-muted-foreground" />
               </button>
             </div>
