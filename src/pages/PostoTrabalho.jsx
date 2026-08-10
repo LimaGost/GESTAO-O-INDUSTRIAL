@@ -659,8 +659,14 @@ export default function PostoTrabalho() {
   }
 
   const isTarugo = maquinaAtual.tipo_produto === 'tarugo';
+  const isSeparacao = maquinaAtual.tipo === 'separacao';
   const subStep = SUBSTEP_POR_LINHA[maquinaAtual.tipo_produto];
-  const HeaderIcon = maquinaAtual.virtual ? (maquinaAtual.icon === 'Boxes' ? Boxes : Package) : Factory;
+  const HeaderIcon = maquinaAtual.virtual ? (maquinaAtual.icon === 'Boxes' ? Boxes : maquinaAtual.icon === 'ClipboardCheck' ? undefined : Package) : Factory;
+  const proximosSeparacao = useMemo(() => {
+    const map = {};
+    for (let i = 0; i < kanbanColunasSeparacao.length - 1; i++) map[kanbanColunasSeparacao[i].key] = kanbanColunasSeparacao[i + 1].key;
+    return map;
+  }, [kanbanColunasSeparacao]);
 
   return (
     <div className="max-w-lg mx-auto pb-8">
