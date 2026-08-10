@@ -253,7 +253,7 @@ export default function CrmDashboard({ clientes, pedidos, onVerCliente, ocultarV
                     <p className="text-xs text-muted-foreground">{c.cidade || c.email || ''}</p>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-bold text-foreground">{fmtRShort(c.totalPeriodo)}</p>
+                    <p className="text-sm font-bold text-foreground">{ocultarValores ? '••••••' : fmtRShort(c.totalPeriodo)}</p>
                     <p className="text-xs text-muted-foreground">{c.qtdPeriodo} pedido{c.qtdPeriodo !== 1 ? 's' : ''}</p>
                   </div>
                   <div className={`w-2 h-2 rounded-full flex-shrink-0 ${cfg.dot}`} />
