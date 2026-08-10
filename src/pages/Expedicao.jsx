@@ -719,6 +719,7 @@ export default function Expedicao() {
       onImprimirEtiqueta={readonly ? null : (exp) => setEtiquetaExpedicao(exp)}
       onConfirmarRecebimento={readonly ? null : (exp) => setModalConfirmacao(exp)}
       onVerPedido={abrirPedido}
+      ocultarValores={ocultarValores}
     />
   );
 
