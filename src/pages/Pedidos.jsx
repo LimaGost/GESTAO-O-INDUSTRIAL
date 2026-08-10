@@ -276,6 +276,7 @@ export default function Pedidos() {
       numero_nf,
       pedido_id: pedido.id,
       pedido_numero: pedido.numero,
+      pedido_criado_por_id: pedido.created_by_id || null,
       cliente_id: pedido.cliente_id || '',
       cliente_nome: pedido.cliente_nome,
       itens: pedido.itens || [],
