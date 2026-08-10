@@ -465,6 +465,8 @@ export default function PostoTrabalho() {
   const [pedidoMap, setPedidoMap] = useState({});
   const [grupoMapById, setGrupoMapById] = useState({});
   const [kanbanColunas, setKanbanColunas] = useState([]);
+  const [kanbanColunasSeparacao, setKanbanColunasSeparacao] = useState([]);
+  const [separacoes, setSeparacoes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processandoId, setProcessandoId] = useState(null);
   const [showReordenar, setShowReordenar] = useState(false);
@@ -472,7 +474,7 @@ export default function PostoTrabalho() {
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    const [maqs, prods, peds, gps, stages, caixas, clientes] = await Promise.all([
+    const [maqs, prods, peds, gps, stages, caixas, clientes, stagesSep, seps] = await Promise.all([
       base44.entities.Maquina.list(),
       base44.entities.Produto.list(),
       base44.entities.Pedido.list(),
@@ -480,10 +482,14 @@ export default function PostoTrabalho() {
       loadKanbanFluxo('producao'),
       base44.entities.ModeloCaixa.list().catch(() => []),
       base44.entities.Cliente.list().catch(() => []),
+      loadKanbanFluxo('separacao'),
+      base44.entities.Separacao.list('-created_date').catch(() => []),
     ]);
     setMaquinas(maqs);
     setProdutos(prods);
     setModelosCaixa(caixas);
+    setKanbanColunasSeparacao(stagesSep.stages || []);
+    setSeparacoes(seps.filter((s) => s.status !== 'liberado_expedicao'));
     const clientePorId = {};
     for (const c of clientes) clientePorId[c.id] = c;
     const pm = {};
