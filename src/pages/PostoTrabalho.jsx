@@ -132,9 +132,14 @@ function OPCard({ ordem, produto, produtos, cliente, dataPedido, subStep, onConc
           <p className="text-xs font-bold text-slate-400">OP {ordem.numero || ordem.id?.slice(-6)}</p>
           <p className="text-lg font-bold text-slate-800">{ordem.produto_nome}</p>
           <p className="text-sm text-slate-500">{ordem.quantidade} un{cliente ? ` · ${cliente}` : ''}</p>
-          {dataPedido && (
-            <p className="text-xs text-slate-400 mt-0.5">Pedido criado em {new Date(dataPedido).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</p>
-          )}
+          <div className="flex flex-wrap gap-x-3 mt-0.5">
+            {dataPedido && (
+              <p className="text-xs text-slate-400">Pedido criado em {new Date(dataPedido).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</p>
+            )}
+            {ordem.created_date && (
+              <p className="text-xs text-slate-400">OP criada em {new Date(ordem.created_date).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</p>
+            )}
+          </div>
         </div>
         <span className="text-[11px] font-bold px-2 py-1 rounded-full bg-slate-100 text-slate-600">
           {STATUS_LABEL[ordem.status] || ordem.status}
