@@ -156,6 +156,44 @@ export default function Estoque() {
   // Produto selecionado no ajuste
   const produtoAjuste = produtos.find(p => p.id === ajuste.produto_id);
 
+  // Mapa de código -> produto, para bipagem/entrada direta por código (case-insensitive)
+  const codigoMapAjuste = useMemo(() => {
+    const map = {};
+    for (const p of produtos) {
+      if (p.codigo) map[String(p.codigo).trim().toLowerCase()] = p.id;
+    }
+    return map;
+  }, [produtos]);
+
+  const produtosFiltradosAjuste = useMemo(() => {
+    const termo = buscaProdutoAjuste.trim().toLowerCase();
+    if (!termo) return [];
+    return produtos
+      .filter(p => (p.nome || '').toLowerCase().includes(termo) || (p.codigo || '').toString().toLowerCase().includes(termo))
+      .slice(0, 8);
+  }, [produtos, buscaProdutoAjuste]);
+
+  const selecionarProdutoAjuste = (produto) => {
+    setAjuste(a => ({ ...a, produto_id: produto.id }));
+    setBuscaProdutoAjuste('');
+    setMostrarListaAjuste(false);
+  };
+
+  // Bipagem ou Enter: se o texto bater exatamente com um código, seleciona na hora.
+  // Senão, se sobrou só 1 produto no filtro, seleciona ele também.
+  const handleEnterBusca = () => {
+    const termo = buscaProdutoAjuste.trim().toLowerCase();
+    if (!termo) return;
+    const idPorCodigo = codigoMapAjuste[termo];
+    if (idPorCodigo) {
+      const p = produtos.find(pp => pp.id === idPorCodigo);
+      if (p) { selecionarProdutoAjuste(p); return; }
+    }
+    if (produtosFiltradosAjuste.length === 1) {
+      selecionarProdutoAjuste(produtosFiltradosAjuste[0]);
+    }
+  };
+
   return (
     <PullToRefresh onRefresh={load}>
     <div className="space-y-5">
