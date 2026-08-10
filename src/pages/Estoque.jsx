@@ -32,6 +32,9 @@ export default function Estoque() {
   const [carregando, setCarregando] = useState(true);
   const [showAjuste, setShowAjuste] = useState(false);
   const [ajuste, setAjuste] = useState({ produto_id: '', tipo: 'entrada', quantidade: 1, motivo: '', estoque: 'principal' });
+  const [buscaProdutoAjuste, setBuscaProdutoAjuste] = useState('');
+  const [mostrarListaAjuste, setMostrarListaAjuste] = useState(false);
+  const inputBipagemRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [busca, setBusca] = useState('');
   const [fracionados, setFracionados] = useState({});
