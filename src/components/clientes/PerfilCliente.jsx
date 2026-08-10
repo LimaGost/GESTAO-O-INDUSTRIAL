@@ -31,7 +31,7 @@ function diasSemComprar(pedidos) {
   return Math.floor((Date.now() - Math.max(...datas)) / 86400000);
 }
 
-export default function PerfilCliente({ cliente, onClose, onSave }) {
+export default function PerfilCliente({ cliente, onClose, onSave, ocultarValores }) {
   const [pedidos, setPedidos] = useState([]);
   const [loadingPedidos, setLoadingPedidos] = useState(true);
   const [obs, setObs] = useState(cliente.observacoes_relacionamento || '');
@@ -154,8 +154,8 @@ export default function PerfilCliente({ cliente, onClose, onSave }) {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
               { icon: ShoppingCart, color: 'text-sky-blue', bg: 'bg-sky-blue/10', label: 'Pedidos', value: pedidos.length },
-              { icon: DollarSign, color: 'text-rainbow-green', bg: 'bg-rainbow-green/10', label: 'Total', value: fmtR(totalInvestido) },
-              { icon: TrendingUp, color: 'text-rainbow-purple', bg: 'bg-rainbow-purple/10', label: 'Ticket Médio', value: fmtR(ticketMedio) },
+              { icon: DollarSign, color: 'text-rainbow-green', bg: 'bg-rainbow-green/10', label: 'Total', value: ocultarValores ? '••••••' : fmtR(totalInvestido) },
+              { icon: TrendingUp, color: 'text-rainbow-purple', bg: 'bg-rainbow-purple/10', label: 'Ticket Médio', value: ocultarValores ? '••••••' : fmtR(ticketMedio) },
               { icon: Package, color: 'text-sun-yellow', bg: 'bg-sun-yellow/10', label: 'Produtos', value: Object.keys(prodMap).length },
             ].map(({ icon: Icon, color, bg, label, value }) => (
               <div key={label} className="bg-card border border-border rounded-2xl p-4">
@@ -205,7 +205,7 @@ export default function PerfilCliente({ cliente, onClose, onSave }) {
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">{fmtDate(p.data_pedido)} · {(p.itens || []).length} item(s)</p>
                       </div>
-                      <p className="text-sm font-bold text-foreground flex-shrink-0">{fmtR(p.valor_total)}</p>
+                      <p className="text-sm font-bold text-foreground flex-shrink-0">{ocultarValores ? '••••••' : fmtR(p.valor_total)}</p>
                     </div>
                   ))}
                 </div>
@@ -233,7 +233,7 @@ export default function PerfilCliente({ cliente, onClose, onSave }) {
                           <span className="font-semibold text-foreground truncate flex-1 flex items-center gap-1.5">
                             {i === 0 && <span>⭐</span>} {p.nome}
                           </span>
-                          <span className="text-muted-foreground ml-2 flex-shrink-0">{p.qtd} un · {fmtR(p.valor)}</span>
+                          <span className="text-muted-foreground ml-2 flex-shrink-0">{p.qtd} un{!ocultarValores && ` · ${fmtR(p.valor)}`}</span>
                         </div>
                         <div className="h-2 bg-muted rounded-full overflow-hidden">
                           <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
