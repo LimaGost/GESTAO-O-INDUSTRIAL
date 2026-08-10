@@ -420,6 +420,7 @@ export default function PostoTrabalho() {
 
   const isTarugo = maquinaAtual.tipo_produto === 'tarugo';
   const subStep = SUBSTEP_POR_LINHA[maquinaAtual.tipo_produto];
+  const HeaderIcon = maquinaAtual.virtual ? (maquinaAtual.icon === 'Boxes' ? Boxes : Package) : Factory;
 
   return (
     <div className="max-w-lg mx-auto pb-8">
@@ -427,7 +428,7 @@ export default function PostoTrabalho() {
         <div>
           <p className="text-xs text-slate-400 font-semibold">POSTO DE TRABALHO</p>
           <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-            <Factory size={20} /> {maquinaAtual.nome}
+            <HeaderIcon size={20} /> {maquinaAtual.nome}
           </h2>
         </div>
         <button onClick={() => setShowTrocarMaquina(true)} className="text-xs font-semibold text-slate-400 flex items-center gap-1">
