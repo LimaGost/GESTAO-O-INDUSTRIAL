@@ -51,6 +51,8 @@ export default function Dashboard() {
   const PAPEIS_SO_TAREFAS = ['vendedor', 'vendedor_industria', 'vendedor_loja', 'estoquista', 'estoquista_industria', 'motorista', 'embalador', 'maquinista'];
   const somenteTarefas = PAPEIS_SO_TAREFAS.includes(user?.role);
   const temCentralTarefas = somenteTarefas || user?.role === 'gerente_producao';
+  const escondeComercial = user?.role === 'gerente_producao'; // sem dados financeiros/vendas pro gerente de produção
+  const abasVisiveis = escondeComercial ? ABAS.filter(a => ['producao', 'logistica'].includes(a.id)) : ABAS;
 
   const [rawData, setRawData] = useState(null);
   const [loading, setLoading] = useState(true);
