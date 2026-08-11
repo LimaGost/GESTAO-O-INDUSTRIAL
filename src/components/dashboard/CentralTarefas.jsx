@@ -258,5 +258,30 @@ export default function CentralTarefas() {
     );
   }
 
+  // ── Maquinista ──────────────────────────────────────
+  if (user.role === 'maquinista') {
+    const concluidos = dados.produzidasHoje.length;
+    const pendentes = dados.aProduzir.length + dados.emProducao.length;
+    return (
+      <div>
+        <ProgressoHoje concluidos={concluidos} pendentes={pendentes} corBase="#EA580C" />
+        <div className="grid md:grid-cols-2 gap-3">
+          <TaskCard icon={Factory} cor="#EA580C" titulo="Fila (a produzir)" itens={dados.aProduzir} vazio="Fila vazia"
+            renderLabel={o => (<><span className="truncate flex-1 font-medium text-foreground">{o.produto_nome} · {o.numero}</span><Link to="/PostoTrabalho" className="text-orange-600 font-semibold flex-shrink-0">Ver</Link></>)} />
+          <TaskCard icon={Clock} cor="#0EA5E9" titulo="Em produção agora" itens={dados.emProducao} vazio="Nenhuma máquina rodando"
+            renderLabel={o => (<><span className="truncate flex-1 font-medium text-foreground">{o.produto_nome} · {o.numero}</span></>)} />
+          <TaskCard icon={AlertTriangle} cor="#DC2626" titulo="OPs sem máquina alocada" itens={dados.semMaquina} vazio="Nenhuma OP órfã"
+            renderLabel={o => (<><span className="truncate flex-1 font-medium text-foreground">{o.produto_nome} · {o.numero}</span></>)} />
+        </div>
+        {dados.tarugo && (
+          <div className={`mt-3 rounded-2xl border px-4 py-3 flex items-center justify-between ${(dados.tarugo.estoque_atual || 0) <= 0 ? 'bg-red-50 border-red-200' : 'bg-white border-border'}`}>
+            <p className="text-sm font-semibold text-foreground">Estoque de Tarugo</p>
+            <p className={`text-lg font-black ${(dados.tarugo.estoque_atual || 0) <= 0 ? 'text-red-600' : 'text-foreground'}`}>{dados.tarugo.estoque_atual || 0} un</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return null;
 }
