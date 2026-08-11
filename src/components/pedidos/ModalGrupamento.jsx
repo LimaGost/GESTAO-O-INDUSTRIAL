@@ -302,6 +302,44 @@ export default function ModalGrupamento({ pedidos, grupos, onClose, onRefresh })
                               <span className="text-xs font-bold text-white">Total Consolidado</span>
                               <span className="text-sm font-bold text-white">{fmtVal(totalConsolidado)}</span>
                             </div>
+
+                            {/* Adicionar mais pedidos ao grupo já existente */}
+                            {(() => {
+                              const candidatos = pedidosDisponiveis.filter(p => p.cliente_id === g.cliente_id);
+                              if (adicionandoAoGrupo !== g.id) {
+                                return (
+                                  <button
+                                    onClick={() => setAdicionandoAoGrupo(g.id)}
+                                    disabled={candidatos.length === 0}
+                                    className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-violet-700 border border-dashed border-violet-300 rounded-xl py-2.5 hover:bg-violet-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                                    <Plus size={12} /> {candidatos.length === 0 ? 'Nenhum pedido disponível desse cliente' : 'Adicionar Pedido a este Grupo'}
+                                  </button>
+                                );
+                              }
+                              return (
+                                <div className="border border-violet-200 rounded-xl overflow-hidden">
+                                  <div className="px-3 py-2 bg-violet-100 flex items-center justify-between">
+                                    <span className="text-xs font-bold text-violet-800">Escolha o pedido pra adicionar</span>
+                                    <button onClick={() => setAdicionandoAoGrupo(null)} className="text-violet-600"><X size={13} /></button>
+                                  </div>
+                                  <div className="divide-y divide-violet-100 max-h-40 overflow-y-auto">
+                                    {candidatos.map(p => (
+                                      <button
+                                        key={p.id}
+                                        onClick={() => adicionarPedidoAoGrupo(g, p)}
+                                        disabled={salvandoAdicao}
+                                        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left hover:bg-violet-50 transition-colors disabled:opacity-50">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                          <span className="text-sm font-bold text-foreground font-mono">#{p.numero}</span>
+                                          <StatusBadge status={p.status} />
+                                        </div>
+                                        <span className="text-xs font-semibold text-foreground flex-shrink-0">{fmtVal(p.valor_total)}</span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })()}
                           </div>
                         )}
                       </div>
