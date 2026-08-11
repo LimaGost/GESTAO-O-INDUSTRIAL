@@ -124,6 +124,16 @@ export default function CentralTarefas() {
         const caixasZeradas = modelosCaixa.filter(c => (c.estoque_atual || 0) <= 0);
         const embaladasHoje = [...paraEmbalar, ...paraEtiquetar].filter(o => ehHoje(o.data_embalagem));
         setDados({ paraEmbalar, paraEtiquetar, caixasZeradas, embaladasHoje });
+      } else if (role === 'maquinista') {
+        const [aProduzir, emProducao, maquinas] = await Promise.all([
+          base44.entities.OrdemProducao.filter({ status: 'a_produzir' }),
+          base44.entities.OrdemProducao.filter({ status: 'em_producao' }),
+          base44.entities.Maquina.list(),
+        ]);
+        const semMaquina = aProduzir.filter(o => !o.maquina_id);
+        const tarugo = maquinas.find(m => m.tipo_produto === 'tarugo');
+        const produzidasHoje = [...aProduzir, ...emProducao].filter(o => ehHoje(o.data_fim_producao));
+        setDados({ aProduzir, emProducao, semMaquina, tarugo, produzidasHoje });
       }
     } finally {
       setLoading(false);
