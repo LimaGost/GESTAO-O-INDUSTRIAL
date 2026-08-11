@@ -61,6 +61,7 @@ export default function Dashboard() {
   const [criandoOP, setCriandoOP] = useState({});
 
   useEffect(() => { load(); }, []);
+  useEffect(() => { if (escondeComercial) setAba('producao'); }, [escondeComercial]);
 
   // Resolve from/to a partir do preset se necessário
   const resolvedPeriod = useMemo(() => {
