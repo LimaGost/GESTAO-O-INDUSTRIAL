@@ -203,14 +203,16 @@ export default function Pedidos() {
     });
 
     let status = 'rascunho';
-    if (form.reservar_estoque_agora !== false) {
-      // Alocação inteligente: reserva estoque, cria Separação e OP (parcial) se necessário
+    if (form.status_pagamento === 'pago') {
+      // Pagamento antecipado: alocação inteligente automática — reserva estoque,
+      // cria Separação e OP (parcial) se necessário. O vendedor não escolhe isso.
       const resultado = await alocarPedido({ pedido, itens: itensAgrupados, produtos, origem: 'pedido' });
       status = resultado.status;
-      await registrarLog('Pedido', pedido.id, 'CRIACAO', `Pedido ${numero} criado. Status: ${status}`);
+      await registrarLog('Pedido', pedido.id, 'CRIACAO', `Pedido ${numero} criado com pagamento antecipado — estoque reservado automaticamente. Status: ${status}`);
     } else {
-      // Fica em rascunho — alguém confirma a reserva de estoque depois, manualmente
-      await registrarLog('Pedido', pedido.id, 'CRIACAO', `Pedido ${numero} criado como rascunho — aguardando confirmação manual de reserva de estoque`);
+      // Sem pagamento antecipado: fica em rascunho — só o estoquista confirma a
+      // reserva depois, pela tela de Estoque.
+      await registrarLog('Pedido', pedido.id, 'CRIACAO', `Pedido ${numero} criado como rascunho — aguardando confirmação de reserva de estoque pelo estoquista (sem pagamento antecipado)`);
     }
     setShowForm(false);
     await load();
