@@ -1,5 +1,6 @@
 import BadgeSemRotulo from '@/components/common/BadgeSemRotulo';
 import BadgeMovimentoEstoque from '@/components/common/BadgeMovimentoEstoque';
+import { Link } from 'react-router-dom';
 import { ArrowRight, User, Tag, Package, Truck, MapPin, Calendar, Flag, CheckCircle, Hash, ClipboardList, Home, Clock, ExternalLink } from 'lucide-react';
 
 const STATUS_ACCENT = {
@@ -52,7 +53,13 @@ export default function SeparacaoCard({ separacao, onAvancar, loading, labelBota
                 <span className="text-[10px] bg-blue-50 text-blue-600 border border-blue-200 px-1.5 py-0.5 rounded font-medium whitespace-nowrap">📋 {separacao.pedido_numero}</span>
               )}
               {separacao.ordem_producao_numero && (
-                <span className="text-[10px] bg-green-50 text-green-600 border border-green-200 px-1.5 py-0.5 rounded font-medium whitespace-nowrap">🏭 {separacao.ordem_producao_numero}</span>
+                <Link
+                  to={`/Kanban?busca=${encodeURIComponent(separacao.ordem_producao_numero)}`}
+                  title="Ver esta OP no Kanban de Produção"
+                  className="text-[10px] bg-green-50 text-green-600 border border-green-200 px-1.5 py-0.5 rounded font-medium whitespace-nowrap hover:bg-green-100 hover:underline inline-flex items-center gap-0.5"
+                >
+                  🏭 {separacao.ordem_producao_numero} <ExternalLink size={9} />
+                </Link>
               )}
               {!separacao.pedido_numero && !separacao.ordem_producao_numero && (
                 <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-medium whitespace-nowrap">{separacao.numero}</span>
