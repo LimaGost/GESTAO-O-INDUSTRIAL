@@ -156,10 +156,10 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {aba === 'geral' && (
+      {!escondeComercial && aba === 'geral' && (
         <DashboardComercial rawData={rawData} loading={loading} period={resolvedPeriod} ocultarValores={ocultarValores} geral />
       )}
-      {aba === 'comercial' && (
+      {!escondeComercial && aba === 'comercial' && (
         <DashboardComercial rawData={rawData} loading={loading} period={resolvedPeriod} ocultarValores={ocultarValores} />
       )}
       {aba === 'producao' && (
@@ -168,7 +168,7 @@ export default function Dashboard() {
       {aba === 'logistica' && (
         <DashboardLogistica rawData={rawData} loading={loading} period={resolvedPeriod} />
       )}
-      {aba === 'whitelabel' && (
+      {!escondeComercial && aba === 'whitelabel' && (
         <DashboardWhiteLabel rawData={rawData} loading={loading} period={resolvedPeriod} ocultarValores={ocultarValores} />
       )}
       </>
