@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Route, Navigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import UserDisabledError from '@/components/UserDisabledError';
 import AnimatedRoutes from './components/AnimatedRoutes';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
@@ -70,6 +71,7 @@ const AuthenticatedApp = () => {
 
   if (authError) {
     if (authError.type === 'user_not_registered') return <UserNotRegisteredError />;
+    if (authError.type === 'user_disabled') return <UserDisabledError reason={authError.message} />;
     if (authError.type === 'auth_required') { navigateToLogin(); return null; }
   }
 
