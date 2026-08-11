@@ -37,7 +37,7 @@ function SectionTitle({ icon: Icon, label }) {
 export default function DashboardComercial({ rawData, loading, period, ocultarValores, geral }) {
   const c = useMemo(() => {
     if (!rawData) return null;
-    const { pedidos: allPedidos } = rawData;
+    const { pedidos: allPedidos, clientes: allClientes = [] } = rawData;
     const { from, to } = period;
     const pedidos = allPedidos.filter(p => isInRange(p.data_pedido || p.created_date, from, to) && p.status !== 'cancelado');
 
@@ -78,6 +78,23 @@ export default function DashboardComercial({ rawData, loading, period, ocultarVa
     }
     const faturamentoMensal = Object.values(mesesMap);
 
+    // Clientes novos por mês (últimos 6 meses)
+    const clientesMesMap = {};
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+      const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+      clientesMesMap[k] = { mes: label, clientes: 0 };
+    }
+    for (const cli of allClientes) {
+      const d = cli.created_date;
+      if (!d) continue;
+      const dt = new Date(d);
+      const k = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
+      if (clientesMesMap[k]) clientesMesMap[k].clientes += 1;
+    }
+    const clientesNovosMensal = Object.values(clientesMesMap);
+
     // Top clientes
     const clienteMap = {};
     for (const p of pedidos) {
@@ -110,7 +127,7 @@ export default function DashboardComercial({ rawData, loading, period, ocultarVa
     const STATUS_L = { rascunho: 'Rascunho', aguardando_estoque: 'Ag. Estoque', separacao: 'Separação', separado: 'Separado', expedido: 'Expedido', entregue: 'Entregue', cancelado: 'Cancelado' };
     const statusPie = Object.entries(statusMap).map(([k, v]) => ({ name: STATUS_L[k] || k, value: v })).filter(x => x.value > 0);
 
-    return { evolucao, faturamentoMensal, topClientes, topProdutos, statusPie };
+    return { evolucao, faturamentoMensal, clientesNovosMensal, topClientes, topProdutos, statusPie };
   }, [rawData, period]);
 
   const fR = (v) => ocultarValores ? VALOR_OCULTO : `R$ ${(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`;
