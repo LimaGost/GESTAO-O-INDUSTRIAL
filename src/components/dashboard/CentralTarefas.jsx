@@ -98,7 +98,11 @@ export default function CentralTarefas() {
         const aguardandoPagamento = pedidos.filter(p => p.status_pagamento === 'pendente' && p.status !== 'cancelado');
         const criadosHoje = pedidos.filter(p => ehHoje(p.created_date));
         const entreguesHoje = pedidos.filter(p => p.status === 'entregue' && ehHoje(p.updated_date));
-        setDados({ represados, aguardandoPagamento, criadosHoje, entreguesHoje, totalPedidos: pedidos.length });
+        const inicioMes = new Date(); inicioMes.setDate(1); inicioMes.setHours(0, 0, 0, 0);
+        const pedidosDoMes = pedidos.filter(p => p.status !== 'cancelado' && new Date(p.created_date) >= inicioMes);
+        const valorMes = pedidosDoMes.reduce((s, p) => s + (p.valor_total || 0), 0);
+        const ticketMedioMes = pedidosDoMes.length > 0 ? valorMes / pedidosDoMes.length : 0;
+        setDados({ represados, aguardandoPagamento, criadosHoje, entreguesHoje, totalPedidos: pedidos.length, pedidosDoMes, valorMes, ticketMedioMes });
       } else if (['estoquista', 'estoquista_industria'].includes(role)) {
         const [pedidos, produtos, seps] = await Promise.all([
           base44.entities.Pedido.filter({ status: 'rascunho', origem: 'pedido' }),
