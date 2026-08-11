@@ -617,6 +617,7 @@ export default function Pedidos() {
           onRefresh={load}
           onSalvarPrecos={salvarPrecos}
           onCancelar={readonly ? null : cancelarPedido}
+          onConfirmarReserva={readonly ? null : confirmarReservaManual}
         />
       )}
     </div>
