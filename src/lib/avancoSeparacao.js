@@ -30,6 +30,12 @@ export async function avancarStatusSeparacao(sep, contexto) {
   const { colunas } = contexto;
   if (sep.status === 'aguardando_producao') return { proximo: null, updates: null }; // bloqueado até a produção concluir
 
+  // Bloqueada em "Separado" aguardando a irmã chegar também — só avança sozinha
+  // se o gerente liberar via PIN (o que zera separacao_irma_id).
+  if (sep.status === 'separado' && sep.separacao_irma_id) {
+    return { proximo: null, updates: null, bloqueadaPorIrma: true };
+  }
+
   const PROXIMOS = buildProximosSeparacao(colunas);
   const proximo = PROXIMOS[sep.status];
   if (!proximo) return { proximo: null, updates: null };
@@ -40,6 +46,39 @@ export async function avancarStatusSeparacao(sep, contexto) {
   if (proximo === 'separado') updates.data_separado = agora;
   if (proximo === 'em_conferencia') updates.data_conferencia = agora;
   if (proximo === 'liberado_expedicao') updates.data_liberacao = agora;
+
+  // Fusão automática: ao entrar em "Separado", se a irmã já está esperando lá, funde as duas num card só
+  if (proximo === 'separado' && sep.separacao_irma_id) {
+    const irmas = await base44.entities.Separacao.filter({ id: sep.separacao_irma_id }).catch(() => []);
+    const irma = irmas[0];
+    if (irma && irma.status === 'separado') {
+      const itensMap = {};
+      for (const i of (sep.itens || [])) itensMap[i.produto_id || i.produto_nome] = { ...i };
+      for (const i of (irma.itens || [])) {
+        const k = i.produto_id || i.produto_nome;
+        if (itensMap[k]) itensMap[k].quantidade = (itensMap[k].quantidade || 0) + (i.quantidade || 0);
+        else itensMap[k] = { ...i };
+      }
+      const itensFundidos = Object.values(itensMap);
+      updates.itens = itensFundidos;
+      updates.quantidade_itens = itensFundidos.length;
+      updates.quantidade_total = itensFundidos.reduce((s, i) => s + (i.quantidade || 0), 0);
+      updates.separacao_irma_id = null;
+      updates.separacao_irma_numero = null;
+
+      await base44.entities.Separacao.update(irma.id, {
+        status: 'mesclada',
+        mesclada_em_id: sep.id,
+        separacao_irma_id: null,
+      });
+      registrarLog('Separacao', irma.id, 'FUNDIDA',
+        `Separação ${irma.numero} fundida em ${sep.numero} — as duas partes do pedido chegaram em Separado`).catch(() => {});
+      registrarLog('Separacao', sep.id, 'FUNDIU_IRMA',
+        `Separação ${sep.numero} absorveu a irmã ${irma.numero} — pedido completo, seguindo unificado`).catch(() => {});
+    }
+    // Se a irmã ainda não chegou em "Separado", esta segue pra "Separado" mas mantém
+    // separacao_irma_id preenchido — fica bloqueada ali até a irmã chegar ou o gerente liberar.
+  }
 
   const colProx = colunas.find((c) => c.key === proximo);
   const acoesProx = Array.isArray(colProx?.acoes) && colProx.acoes.length > 0 ?
