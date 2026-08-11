@@ -229,5 +229,24 @@ export default function CentralTarefas() {
     );
   }
 
+  // ── Embalador ────────────────────────────────────────────
+  if (user.role === 'embalador') {
+    const concluidos = dados.embaladasHoje.length;
+    const pendentes = dados.paraEmbalar.length + dados.paraEtiquetar.length;
+    return (
+      <div>
+        <ProgressoHoje concluidos={concluidos} pendentes={pendentes} corBase="#7C3AED" />
+        <div className="grid md:grid-cols-2 gap-3">
+          <TaskCard icon={Package} cor="#2563EB" titulo="Pra embalar" itens={dados.paraEmbalar} vazio="Nada esperando embalagem"
+            renderLabel={o => (<><span className="truncate flex-1 font-medium text-foreground">{o.produto_nome} · {o.numero}</span><Link to="/PostoTrabalho" className="text-blue-600 font-semibold flex-shrink-0">Ver</Link></>)} />
+          <TaskCard icon={ClipboardList} cor="#7C3AED" titulo="Pra etiquetar" itens={dados.paraEtiquetar} vazio="Nada esperando etiquetagem"
+            renderLabel={o => (<><span className="truncate flex-1 font-medium text-foreground">{o.produto_nome} · {o.numero}</span><Link to="/PostoTrabalho" className="text-violet-600 font-semibold flex-shrink-0">Ver</Link></>)} />
+          <TaskCard icon={AlertTriangle} cor="#DC2626" titulo="Caixas zeradas" itens={dados.caixasZeradas} vazio="Nenhuma caixa zerada"
+            renderLabel={c => (<><span className="truncate flex-1 font-medium text-foreground">{c.nome}</span><span className="text-red-600 font-bold flex-shrink-0">0 un</span></>)} />
+        </div>
+      </div>
+    );
+  }
+
   return null;
 }
