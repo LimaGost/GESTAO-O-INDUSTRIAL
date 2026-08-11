@@ -126,12 +126,14 @@ export default function Dashboard() {
       <>
       <PeriodFilter value={period} onChange={setPeriod} />
 
-      <DashboardKpis
-        rawData={rawData}
-        loading={loading}
-        period={resolvedPeriod}
-        ocultarValores={ocultarValores}
-      />
+      {!escondeComercial && (
+        <DashboardKpis
+          rawData={rawData}
+          loading={loading}
+          period={resolvedPeriod}
+          ocultarValores={ocultarValores}
+        />
+      )}
 
       <DashboardAlertas
         rawData={rawData}
