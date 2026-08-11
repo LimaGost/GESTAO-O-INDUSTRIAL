@@ -24,6 +24,9 @@ export function dicaEtapa(coluna, kanbanKey, proximoLabel) {
   const acoes = acoesEfetivas(coluna, kanbanKey)
     .map((a) => ACAO_DESC[a])
     .filter(Boolean);
+  if (kanbanKey === 'separacao' && coluna?.key === 'separado') {
+    acoes.push('Quando um pedido foi dividido em duas separações (parte já em estoque + parte que veio da produção), é aqui que os dois cards se reencontram e se juntam automaticamente num só.');
+  }
   return {
     titulo: coluna?.label || '',
     acoes,
