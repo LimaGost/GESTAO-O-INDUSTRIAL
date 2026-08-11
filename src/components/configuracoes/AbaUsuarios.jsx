@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Users, Shield, Save, Check, Eye, X, EyeOff, Lock, Unlock, ChevronDown, ChevronUp, AlertTriangle, DollarSign } from 'lucide-react';
+import { Users, Shield, Save, Check, Eye, X, EyeOff, Lock, Unlock, ChevronDown, ChevronUp, AlertTriangle, DollarSign, Trash2, RotateCcw } from 'lucide-react';
 
 const ROLES = [
   { key: 'admin',            label: 'Administrador',       color: 'bg-red-100 text-red-700 border-red-300' },
