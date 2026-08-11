@@ -171,7 +171,6 @@ export default function DashboardComercial({ rawData, loading, period, ocultarVa
           )}
         </ExportableChart>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Faturamento mensal */}
         <ExportableChart title="Faturamento Mensal — Últimos 6 meses">
           {loading ? <Skeleton h={180} /> : (
