@@ -48,7 +48,7 @@ export default function Dashboard() {
   const { user } = useAuth();
   const ocultarValores = ocultarFinanceiro('Dashboard');
 
-  const PAPEIS_SO_TAREFAS = ['vendedor', 'vendedor_industria', 'vendedor_loja', 'estoquista', 'estoquista_industria', 'motorista', 'embalador'];
+  const PAPEIS_SO_TAREFAS = ['vendedor', 'vendedor_industria', 'vendedor_loja', 'estoquista', 'estoquista_industria', 'motorista', 'embalador', 'maquinista'];
   const somenteTarefas = PAPEIS_SO_TAREFAS.includes(user?.role);
   const temCentralTarefas = somenteTarefas || user?.role === 'gerente_producao';
 
