@@ -28,6 +28,7 @@ export default function ModalNovoPedido({ clientes, produtos, loading, onConfirm
     white_label: false,
     white_label_marca: '',
     sem_rotulo: false,
+    reservar_estoque_agora: true,
     forma_pagamento: '',
     status_pagamento: 'pendente',
     observacoes_pagamento: '',
