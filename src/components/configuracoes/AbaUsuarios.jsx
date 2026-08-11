@@ -353,7 +353,7 @@ function AbaUsuariosList({ usuarios, onRoleChange, onToggleDisabled }) {
           const semRole = !ROLES_SISTEMA.includes(u.role);
           const isEditando = editandoId === u.id;
           return (
-            <div key={u.id} className={`border rounded-xl p-3 space-y-2 transition-all ${isEditando ? 'border-primary/30 bg-primary/5' : 'border-border'}`}>
+            <div key={u.id} className={`border rounded-xl p-3 space-y-2 transition-all ${isEditando ? 'border-primary/30 bg-primary/5' : 'border-border'} ${u.disabled ? 'opacity-50' : ''}`}>
               <div className="flex items-center gap-3">
                 <div className="relative flex-shrink-0">
                   <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center font-bold text-sm text-primary">
@@ -362,7 +362,7 @@ function AbaUsuariosList({ usuarios, onRoleChange, onToggleDisabled }) {
                   <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-card ${isOnline(u) ? 'bg-green-500' : 'bg-slate-300'}`} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate">{u.full_name || '—'}</p>
+                  <p className="text-sm font-semibold text-foreground truncate">{u.full_name || '—'}{u.disabled && <span className="ml-1.5 text-[10px] font-bold text-red-600">(Desativado)</span>}</p>
                   <p className="text-xs text-muted-foreground truncate">{u.email}</p>
                   {isOnline(u)
                     ? <p className="text-[10px] font-semibold text-green-600">● Online agora</p>
@@ -372,6 +372,30 @@ function AbaUsuariosList({ usuarios, onRoleChange, onToggleDisabled }) {
                   className={`text-xs px-2.5 py-1 rounded-full border font-semibold flex-shrink-0 transition-all hover:opacity-80 ${semRole ? 'bg-amber-100 text-amber-700 border-amber-300' : cfg?.color || 'bg-muted text-muted-foreground border-border'}`}>
                   {semRole ? '⚠ Sem perfil' : (ROLE_LABEL[u.role] || u.role)}
                 </button>
+                {confirmandoRemocao === u.id ? (
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button onClick={() => handleToggleDisabled(u)} disabled={salvando === u.id}
+                      className="text-[10px] font-bold px-2 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50">
+                      {salvando === u.id ? '...' : 'Confirmar'}
+                    </button>
+                    <button onClick={() => setConfirmandoRemocao(null)}
+                      className="text-[10px] font-semibold px-2 py-1.5 rounded-lg bg-muted text-muted-foreground">
+                      Cancelar
+                    </button>
+                  </div>
+                ) : u.disabled ? (
+                  <button onClick={() => handleToggleDisabled(u)} disabled={salvando === u.id}
+                    title="Reativar usuário"
+                    className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 transition-colors flex-shrink-0 disabled:opacity-50">
+                    <RotateCcw size={15} />
+                  </button>
+                ) : (
+                  <button onClick={() => setConfirmandoRemocao(u.id)}
+                    title="Desativar usuário"
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0">
+                    <Trash2 size={15} />
+                  </button>
+                )}
               </div>
 
               {isEditando && (
