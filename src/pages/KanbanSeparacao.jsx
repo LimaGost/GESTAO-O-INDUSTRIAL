@@ -66,7 +66,7 @@ export default function KanbanSeparacao() {
       ]);
       // Oculta cards órfãos (pedido excluído) ou de pedidos cancelados
       const pedidosOk = new Set(peds.filter(p => p.status !== 'cancelado').map(p => p.id));
-      setSeparacoes(seps.filter(s => !s.pedido_id || pedidosOk.has(s.pedido_id)));
+      setSeparacoes(seps.filter(s => s.status !== 'mesclada' && (!s.pedido_id || pedidosOk.has(s.pedido_id))));
       setPedidos(peds);
       setProdutos(prods);
       setGrupos(gps.filter(g => g.status !== 'desfeito'));
