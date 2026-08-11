@@ -546,6 +546,7 @@ export default function Pedidos() {
                           onCancelar={cancelarPedido}
                           onProcessarBling={setPedidoBlingProcessar}
                           onProcessarPortal={setPedidoPortalProcessar}
+                          onConfirmarReserva={confirmarReservaManual}
                           onAvancarSeparado={avancarParaSeparado}
                         />
                       ))}
