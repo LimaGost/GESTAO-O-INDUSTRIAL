@@ -1,7 +1,9 @@
 import BadgeSemRotulo from '@/components/common/BadgeSemRotulo';
 import BadgeMovimentoEstoque from '@/components/common/BadgeMovimentoEstoque';
 import { Link } from 'react-router-dom';
-import { ArrowRight, User, Tag, Package, Truck, MapPin, Calendar, Flag, CheckCircle, Hash, ClipboardList, Home, Clock, ExternalLink } from 'lucide-react';
+import { useState } from 'react';
+import { base44 } from '@/api/base44Client';
+import { ArrowRight, User, Tag, Package, Truck, MapPin, Calendar, Flag, CheckCircle, Hash, ClipboardList, Home, Clock, ExternalLink, Lock, X, Link2 } from 'lucide-react';
 
 const STATUS_ACCENT = {
   aguardando_producao: '#F59E0B',
@@ -31,7 +33,60 @@ function fmtData(iso) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
 
-export default function SeparacaoCard({ separacao, onAvancar, loading, labelBotao, readonly, onOpenModal, movimentoEstoque }) {
+function LiberarSemIrmaModal({ separacao, onClose, onSucesso }) {
+  const [pin, setPin] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState('');
+
+  const confirmar = async () => {
+    setLoading(true);
+    setErro('');
+    try {
+      const res = await base44.functions.invoke('liberarSeparacaoSemIrma', { separacao_id: separacao.id, pin });
+      const data = res?.data || res;
+      if (data?.error) setErro(data.error);
+      else onSucesso();
+    } catch (e) {
+      setErro(e.message || 'Erro ao processar.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Lock size={18} className="text-amber-600" />
+            <h3 className="text-base font-bold text-foreground">Liberar sem a irmã</h3>
+          </div>
+          <button onClick={onClose}><X size={18} className="text-muted-foreground" /></button>
+        </div>
+        <p className="text-xs text-muted-foreground mb-4">
+          A separação {separacao.numero} vai seguir sozinha pra Conferência/Expedição, sem esperar a irmã {separacao.separacao_irma_numero}. O pedido será expedido incompleto. Só o gerente de produção pode confirmar isso.
+        </p>
+        <input
+          type="password" inputMode="numeric" autoFocus
+          value={pin} onChange={e => setPin(e.target.value)}
+          placeholder="PIN do gerente"
+          className="w-full text-center text-2xl tracking-[0.4em] border-2 border-border rounded-xl py-3 mb-2 focus:outline-none focus:border-amber-500"
+        />
+        {erro && <p className="text-xs text-red-600 mb-2 text-center">{erro}</p>}
+        <div className="flex gap-2 mt-3">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl bg-muted text-muted-foreground font-semibold text-sm">Cancelar</button>
+          <button onClick={confirmar} disabled={loading || pin.length < 4}
+            className="flex-1 py-2.5 rounded-xl bg-amber-500 text-white font-semibold text-sm disabled:opacity-50">
+            {loading ? 'Verificando...' : 'Confirmar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function SeparacaoCard({ separacao, onAvancar, loading, labelBotao, readonly, onOpenModal, movimentoEstoque, onLiberadoSemIrma }) {
+  const [showLiberarModal, setShowLiberarModal] = useState(false);
   const accent = STATUS_ACCENT[separacao.status] || '#64748B';
   const origem = ORIGEM_CONFIG[separacao.origem] || ORIGEM_CONFIG.ordem_producao;
   const atrasada = separacao.data_prevista && separacao.status !== 'liberado_expedicao' &&
