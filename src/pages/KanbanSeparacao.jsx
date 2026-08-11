@@ -280,6 +280,7 @@ export default function KanbanSeparacao() {
                       readonly={readonly}
                       onOpenModal={() => setSepSelecionada(sep)}
                       movimentoEstoque={movimento}
+                      onLiberadoSemIrma={load}
                     />
                   ))
                 )}
