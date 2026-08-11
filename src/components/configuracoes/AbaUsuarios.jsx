@@ -292,10 +292,11 @@ function AbaPermissoes({ permissoes, onSave }) {
   );
 }
 
-function AbaUsuariosList({ usuarios, onRoleChange }) {
+function AbaUsuariosList({ usuarios, onRoleChange, onToggleDisabled }) {
   const [busca, setBusca] = useState('');
   const [editandoId, setEditandoId] = useState(null);
   const [salvando, setSalvando] = useState(null);
+  const [confirmandoRemocao, setConfirmandoRemocao] = useState(null);
 
   const filtrados = usuarios.filter(u =>
     !busca || u.full_name?.toLowerCase().includes(busca.toLowerCase()) || u.email?.toLowerCase().includes(busca.toLowerCase())
@@ -306,6 +307,13 @@ function AbaUsuariosList({ usuarios, onRoleChange }) {
     await onRoleChange(u.id, novoRole);
     setSalvando(null);
     setEditandoId(null);
+  };
+
+  const handleToggleDisabled = async (u) => {
+    setSalvando(u.id);
+    await onToggleDisabled(u.id, !u.disabled);
+    setSalvando(null);
+    setConfirmandoRemocao(null);
   };
 
   const ROLES_SISTEMA = ROLES.map(r => r.key);
