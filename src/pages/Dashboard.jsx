@@ -5,6 +5,8 @@ import { registrarLog } from '@/lib/audit';
 import { gerarNumero, gerarLote } from '@/lib/numeracao';
 import { cachedFetch, cacheInvalidateMany, cacheGet, cacheSet } from '@/lib/entityCache';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
+import { useAuth } from '@/lib/AuthContext';
+import CentralTarefas from '@/components/dashboard/CentralTarefas';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import DashboardKpis from '@/components/dashboard/DashboardKpis';
 import DashboardComercial from '@/components/dashboard/DashboardComercial';
@@ -43,7 +45,12 @@ function getPrevRange(from, to) {
 
 export default function Dashboard() {
   const { somenteLeitura, ocultarFinanceiro } = usePermissoes();
+  const { user } = useAuth();
   const ocultarValores = ocultarFinanceiro('Dashboard');
+
+  const PAPEIS_SO_TAREFAS = ['vendedor', 'vendedor_industria', 'vendedor_loja', 'estoquista', 'estoquista_industria', 'motorista'];
+  const somenteTarefas = PAPEIS_SO_TAREFAS.includes(user?.role);
+  const temCentralTarefas = somenteTarefas || user?.role === 'gerente_producao';
 
   const [rawData, setRawData] = useState(null);
   const [loading, setLoading] = useState(true);
