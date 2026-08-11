@@ -144,7 +144,7 @@ export default function Dashboard() {
 
       {/* Abas */}
       <div className="flex gap-1 overflow-x-auto pb-1 flex-nowrap">
-        {ABAS.map(a => (
+        {abasVisiveis.map(a => (
           <button key={a.id} onClick={() => setAba(a.id)}
             className={`flex-shrink-0 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
               aba === a.id
