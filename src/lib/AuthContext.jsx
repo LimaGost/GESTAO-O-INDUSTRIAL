@@ -95,16 +95,25 @@ export const AuthProvider = ({ children }) => {
       setIsLoadingAuth(true);
       const currentUser = await base44.auth.me();
 
-      // Bloqueio de verdade no código do app: a plataforma sozinha não estava
-      // impedindo o login de usuários marcados como `disabled`.
-      if (currentUser.disabled) {
+      // Bloqueio de verdade no código do app: `auth.me()` pode não trazer o campo
+      // `disabled` (é um campo mais administrativo da plataforma). Buscamos o
+      // registro completo do próprio usuário pra confirmar antes de liberar acesso.
+      let registroCompleto = currentUser;
+      try {
+        const resultado = await base44.entities.User.filter({ id: currentUser.id });
+        if (resultado?.[0]) registroCompleto = resultado[0];
+      } catch (e) {
+        console.warn('Não foi possível confirmar status de ativação do usuário:', e.message);
+      }
+
+      if (registroCompleto.disabled) {
         setUser(null);
         setIsAuthenticated(false);
         setIsLoadingAuth(false);
         setAuthChecked(true);
         setAuthError({
           type: 'user_disabled',
-          message: currentUser.disabled_reason || 'Sua conta foi desativada.',
+          message: registroCompleto.disabled_reason || 'Sua conta foi desativada.',
         });
         return;
       }
