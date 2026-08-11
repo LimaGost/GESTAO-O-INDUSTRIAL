@@ -93,7 +93,10 @@ export default function CentralTarefas() {
           bloqueadas, liberadasHoje, mescladasHoje, tarugo, caixasZeradas, opsFila: ops, pedidosRepresados: pedidos,
         });
       } else if (['vendedor', 'vendedor_industria', 'vendedor_loja'].includes(role)) {
-        const pedidos = await base44.entities.Pedido.filter({ created_by_id: userId });
+        const [pedidos, clientes] = await Promise.all([
+          base44.entities.Pedido.filter({ created_by_id: userId }),
+          base44.entities.Cliente.filter({ created_by_id: userId }).catch(() => []),
+        ]);
         const represados = pedidos.filter(p => p.status === 'rascunho');
         const aguardandoPagamento = pedidos.filter(p => p.status_pagamento === 'pendente' && p.status !== 'cancelado');
         const criadosHoje = pedidos.filter(p => ehHoje(p.created_date));
@@ -102,7 +105,8 @@ export default function CentralTarefas() {
         const pedidosDoMes = pedidos.filter(p => p.status !== 'cancelado' && new Date(p.created_date) >= inicioMes);
         const valorMes = pedidosDoMes.reduce((s, p) => s + (p.valor_total || 0), 0);
         const ticketMedioMes = pedidosDoMes.length > 0 ? valorMes / pedidosDoMes.length : 0;
-        setDados({ represados, aguardandoPagamento, criadosHoje, entreguesHoje, totalPedidos: pedidos.length, pedidosDoMes, valorMes, ticketMedioMes });
+        const clientesNovosMes = clientes.filter(c => new Date(c.created_date) >= inicioMes);
+        setDados({ represados, aguardandoPagamento, criadosHoje, entreguesHoje, totalPedidos: pedidos.length, pedidosDoMes, valorMes, ticketMedioMes, clientesNovosMes, totalClientes: clientes.length });
       } else if (['estoquista', 'estoquista_industria'].includes(role)) {
         const [pedidos, produtos, seps] = await Promise.all([
           base44.entities.Pedido.filter({ status: 'rascunho', origem: 'pedido' }),
