@@ -538,7 +538,6 @@ export default function Pedidos() {
                           onCancelar={cancelarPedido}
                           onProcessarBling={setPedidoBlingProcessar}
                           onProcessarPortal={setPedidoPortalProcessar}
-                          onConfirmarReserva={confirmarReservaManual}
                           onAvancarSeparado={avancarParaSeparado}
                         />
                       ))}
@@ -609,7 +608,6 @@ export default function Pedidos() {
           onRefresh={load}
           onSalvarPrecos={salvarPrecos}
           onCancelar={readonly ? null : cancelarPedido}
-          onConfirmarReserva={readonly ? null : confirmarReservaManual}
         />
       )}
     </div>
