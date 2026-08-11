@@ -602,6 +602,10 @@ export default function PostoTrabalho() {
   };
 
   const concluirSeparacao = async (sep) => {
+    if (sep.status === 'separado' && sep.separacao_irma_id) {
+      alert(`Esta separação está aguardando a irmã ${sep.separacao_irma_numero || ''} chegar em "Separado" também. Só o gerente de produção pode liberar sem ela, pelo computador.`);
+      return;
+    }
     setProcessandoId(sep.id);
     try {
       await avancarStatusSeparacao(sep, { colunas: kanbanColunasSeparacao });
