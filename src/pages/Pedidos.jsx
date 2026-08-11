@@ -191,10 +191,16 @@ export default function Pedidos() {
       ordens_producao_ids: [],
     });
 
-    // Alocação inteligente: reserva estoque, cria Separação e OP (parcial) se necessário
-    const { status } = await alocarPedido({ pedido, itens: itensAgrupados, produtos, origem: 'pedido' });
-
-    await registrarLog('Pedido', pedido.id, 'CRIACAO', `Pedido ${numero} criado. Status: ${status}`);
+    let status = 'rascunho';
+    if (form.reservar_estoque_agora !== false) {
+      // Alocação inteligente: reserva estoque, cria Separação e OP (parcial) se necessário
+      const resultado = await alocarPedido({ pedido, itens: itensAgrupados, produtos, origem: 'pedido' });
+      status = resultado.status;
+      await registrarLog('Pedido', pedido.id, 'CRIACAO', `Pedido ${numero} criado. Status: ${status}`);
+    } else {
+      // Fica em rascunho — alguém confirma a reserva de estoque depois, manualmente
+      await registrarLog('Pedido', pedido.id, 'CRIACAO', `Pedido ${numero} criado como rascunho — aguardando confirmação manual de reserva de estoque`);
+    }
     setShowForm(false);
     await load();
     setLoading(false);
