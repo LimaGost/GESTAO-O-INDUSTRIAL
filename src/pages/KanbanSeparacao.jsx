@@ -84,6 +84,10 @@ export default function KanbanSeparacao() {
 
   const avancar = async (sep) => {
     if (sep.status === 'aguardando_producao') return; // bloqueado até a produção concluir
+    if (sep.status === 'separado' && sep.separacao_irma_id) {
+      alert(`Esta separação está aguardando a irmã ${sep.separacao_irma_numero || ''} chegar em "Separado" também. Peça pro gerente de produção liberar com o PIN dele se precisar seguir sem ela.`);
+      return;
+    }
     const proximo = colunas.find(c => c.key === sep.status)?.proximo;
     if (!proximo) return;
     setSeparacoes(prev => prev.map(s => s.id === sep.id ? { ...s, status: proximo } : s));
@@ -92,7 +96,11 @@ export default function KanbanSeparacao() {
     try {
       // Lógica de automações centralizada em src/lib/avancoSeparacao.js —
       // compartilhada com a tela de Posto de Trabalho (tablet).
-      await avancarStatusSeparacao(sep, { colunas });
+      const resultado = await avancarStatusSeparacao(sep, { colunas });
+      // Se houve fusão (itens mudaram) ou bloqueio, recarrega pra refletir certinho
+      if (resultado?.updates?.itens || resultado?.bloqueadaPorIrma) {
+        await load();
+      }
     } catch (e) {
       setSeparacoes(prev => prev.map(s => s.id === sep.id ? { ...s, status: sep.status } : s));
       console.error('[KanbanSeparacao] erro ao avançar:', e);
