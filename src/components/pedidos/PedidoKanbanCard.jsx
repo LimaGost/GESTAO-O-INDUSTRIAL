@@ -14,11 +14,12 @@ function fmtVal(v) {
 
 export default function PedidoKanbanCard({
   pedido, statusEfetivo, ocultarValores,
-  readonly, onVerDetalhes, onExpedir, onCancelar, onProcessarBling, onAvancarSeparado, onProcessarPortal,
+  readonly, onVerDetalhes, onExpedir, onCancelar, onProcessarBling, onAvancarSeparado, onProcessarPortal, onConfirmarReserva,
 }) {
   const st = STATUS_CONFIG[statusEfetivo] || STATUS_CONFIG.pendente;
   const isPendente = statusEfetivo === 'pendente';
   const isRascunho = isPendente && pedido.status === 'rascunho';
+  const isManualPendente = isRascunho && pedido.origem === 'pedido';
   const aguardaEstoque = isPendente && pedido.status === 'aguardando_estoque';
   const prontoParaExpedir = isPendente && ['separacao', 'separado'].includes(pedido.status);
   const Icon = st.icon;
@@ -132,20 +133,26 @@ export default function PedidoKanbanCard({
         )}
         {isRascunho && (
           <div className="text-[10px] bg-slate-50 text-slate-600 border border-slate-200 rounded-lg px-2 py-1.5 flex items-center gap-1 font-semibold">
-            <FileText size={9} /> Aguardando processamento
+            <FileText size={9} /> {isManualPendente ? 'Aguardando confirmação de reserva de estoque' : 'Aguardando processamento'}
           </div>
         )}
 
         {/* Ações rápidas */}
         {!readonly && (
           <div className="flex gap-1.5 flex-wrap" onClick={e => e.stopPropagation()}>
+            {isManualPendente && onConfirmarReserva && (
+              <button onClick={() => onConfirmarReserva(pedido)}
+                className="flex items-center gap-1 text-[10px] bg-emerald-600 text-white border border-emerald-600 px-2 py-1 rounded-lg font-semibold hover:bg-emerald-700 transition-colors">
+                <Package size={9} /> Confirmar Reserva
+              </button>
+            )}
             {isRascunho && isPortal && onProcessarPortal && (
               <button onClick={() => onProcessarPortal(pedido)}
                 className="flex items-center gap-1 text-[10px] bg-sky-600 text-white border border-sky-600 px-2 py-1 rounded-lg font-semibold hover:bg-sky-700 transition-colors">
                 <Globe size={9} /> Processar
               </button>
             )}
-            {isRascunho && !isPortal && (
+            {isRascunho && !isPortal && !isManualPendente && (
               <button onClick={() => onProcessarBling(pedido)}
                 className="flex items-center gap-1 text-[10px] bg-primary text-primary-foreground border border-primary px-2 py-1 rounded-lg font-semibold hover:opacity-90 transition-opacity">
                 <Zap size={9} /> Processar
