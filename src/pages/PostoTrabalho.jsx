@@ -489,7 +489,7 @@ export default function PostoTrabalho() {
     setProdutos(prods);
     setModelosCaixa(caixas);
     setKanbanColunasSeparacao(stagesSep.stages || []);
-    setSeparacoes(seps.filter((s) => s.status !== 'liberado_expedicao'));
+    setSeparacoes(seps.filter((s) => s.status !== 'liberado_expedicao' && s.status !== 'mesclada'));
     const clientePorId = {};
     for (const c of clientes) clientePorId[c.id] = c;
     const pm = {};
