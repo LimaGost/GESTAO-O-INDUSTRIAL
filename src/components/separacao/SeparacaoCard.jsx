@@ -243,6 +243,13 @@ export default function SeparacaoCard({ separacao, onAvancar, loading, labelBota
           <div className="flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-amber-600 bg-amber-50 rounded-xl">
             <Clock size={12} /> Aguardando Produção
           </div>
+        ) : separacao.status === 'separado' && separacao.separacao_irma_id ? (
+          <button
+            onClick={() => setShowLiberarModal(true)}
+            disabled={readonly}
+            className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition-colors disabled:opacity-50">
+            <Lock size={12} /> Liberar sem a irmã (PIN)
+          </button>
         ) : separacao.status === 'liberado_expedicao' ? (
           <div className="flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-teal-600 bg-teal-50 rounded-xl">
             <CheckCircle size={12} /> Liberado p/ Expedição
@@ -260,6 +267,14 @@ export default function SeparacaoCard({ separacao, onAvancar, loading, labelBota
           </button>
         ) : null}
       </div>
+
+      {showLiberarModal && (
+        <LiberarSemIrmaModal
+          separacao={separacao}
+          onClose={() => setShowLiberarModal(false)}
+          onSucesso={() => { setShowLiberarModal(false); onLiberadoSemIrma?.(); }}
+        />
+      )}
     </div>
   );
 }
