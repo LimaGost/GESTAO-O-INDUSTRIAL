@@ -121,6 +121,14 @@ export async function alocarPedido({ pedido, itens, produtos, origem = 'pedido' 
     });
     await registrarLog('OrdemProducao', ordem.id, 'CRIACAO_AUTOMATICA',
       `OP para pedido ${numero} — ${itensSemEstoque.length} item(ns) p/ produção (${qtdReservadaTotal} un já reservadas em estoque)`);
+
+    // Grava o vínculo de volta na Separação, para o separador ver qual OP está produzindo o restante
+    if (separacao) {
+      await base44.entities.Separacao.update(separacao.id, {
+        ordem_producao_id: ordem.id,
+        ordem_producao_numero: ordem.numero,
+      });
+    }
   }
 
   // 4. Atualiza o pedido
