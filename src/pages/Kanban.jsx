@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { cachedFetch, cacheInvalidate } from '@/lib/entityCache';
 import { base44 } from '@/api/base44Client';
 import { registrarLog } from '@/lib/audit';
@@ -122,7 +123,8 @@ export default function Kanban() {
   const [variacoesOP, setVariacoesOP] = useState([]);
   const [filtroOrigem, setFiltroOrigem] = useState('todas');
   const [filtroCategoria, setFiltroCategoria] = useState('todas');
-  const [busca, setBusca] = useState('');
+  const [searchParams] = useSearchParams();
+  const [busca, setBusca] = useState(() => searchParams.get('busca') || '');
   const [ordemSelecionada, setOrdemSelecionada] = useState(null);
   const [sortKey, setSortKey] = useState('created_date_asc');
   const [showFilters, setShowFilters] = useState(true);
