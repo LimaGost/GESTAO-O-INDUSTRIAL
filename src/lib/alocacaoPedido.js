@@ -157,6 +157,10 @@ export async function alocarPedido({ pedido, itens, produtos, origem = 'pedido' 
     if (separacao) {
       await base44.entities.Separacao.update(separacao.id, {
         separacao_irma_id: separacaoProducao.id,
+        separacao_irma_numero: separacaoProducao.numero,
+      });
+      await base44.entities.Separacao.update(separacaoProducao.id, {
+        separacao_irma_numero: separacao.numero,
       });
     }
   }
