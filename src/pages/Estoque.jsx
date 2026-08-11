@@ -1,9 +1,11 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
-import { AlertTriangle, TrendingUp, Archive, Plus, X, Check, Search, Eye, Package, RefreshCw, SlidersHorizontal } from 'lucide-react';
+import { AlertTriangle, TrendingUp, Archive, Plus, X, Check, Search, Eye, Package, RefreshCw, SlidersHorizontal, ClipboardList } from 'lucide-react';
 import { registrarLog } from '@/lib/audit';
 import { gerarNumero } from '@/lib/numeracao';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
+import { useAuth } from '@/lib/AuthContext';
+import { alocarPedido } from '@/lib/alocacaoPedido';
 import PullToRefresh from '@/components/PullToRefresh';
 import { listarFracionado, adicionarFracionado, retirarFracionado } from '@/lib/estoqueFracionado';
 import { calcularCaixas, formatarCaixas } from '@/lib/calculoCaixas';
@@ -26,7 +28,11 @@ function BarraEstoque({ pct, zerado, alerta }) {
 
 export default function Estoque() {
   const { somenteLeitura } = usePermissoes();
+  const { user } = useAuth();
   const readonly = somenteLeitura('Estoque');
+  const podeReservar = ['estoquista', 'estoquista_industria', 'admin', 'diretor'].includes(user?.role);
+  const [pedidosPendentes, setPedidosPendentes] = useState([]);
+  const [confirmandoPedidoId, setConfirmandoPedidoId] = useState(null);
   const [produtos, setProdutos] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [showAjuste, setShowAjuste] = useState(false);
