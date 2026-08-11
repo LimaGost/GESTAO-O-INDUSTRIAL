@@ -34,6 +34,8 @@ export default function ModalGrupamento({ pedidos, grupos, onClose, onRefresh })
   const [salvando, setSalvando] = useState(false);
   const [desfazendoId, setDesfazendoId] = useState(null);
   const [grupoExpandido, setGrupoExpandido] = useState(null);
+  const [adicionandoAoGrupo, setAdicionandoAoGrupo] = useState(null);
+  const [salvandoAdicao, setSalvandoAdicao] = useState(false);
 
   const pedidosIdsEmGrupo = useMemo(
     () => new Set(grupos.flatMap(g => g.pedidos_ids || [])),
@@ -112,6 +114,26 @@ export default function ModalGrupamento({ pedidos, grupos, onClose, onRefresh })
     await registrarLog('GrupoPedidos', grupo.id, 'DESFAZER_GRUPO',
       `Agrupamento desfeito: ${grupo.cliente_nome}`);
     setDesfazendoId(null);
+    onRefresh();
+  };
+
+  const adicionarPedidoAoGrupo = async (grupo, pedido) => {
+    setSalvandoAdicao(true);
+    const novosIds = [...(grupo.pedidos_ids || []), pedido.id];
+    const novosNumeros = [...(grupo.pedidos_numeros || []), pedido.numero].filter(Boolean);
+    const pedidosDoGrupoAtualizado = pedidos.filter(p => novosIds.includes(p.id));
+    const novoTotal = pedidosDoGrupoAtualizado.reduce((s, p) => s + (p.valor_total || 0), 0);
+
+    await base44.entities.GrupoPedidos.update(grupo.id, {
+      pedidos_ids: novosIds,
+      pedidos_numeros: novosNumeros,
+      valor_total_consolidado: novoTotal,
+    });
+    await registrarLog('GrupoPedidos', grupo.id, 'ADICIONAR_PEDIDO',
+      `Pedido #${pedido.numero} adicionado ao grupo de ${grupo.cliente_nome}`);
+
+    setSalvandoAdicao(false);
+    setAdicionandoAoGrupo(null);
     onRefresh();
   };
 
