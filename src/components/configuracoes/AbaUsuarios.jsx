@@ -511,7 +511,7 @@ export default function AbaUsuarios() {
         })}
       </div>
 
-      {aba === 'usuarios'   && <AbaUsuariosList usuarios={usuarios} onRoleChange={handleRoleChange} />}
+      {aba === 'usuarios'   && <AbaUsuariosList usuarios={usuarios} onRoleChange={handleRoleChange} onToggleDisabled={handleToggleDisabled} />}
       {aba === 'permissoes' && <AbaPermissoes permissoes={permissoes} onSave={handleSavePermissao} />}
     </div>
   );
