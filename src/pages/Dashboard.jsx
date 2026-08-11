@@ -117,6 +117,10 @@ export default function Dashboard() {
     <div className="space-y-4">
       <DashboardHeader onRefresh={() => load(true)} loading={loading} />
 
+      {temCentralTarefas && <CentralTarefas />}
+
+      {!somenteTarefas && (
+      <>
       <PeriodFilter value={period} onChange={setPeriod} />
 
       <DashboardKpis
@@ -161,6 +165,8 @@ export default function Dashboard() {
       )}
       {aba === 'whitelabel' && (
         <DashboardWhiteLabel rawData={rawData} loading={loading} period={resolvedPeriod} ocultarValores={ocultarValores} />
+      )}
+      </>
       )}
     </div>
     </PullToRefresh>
