@@ -119,6 +119,11 @@ export default function SeparacaoCard({ separacao, onAvancar, loading, labelBota
               {!separacao.pedido_numero && !separacao.ordem_producao_numero && (
                 <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-medium whitespace-nowrap">{separacao.numero}</span>
               )}
+              {separacao.separacao_irma_numero && (
+                <span className="text-[10px] bg-indigo-50 text-indigo-600 border border-indigo-200 px-1.5 py-0.5 rounded font-medium whitespace-nowrap inline-flex items-center gap-0.5">
+                  <Link2 size={9} /> Irmã: {separacao.separacao_irma_numero}
+                </span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -211,6 +216,16 @@ export default function SeparacaoCard({ separacao, onAvancar, loading, labelBota
         {separacao.producao_concluida && separacao.status === 'aguardando_separacao' && (
           <div className="flex items-center gap-1 text-[10px] font-semibold mt-2 px-2 py-1 rounded-lg bg-green-50 text-green-700 border border-green-200">
             <CheckCircle size={10} /> Pedido completo — Pronto para Separação
+          </div>
+        )}
+        {separacao.status === 'separado' && separacao.separacao_irma_id && (
+          <div className="text-[10px] font-semibold mt-2 px-2 py-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
+            <Clock size={10} className="flex-shrink-0" /> Aguardando a irmã {separacao.separacao_irma_numero} chegar em Separado também
+          </div>
+        )}
+        {separacao.liberado_sem_irma && (
+          <div className="text-[10px] font-semibold mt-2 px-2 py-1.5 rounded-lg bg-orange-50 text-orange-700 border border-orange-200 flex items-center gap-1">
+            <Lock size={10} className="flex-shrink-0" /> Liberada sem a irmã por {separacao.liberado_sem_irma_por} — pedido incompleto
           </div>
         )}
       </div>
