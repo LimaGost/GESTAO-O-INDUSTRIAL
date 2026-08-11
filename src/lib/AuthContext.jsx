@@ -94,6 +94,21 @@ export const AuthProvider = ({ children }) => {
       // Now check if the user is authenticated
       setIsLoadingAuth(true);
       const currentUser = await base44.auth.me();
+
+      // Bloqueio de verdade no código do app: a plataforma sozinha não estava
+      // impedindo o login de usuários marcados como `disabled`.
+      if (currentUser.disabled) {
+        setUser(null);
+        setIsAuthenticated(false);
+        setIsLoadingAuth(false);
+        setAuthChecked(true);
+        setAuthError({
+          type: 'user_disabled',
+          message: currentUser.disabled_reason || 'Sua conta foi desativada.',
+        });
+        return;
+      }
+
       setUser(currentUser);
       setIsAuthenticated(true);
       setIsLoadingAuth(false);
