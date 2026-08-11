@@ -457,6 +457,16 @@ export default function AbaUsuarios() {
     setUsuarios(prev => prev.map(u => u.id === userId ? { ...u, role: novoRole } : u));
   };
 
+  const handleToggleDisabled = async (userId, disabled) => {
+    await base44.entities.User.update(userId, {
+      disabled,
+      disabled_reason: disabled ? 'Desativado pelo administrador em Configurações' : null,
+    });
+    await registrarLog('User', userId, disabled ? 'USUARIO_DESATIVADO' : 'USUARIO_REATIVADO',
+      disabled ? 'Usuário desativado pelo administrador.' : 'Usuário reativado pelo administrador.');
+    setUsuarios(prev => prev.map(u => u.id === userId ? { ...u, disabled } : u));
+  };
+
   const handleSavePermissao = async (role, modulos_niveis, existingId) => {
     if (existingId) {
       await base44.entities.PermissaoRole.update(existingId, { role, modulos_niveis });
