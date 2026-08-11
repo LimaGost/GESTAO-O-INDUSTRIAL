@@ -115,6 +115,18 @@ export default function CentralTarefas() {
         const emTransito = exps.filter(e => e.status === 'enviada');
         const entreguesHoje = exps.filter(e => e.status === 'entregue' && ehHoje(e.data_entrega));
         setDados({ prontas, emTransito, entreguesHoje });
+      } else if (role === 'embalador') {
+        const [ops, caixas] = await Promise.all([
+          base44.entities.OrdemProducao.filter({ status: 'em_embalagem' }),
+          base44.entities.OrdemProducao.filter({ status: 'em_etiquetagem' }),
+          base44.entities.ModeloCaixa.list().catch(() => []),
+        ]).then(([a, b, c]) => [[...a, ...b], c]);
+        const [emAndamento, modelosCaixa] = ops;
+        const paraEmbalar = emAndamento.filter(o => o.status === 'em_embalagem');
+        const paraEtiquetar = emAndamento.filter(o => o.status === 'em_etiquetagem');
+        const caixasZeradas = modelosCaixa.filter(c => (c.estoque_atual || 0) <= 0);
+        const embaladasHoje = emAndamento.filter(o => ehHoje(o.data_embalagem));
+        setDados({ paraEmbalar, paraEtiquetar, caixasZeradas, embaladasHoje });
       }
     } finally {
       setLoading(false);
