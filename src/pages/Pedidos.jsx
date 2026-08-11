@@ -164,6 +164,16 @@ export default function Pedidos() {
     await load();
   };
 
+  const confirmarReservaManual = async (pedido) => {
+    setLoading(true);
+    const itens = (pedido.itens || []).filter(i => i.produto_id && i.quantidade > 0);
+    const { status } = await alocarPedido({ pedido, itens, produtos, origem: 'pedido' });
+    await registrarLog('Pedido', pedido.id, 'RESERVA_CONFIRMADA',
+      `Reserva de estoque confirmada manualmente para o pedido ${pedido.numero}. Status: ${status}`);
+    await load();
+    setLoading(false);
+  };
+
   const confirmarPedido = async (form) => {
     if (!form.cliente_nome || form.itens.length === 0) return;
     setLoading(true);
