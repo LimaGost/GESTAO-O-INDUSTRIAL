@@ -28,7 +28,6 @@ export default function ModalNovoPedido({ clientes, produtos, loading, onConfirm
     white_label: false,
     white_label_marca: '',
     sem_rotulo: false,
-    reservar_estoque_agora: true,
     forma_pagamento: '',
     status_pagamento: 'pendente',
     observacoes_pagamento: '',
@@ -250,25 +249,6 @@ export default function ModalNovoPedido({ clientes, produtos, loading, onConfirm
                   />
                 </div>
               )}
-
-              {/* Reservar estoque agora */}
-              <label className="flex items-center gap-3 cursor-pointer select-none p-3 rounded-xl border border-border hover:bg-muted/30 transition-colors">
-                <div onClick={() => setForm(f => ({ ...f, reservar_estoque_agora: !f.reservar_estoque_agora }))}
-                  className={`w-10 h-6 rounded-full transition-colors flex items-center px-0.5 flex-shrink-0 ${form.reservar_estoque_agora ? 'bg-emerald-500' : 'bg-border'}`}>
-                  <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${form.reservar_estoque_agora ? 'translate-x-4' : 'translate-x-0'}`} />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                    <Package size={12} className="text-emerald-600" /> Reservar Estoque Agora
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {form.reservar_estoque_agora
-                      ? 'Separa o que tiver em estoque e cria OP para o restante, já na criação'
-                      : 'Pedido fica como rascunho — alguém confirma a reserva depois, manualmente'}
-                  </p>
-                </div>
-                {!form.reservar_estoque_agora && <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">MANUAL</span>}
-              </label>
 
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Entrega Prevista</label>
