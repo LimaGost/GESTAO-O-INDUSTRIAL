@@ -187,6 +187,7 @@ export default function Pedidos() {
       ...form,
       numero,
       status: 'rascunho',
+      origem: form.origem || 'pedido',
       valor_total: valorTotal,
       ordens_producao_ids: [],
     });
