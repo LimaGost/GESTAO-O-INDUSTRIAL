@@ -156,6 +156,22 @@ export default function DashboardComercial({ rawData, loading, period, ocultarVa
       </ExportableChart>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Clientes novos por mês */}
+        <ExportableChart title="Clientes Novos — Últimos 6 meses">
+          {loading ? <Skeleton h={180} /> : (
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={c?.clientesNovosMensal || []} barSize={28}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                <XAxis dataKey="mes" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={25} allowDecimals={false} />
+                <Tooltip content={<CustomTooltip unit=" clientes" />} />
+                <Bar dataKey="clientes" name="Clientes novos" fill="#A855F7" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </ExportableChart>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Faturamento mensal */}
         <ExportableChart title="Faturamento Mensal — Últimos 6 meses">
           {loading ? <Skeleton h={180} /> : (
