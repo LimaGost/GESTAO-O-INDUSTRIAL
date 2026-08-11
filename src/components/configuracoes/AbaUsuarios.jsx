@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
+import { registrarLog } from '@/lib/audit';
 import { Users, Shield, Save, Check, Eye, X, EyeOff, Lock, Unlock, ChevronDown, ChevronUp, AlertTriangle, DollarSign, Trash2, RotateCcw } from 'lucide-react';
 
 const ROLES = [
