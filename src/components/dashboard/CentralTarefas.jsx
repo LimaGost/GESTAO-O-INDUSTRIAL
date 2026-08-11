@@ -180,8 +180,29 @@ export default function CentralTarefas() {
   if (['vendedor', 'vendedor_industria', 'vendedor_loja'].includes(user.role)) {
     const concluidos = dados.criadosHoje.length + dados.entreguesHoje.length;
     const pendentes = dados.represados.length + dados.aguardandoPagamento.length;
+    const nomeMes = new Date().toLocaleDateString('pt-BR', { month: 'long' });
     return (
       <div>
+        <div className="rounded-2xl px-5 py-4 mb-4 text-white" style={{ background: 'linear-gradient(135deg, #2563EB, #1E3A8A)' }}>
+          <div className="flex items-center gap-2 mb-3">
+            <TrendingUp size={16} />
+            <p className="text-sm font-bold">Minhas vendas de {nomeMes}</p>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <p className="text-2xl font-black">R$ {dados.valorMes.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+              <p className="text-xs opacity-70">Faturado no mês</p>
+            </div>
+            <div>
+              <p className="text-2xl font-black">{dados.pedidosDoMes.length}</p>
+              <p className="text-xs opacity-70">Pedidos no mês</p>
+            </div>
+            <div>
+              <p className="text-2xl font-black">R$ {dados.ticketMedioMes.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+              <p className="text-xs opacity-70">Ticket médio</p>
+            </div>
+          </div>
+        </div>
         <ProgressoHoje concluidos={concluidos} pendentes={pendentes} corBase="#2563EB" />
         <div className="grid md:grid-cols-2 gap-3">
           <TaskCard icon={ClipboardList} cor="#F59E0B" titulo="Meus pedidos represados" itens={dados.represados} vazio="Nenhum represado — tudo confirmado"
