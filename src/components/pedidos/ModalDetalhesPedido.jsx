@@ -59,7 +59,7 @@ const PIPELINE_SEM_PRODUCAO = [
 
 export default function ModalDetalhesPedido({
   pedido, ocultarValores, podeEditarPrecos,
-  onClose, onRefresh, onSalvarPrecos, produtos = [], onCancelar,
+  onClose, onRefresh, onSalvarPrecos, produtos = [], onCancelar, onConfirmarReserva,
 }) {
   const [ordens, setOrdens] = useState([]);
   const [expedicao, setExpedicao] = useState(null);
@@ -714,6 +714,14 @@ export default function ModalDetalhesPedido({
 
         {/* Footer */}
         <div className="px-5 py-3 border-t border-border flex-shrink-0 space-y-2">
+          {onConfirmarReserva && pedido.status === 'rascunho' && pedido.origem === 'pedido' && (
+            <button
+              onClick={() => { onConfirmarReserva(pedido); onClose(); }}
+              className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity"
+            >
+              <Package size={14} /> Confirmar Reserva de Estoque
+            </button>
+          )}
           {onCancelar && !['cancelado', 'entregue'].includes(pedido.status) && (
             <button
               onClick={() => { onCancelar(pedido.id, pedido.numero); onClose(); }}
