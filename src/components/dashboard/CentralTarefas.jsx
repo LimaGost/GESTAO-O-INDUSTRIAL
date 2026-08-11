@@ -192,7 +192,7 @@ export default function CentralTarefas() {
             <TrendingUp size={16} />
             <p className="text-sm font-bold">Minhas vendas de {nomeMes}</p>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div>
               <p className="text-2xl font-black">R$ {dados.valorMes.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
               <p className="text-xs opacity-70">Faturado no mês</p>
@@ -204,6 +204,10 @@ export default function CentralTarefas() {
             <div>
               <p className="text-2xl font-black">R$ {dados.ticketMedioMes.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
               <p className="text-xs opacity-70">Ticket médio</p>
+            </div>
+            <div>
+              <p className="text-2xl font-black">{dados.clientesNovosMes.length}</p>
+              <p className="text-xs opacity-70">Clientes novos no mês</p>
             </div>
           </div>
         </div>
