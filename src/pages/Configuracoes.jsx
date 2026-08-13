@@ -463,10 +463,10 @@ function AbaAuditoria() {
                     {log.created_date ? (
                       <>
                         <p className="text-xs font-mono text-muted-foreground leading-tight">
-                          {new Date(log.created_date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                          {new Date(log.created_date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', timeZone: 'America/Sao_Paulo' })}
                         </p>
                         <p className="text-xs font-mono font-semibold text-foreground leading-tight">
-                          {new Date(log.created_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                          {new Date(log.created_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'America/Sao_Paulo' })}
                         </p>
                       </>
                     ) : <p className="text-xs text-muted-foreground">—</p>}
