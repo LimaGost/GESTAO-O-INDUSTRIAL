@@ -147,8 +147,39 @@ export default function SeparacaoCard({ separacao, onAvancar, loading, labelBota
           </div>
         )}
 
-        {/* Itens resumo */}
-        {separacao.itens?.length > 0 && (
+        {/* Itens: checklist de confirmação de estoque, ou resumo normal */}
+        {precisaConfirmarEstoque && separacao.itens?.length > 0 ? (
+          <div className="mb-2">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wide">Confirme o que tem em estoque</p>
+              <button
+                onClick={() => setItensChecados(prev => prev.size === separacao.itens.length ? new Set() : new Set(separacao.itens.map(i => i.produto_id)))}
+                className="text-[10px] font-semibold text-primary hover:underline">
+                {itensChecados.size === separacao.itens.length ? 'Desmarcar tudo' : 'Marcar tudo'}
+              </button>
+            </div>
+            <div className="space-y-0.5 max-h-40 overflow-y-auto border border-amber-200 rounded-lg bg-amber-50/40 p-1.5">
+              {separacao.itens.map((item, idx) => {
+                const checado = itensChecados.has(item.produto_id);
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => setItensChecados(prev => {
+                      const next = new Set(prev);
+                      if (next.has(item.produto_id)) next.delete(item.produto_id); else next.add(item.produto_id);
+                      return next;
+                    })}
+                    className={`w-full flex items-center gap-1.5 text-xs px-1.5 py-1 rounded transition-colors text-left ${checado ? 'bg-emerald-100' : 'hover:bg-amber-100'}`}
+                  >
+                    {checado ? <CheckSquare size={13} className="text-emerald-600 flex-shrink-0" /> : <Square size={13} className="text-muted-foreground flex-shrink-0" />}
+                    <span className="truncate flex-1 text-foreground">{item.produto_nome}</span>
+                    <span className="font-semibold text-foreground ml-1 flex-shrink-0">{item.quantidade}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : separacao.itens?.length > 0 && (
           <div className="space-y-0.5 mb-2">
             {separacao.itens.slice(0, 3).map((item, idx) => (
               <div key={idx} className={`flex items-center justify-between text-xs px-1.5 py-0.5 rounded ${item.sem_rotulo ? 'bg-teal-50 border border-teal-200' : ''}`}>
