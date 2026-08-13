@@ -277,6 +277,17 @@ export default function SeparacaoCard({ separacao, onAvancar, loading, labelBota
           <div className="flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-amber-600 bg-amber-50 rounded-xl">
             <Clock size={12} /> Aguardando Produção
           </div>
+        ) : precisaConfirmarEstoque ? (
+          <button
+            onClick={async () => {
+              setConfirmando(true);
+              try { await onConfirmarEstoque?.(separacao, Array.from(itensChecados)); }
+              finally { setConfirmando(false); }
+            }}
+            disabled={confirmando || readonly}
+            className="w-full py-2 rounded-xl text-xs font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 bg-amber-500 text-white hover:bg-amber-600">
+            {confirmando ? 'Confirmando...' : <><CheckSquare size={12} /> Confirmar Estoque{itensChecados.size < (separacao.itens?.length || 0) && itensChecados.size > 0 ? ` (${itensChecados.size}/${separacao.itens.length})` : ''}</>}
+          </button>
         ) : separacao.status === 'separado' && separacao.separacao_irma_id ? (
           <button
             onClick={() => setShowLiberarModal(true)}
