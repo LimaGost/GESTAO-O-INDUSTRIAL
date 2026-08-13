@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { registrarLog } from '@/lib/audit';
 import { avancarStatusSeparacao } from '@/lib/avancoSeparacao';
+import { confirmarEstoqueSeparacao } from '@/lib/alocacaoPedido';
 import { criarSeparacaoFromPedido, criarSeparacaoFromGrupo } from '@/lib/separacao';
 import { buildColunas, readStagesLocal } from '@/lib/kanbanFluxo';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
@@ -281,6 +282,7 @@ export default function KanbanSeparacao() {
                       onOpenModal={() => setSepSelecionada(sep)}
                       movimentoEstoque={movimento}
                       onLiberadoSemIrma={load}
+                      onConfirmarEstoque={confirmarEstoque}
                     />
                   ))
                 )}
