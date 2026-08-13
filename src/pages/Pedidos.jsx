@@ -324,7 +324,7 @@ export default function Pedidos() {
         (p.itens || []).some(i => (i.produto_nome || '').toLowerCase().includes(b))
       );
     });
-  }, [pedidos, busca, filtroWL]);
+  }, [pedidos, busca, filtroWL, filtroOrigem]);
 
   // Mapa pedido_id → grupo ativo (para consolidar cards agrupados no Kanban)
   const grupoPorPedido = useMemo(() => {
