@@ -17,7 +17,7 @@ import { ordenarCards } from '@/lib/ordenacaoCards';
 import { movimentoDaEtapa } from '@/lib/movimentoEstoque';
 import BadgeMovimentoEstoque from '@/components/common/BadgeMovimentoEstoque';
 import DicaColuna from '@/components/common/DicaColuna';
-import { ClipboardCheck, Plus, X, Search, RefreshCw } from 'lucide-react';
+import { ClipboardCheck, Plus, X, Search, RefreshCw, SlidersHorizontal } from 'lucide-react';
 
 function buildSepColunas() {
   const stages = readStagesLocal('separacao');
