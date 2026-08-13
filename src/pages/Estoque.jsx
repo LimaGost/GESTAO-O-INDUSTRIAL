@@ -69,29 +69,10 @@ export default function Estoque() {
     const map = {};
     for (const r of fracAll) map[r.produto_id] = (map[r.produto_id] || 0) + (r.quantidade || 0);
     setFracionados(map);
-    if (podeReservar) {
-      const pendentes = await base44.entities.Pedido.filter({ status: 'rascunho', origem: 'pedido' }).catch(() => []);
-      setPedidosPendentes(pendentes);
-    }
     setCarregando(false);
   };
 
   useEffect(() => { load(); }, []);
-
-  const confirmarReservaPedido = async (pedido) => {
-    setConfirmandoPedidoId(pedido.id);
-    try {
-      const itens = (pedido.itens || []).filter(i => i.produto_id && i.quantidade > 0);
-      const { status } = await alocarPedido({ pedido, itens, produtos, origem: 'pedido' });
-      await registrarLog('Pedido', pedido.id, 'RESERVA_CONFIRMADA',
-        `Reserva de estoque confirmada pelo estoquista para o pedido ${pedido.numero}. Status: ${status}`);
-      await load();
-    } catch (e) {
-      alert('Erro ao confirmar reserva: ' + e.message);
-    } finally {
-      setConfirmandoPedidoId(null);
-    }
-  };
 
   const ajustarEstoque = async () => {
     if (!ajuste.produto_id || ajuste.quantidade <= 0) return alert('Selecione produto e quantidade válida.');
