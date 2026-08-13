@@ -314,6 +314,7 @@ export default function Pedidos() {
   const pedidosFiltrados = useMemo(() => {
     return pedidos.filter(p => {
       if (filtroWL && !p.white_label) return false;
+      if (filtroOrigem !== 'todas' && p.origem !== filtroOrigem) return false;
       if (!busca.trim()) return true;
       const b = busca.toLowerCase();
       return (
