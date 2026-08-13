@@ -606,6 +606,10 @@ export default function PostoTrabalho() {
       alert(`Esta separação está aguardando a irmã ${sep.separacao_irma_numero || ''} chegar em "Separado" também. Só o gerente de produção pode liberar sem ela, pelo computador.`);
       return;
     }
+    if (sep.status === 'aguardando_separacao' && !sep.estoque_confirmado) {
+      alert('Essa separação ainda precisa que alguém confirme o estoque item a item, pelo computador (Kanban de Separação Indústria), antes de continuar por aqui.');
+      return;
+    }
     setProcessandoId(sep.id);
     try {
       await avancarStatusSeparacao(sep, { colunas: kanbanColunasSeparacao });
