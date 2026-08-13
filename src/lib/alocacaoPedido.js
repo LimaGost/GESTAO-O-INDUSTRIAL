@@ -1,63 +1,34 @@
 /**
- * Alocação inteligente de estoque para pedidos.
+ * Fluxo de alocação de estoque — confirmação manual pelo estoquista.
  *
- * - Estoque total  → reserva e envia direto ao Kanban de Separação (uma única Separação).
- * - Estoque parcial → nascem DUAS Separações-irmãs vinculadas entre si:
- *     - "Expressa": o que já está em estoque, corre livre desde já.
- *     - "Produção": o que falta, fica bloqueada em "Aguardando Produção" até a OP terminar.
- *   As duas seguem seus próprios caminhos até a coluna "Separado", onde se reencontram
- *   e se fundem automaticamente num card só (ver avancoSeparacao.js).
+ * Diferente da versão anterior (que comparava a quantidade do pedido com
+ * Produto.estoque_atual automaticamente), agora o sistema NÃO confia no
+ * número de estoque sozinho: todo pedido nasce como UMA Separação com todos
+ * os itens pendentes de confirmação (estoque_confirmado: false), direto na
+ * coluna "Aguardando Separação". O estoquista confere fisicamente item a
+ * item (checklist no card) e confirma o que realmente tem — o que não for
+ * confirmado vira uma Ordem de Produção + uma Separação-irmã ("produção"),
+ * reaproveitando o mesmo modelo de irmãs já usado quando a produção termina
+ * depois da separação.
  */
 import { base44 } from '@/api/base44Client';
 import { gerarNumero } from './numeracao';
 import { registrarLog } from './audit';
 
 /**
- * Processa a alocação de um pedido já criado: reserva estoque,
- * cria a(s) Separação(ões) e a OP (se necessário) e atualiza o status do pedido.
- * Retorna { status, precisaProducao, separacao, separacaoProducao, ordem }.
+ * Cria a Separação de um pedido, com todos os itens pendentes de
+ * confirmação de estoque. Não mexe em estoque nem cria OP ainda.
  */
-export async function alocarPedido({ pedido, itens, produtos, origem = 'pedido' }) {
+export async function criarSeparacaoParaConfirmacao({ pedido, itens }) {
   const numero = pedido.numero;
-  const itensParaReserva = [];
-  const itensSemEstoque = [];
-
-  for (const item of itens) {
-    if (!item.produto_id || (item.quantidade || 0) <= 0) continue;
-    const p = produtos.find(pr => pr.id === item.produto_id);
-    if (!p) continue;
-    // White Label / Sem Rótulo: não temos esses itens no estoque da indústria —
-    // vão integralmente para produção, sem reserva de estoque.
-    if (pedido.white_label || pedido.sem_rotulo || item.sem_rotulo) {
-      itensSemEstoque.push({ ...item, produto: p, quantidadeFalta: item.quantidade });
-      continue;
-    }
-    const disponivel = p.estoque_atual || 0;
-    const qtdReservar = Math.min(disponivel, item.quantidade);
-    const qtdFalta = item.quantidade - qtdReservar;
-    if (qtdReservar > 0) itensParaReserva.push({ ...item, produto: p, qtdReservar });
-    if (qtdFalta > 0) itensSemEstoque.push({ ...item, produto: p, quantidadeFalta: qtdFalta });
-  }
-
-  const precisaProducao = itensSemEstoque.length > 0;
-  const temReserva = itensParaReserva.length > 0;
-  const status = precisaProducao ? 'aguardando_estoque' : 'separacao';
-  const qtdReservadaTotal = itensParaReserva.reduce((s, i) => s + i.qtdReservar, 0);
-  const qtdPendenteTotal = itensSemEstoque.reduce((s, i) => s + i.quantidadeFalta, 0);
-  const qtdPedidoTotal = itens.reduce((s, i) => s + (i.quantidade || 0), 0);
+  const itensValidos = itens.filter(i => i.produto_id && (i.quantidade || 0) > 0);
+  const qtdTotal = itensValidos.reduce((s, i) => s + (i.quantidade || 0), 0);
   const semRotuloPedido = !!(pedido.sem_rotulo || itens.some(i => i.sem_rotulo));
 
-  // 1. Reserva (baixa) o estoque disponível imediatamente
-  for (const item of itensParaReserva) {
-    await base44.entities.Produto.update(item.produto_id, {
-      estoque_atual: (item.produto.estoque_atual || 0) - item.qtdReservar,
-    });
-    await registrarLog('Produto', item.produto_id, 'RESERVA_ESTOQUE',
-      `Reserva de ${item.qtdReservar} un para pedido ${numero}`);
-  }
-
-  const baseSeparacao = {
+  const separacao = await base44.entities.Separacao.create({
+    numero: gerarNumero('SEP'),
     origem: 'pedido',
+    tipo_separacao: 'unica',
     pedido_id: pedido.id,
     pedido_numero: numero,
     pedido_criado_por_id: pedido.created_by_id || null,
@@ -72,114 +43,186 @@ export async function alocarPedido({ pedido, itens, produtos, origem = 'pedido' 
     destino_endereco: pedido.destino_endereco || null,
     data_prevista: pedido.data_entrega_prevista || null,
     prioridade: 'normal',
-  };
-
-  // 2. Separação "Expressa" — o que já está em estoque
-  let separacao = null;
-  if (temReserva) {
-    const itensSep = itensParaReserva.map(i => ({
+    itens: itensValidos.map(i => ({
       produto_id: i.produto_id,
       produto_nome: i.produto_nome,
-      quantidade: i.qtdReservar,
+      quantidade: i.quantidade,
       sem_rotulo: !!(pedido.sem_rotulo || i.sem_rotulo),
+    })),
+    quantidade_itens: itensValidos.length,
+    quantidade_total: qtdTotal,
+    estoque_confirmado: false,
+    estoque_ja_reservado: false,
+    status: 'aguardando_separacao',
+  });
+
+  await registrarLog('Separacao', separacao.id, 'CRIACAO_AUTOMATICA',
+    `Separação ${separacao.numero} criada para o pedido ${numero} — aguardando o estoquista confirmar o que tem em estoque`);
+
+  await base44.entities.Pedido.update(pedido.id, {
+    status: 'separacao',
+    ordens_producao_ids: [],
+  });
+
+  return { separacao };
+}
+
+/**
+ * Chamada quando o estoquista termina o checklist de um card em
+ * "Aguardando Separação". `produtoIdsConfirmados` é a lista de produto_id
+ * que ele marcou como "tenho em estoque". O resto vira produção.
+ */
+export async function confirmarEstoqueSeparacao(separacao, produtoIdsConfirmados) {
+  const confirmadosSet = new Set(produtoIdsConfirmados);
+  const itensConfirmados = separacao.itens.filter(i => confirmadosSet.has(i.produto_id));
+  const itensNaoConfirmados = separacao.itens.filter(i => !confirmadosSet.has(i.produto_id));
+
+  // Baixa o estoque só do que foi confirmado
+  if (itensConfirmados.length > 0) {
+    const produtos = await base44.entities.Produto.list();
+    await Promise.all(itensConfirmados.map(async (item) => {
+      const prod = produtos.find(p => p.id === item.produto_id);
+      if (!prod) return;
+      await base44.entities.Produto.update(prod.id, {
+        estoque_atual: Math.max(0, (prod.estoque_atual || 0) - (item.quantidade || 0)),
+      });
+      await registrarLog('Produto', prod.id, 'RESERVA_ESTOQUE',
+        `Reserva de ${item.quantidade} un confirmada pelo estoquista para o pedido ${separacao.pedido_numero}`);
     }));
-    separacao = await base44.entities.Separacao.create({
-      ...baseSeparacao,
-      numero: gerarNumero('SEP'),
-      tipo_separacao: precisaProducao ? 'expressa' : 'unica',
-      itens: itensSep,
-      quantidade_itens: itensSep.length,
-      quantidade_total: qtdReservadaTotal,
-      quantidade_pendente_producao: 0,
-      estoque_ja_reservado: true,
-      status: 'aguardando_separacao',
-    });
-    await registrarLog('Separacao', separacao.id, 'CRIACAO_AUTOMATICA',
-      precisaProducao
-        ? `Separação ${separacao.numero} (expressa) criada com ${qtdReservadaTotal} un já em estoque — pedido ${numero} (parte pendente em Separação de Produção à parte)`
-        : `Separação ${separacao.numero} criada — estoque total disponível para o pedido ${numero}`);
   }
 
-  // 3. Cria a OP para a quantidade pendente + Separação "Produção" (irmã, bloqueada)
-  let ordem = null;
-  let separacaoProducao = null;
-  if (precisaProducao) {
-    const itensParaProducao = itensSemEstoque.map(i => ({
-      produto_id: i.produto_id,
-      produto_nome: i.produto_nome,
-      quantidade: i.quantidadeFalta,
-      disponivel: false,
-      sem_rotulo: !!(pedido.sem_rotulo || i.sem_rotulo),
-    }));
+  if (itensNaoConfirmados.length === 0) {
+    // Tudo confirmado — a própria Separação segue normalmente, sem irmã
+    await base44.entities.Separacao.update(separacao.id, {
+      estoque_confirmado: true,
+      estoque_ja_reservado: true,
+    });
+    await registrarLog('Separacao', separacao.id, 'ESTOQUE_CONFIRMADO',
+      `Estoque confirmado integralmente pelo estoquista — separação ${separacao.numero} segue para separação física`);
+    return { precisaProducao: false };
+  }
 
-    separacaoProducao = await base44.entities.Separacao.create({
-      ...baseSeparacao,
-      numero: gerarNumero('SEP'),
+  if (itensConfirmados.length === 0) {
+    // Nada em estoque — esta mesma Separação vira a "de produção", sem precisar de irmã
+    const ordem = await criarOPParaItens({
+      itens: itensNaoConfirmados,
+      pedido_id: separacao.pedido_id,
+      pedido_numero: separacao.pedido_numero,
+      pedido_criado_por_id: separacao.pedido_criado_por_id,
+      cliente_nome: separacao.cliente_nome,
+      sem_rotulo: separacao.sem_rotulo,
+    });
+    await base44.entities.Separacao.update(separacao.id, {
+      estoque_confirmado: true,
       tipo_separacao: 'producao',
-      itens: [],
-      quantidade_itens: itensSemEstoque.length,
-      quantidade_total: 0,
-      quantidade_pendente_producao: qtdPendenteTotal,
-      estoque_ja_reservado: false,
       status: 'aguardando_producao',
-      separacao_irma_id: separacao?.id || null,
-    });
-
-    ordem = await base44.entities.OrdemProducao.create({
-      numero: gerarNumero('OP'),
-      produto_nome: `${pedido.cliente_nome} • ${numero}`,
-      quantidade: qtdPendenteTotal,
-      itens: itensParaProducao,
-      status: 'a_produzir',
-      pedido_id: pedido.id,
-      pedido_numero: numero,
-      pedido_criado_por_id: pedido.created_by_id || null,
-      cliente_nome: pedido.cliente_nome || null,
-      sem_rotulo: semRotuloPedido,
-      origem,
-      observacoes: pedido.observacoes || '',
-      quantidade_pedido_total: qtdPedidoTotal,
-      quantidade_reservada_estoque: qtdReservadaTotal,
-      separacao_id: separacaoProducao.id,
-    });
-    await registrarLog('OrdemProducao', ordem.id, 'CRIACAO_AUTOMATICA',
-      `OP para pedido ${numero} — ${itensSemEstoque.length} item(ns) p/ produção (${qtdReservadaTotal} un já reservadas em Separação expressa à parte)`);
-
-    // Vínculo de volta: a Separação de Produção sabe qual OP a está produzindo
-    await base44.entities.Separacao.update(separacaoProducao.id, {
+      itens: [],
+      quantidade_itens: 0,
+      quantidade_total: 0,
+      quantidade_pendente_producao: itensNaoConfirmados.reduce((s, i) => s + i.quantidade, 0),
       ordem_producao_id: ordem.id,
       ordem_producao_numero: ordem.numero,
     });
-    await registrarLog('Separacao', separacaoProducao.id, 'CRIACAO_AUTOMATICA',
-      `Separação ${separacaoProducao.numero} (produção) criada — aguardando OP ${ordem.numero} concluir ${qtdPendenteTotal} un (pedido ${numero})`);
-
-    // Se existe irmã expressa, vincula ela de volta também
-    if (separacao) {
-      await base44.entities.Separacao.update(separacao.id, {
-        separacao_irma_id: separacaoProducao.id,
-        separacao_irma_numero: separacaoProducao.numero,
-      });
-      await base44.entities.Separacao.update(separacaoProducao.id, {
-        separacao_irma_numero: separacao.numero,
-      });
-    }
+    await registrarLog('Separacao', separacao.id, 'ESTOQUE_CONFIRMADO',
+      `Nenhum item confirmado em estoque — separação ${separacao.numero} virou produção, aguardando OP ${ordem.numero}`);
+    return { precisaProducao: true };
   }
 
-  // 4. Atualiza o pedido
-  await base44.entities.Pedido.update(pedido.id, {
-    status,
-    ordens_producao_ids: ordem ? [ordem.id] : [],
+  // Caso parcial: a original fica só com os confirmados (expressa),
+  // nasce uma irmã de produção pro resto
+  const qtdConfirmada = itensConfirmados.reduce((s, i) => s + i.quantidade, 0);
+
+  const separacaoProducao = await base44.entities.Separacao.create({
+    numero: gerarNumero('SEP'),
+    origem: 'pedido',
+    tipo_separacao: 'producao',
+    pedido_id: separacao.pedido_id,
+    pedido_numero: separacao.pedido_numero,
+    pedido_criado_por_id: separacao.pedido_criado_por_id,
+    cliente_id: separacao.cliente_id,
+    cliente_nome: separacao.cliente_nome,
+    white_label: separacao.white_label,
+    white_label_marca: separacao.white_label_marca,
+    sem_rotulo: separacao.sem_rotulo,
+    destino_tipo: separacao.destino_tipo,
+    destino_transportadora: separacao.destino_transportadora,
+    destino_unidade: separacao.destino_unidade,
+    destino_endereco: separacao.destino_endereco,
+    data_prevista: separacao.data_prevista,
+    prioridade: separacao.prioridade,
+    itens: [],
+    quantidade_itens: itensNaoConfirmados.length,
+    quantidade_total: 0,
+    quantidade_pendente_producao: itensNaoConfirmados.reduce((s, i) => s + i.quantidade, 0),
+    estoque_confirmado: true,
+    estoque_ja_reservado: false,
+    status: 'aguardando_producao',
+    separacao_irma_id: separacao.id,
   });
 
-  return { status, precisaProducao, separacao, separacaoProducao, ordem };
+  const ordem = await criarOPParaItens({
+    itens: itensNaoConfirmados,
+    pedido_id: separacao.pedido_id,
+    pedido_numero: separacao.pedido_numero,
+    pedido_criado_por_id: separacao.pedido_criado_por_id,
+    cliente_nome: separacao.cliente_nome,
+    sem_rotulo: separacao.sem_rotulo,
+    separacao_id: separacaoProducao.id,
+  });
+
+  await base44.entities.Separacao.update(separacaoProducao.id, {
+    ordem_producao_id: ordem.id,
+    ordem_producao_numero: ordem.numero,
+  });
+
+  await base44.entities.Separacao.update(separacao.id, {
+    estoque_confirmado: true,
+    estoque_ja_reservado: true,
+    tipo_separacao: 'expressa',
+    itens: itensConfirmados,
+    quantidade_itens: itensConfirmados.length,
+    quantidade_total: qtdConfirmada,
+    separacao_irma_id: separacaoProducao.id,
+    separacao_irma_numero: separacaoProducao.numero,
+  });
+  await base44.entities.Separacao.update(separacaoProducao.id, {
+    separacao_irma_numero: separacao.numero,
+  });
+
+  await registrarLog('Separacao', separacao.id, 'ESTOQUE_CONFIRMADO',
+    `Estoque parcialmente confirmado — ${itensConfirmados.length} item(ns) seguem aqui, ${itensNaoConfirmados.length} foram para a separação-irmã ${separacaoProducao.numero} (produção)`);
+
+  return { precisaProducao: true, separacaoProducao };
+}
+
+async function criarOPParaItens({ itens, pedido_id, pedido_numero, pedido_criado_por_id, cliente_nome, sem_rotulo, separacao_id }) {
+  const qtd = itens.reduce((s, i) => s + i.quantidade, 0);
+  const ordem = await base44.entities.OrdemProducao.create({
+    numero: gerarNumero('OP'),
+    produto_nome: `${cliente_nome} • ${pedido_numero}`,
+    quantidade: qtd,
+    itens: itens.map(i => ({ produto_id: i.produto_id, produto_nome: i.produto_nome, quantidade: i.quantidade, disponivel: false, sem_rotulo: !!i.sem_rotulo })),
+    status: 'a_produzir',
+    pedido_id,
+    pedido_numero,
+    pedido_criado_por_id,
+    cliente_nome,
+    sem_rotulo: !!sem_rotulo,
+    origem: 'pedido',
+    quantidade_pedido_total: qtd,
+    quantidade_reservada_estoque: 0,
+    separacao_id: separacao_id || null,
+  });
+  await registrarLog('OrdemProducao', ordem.id, 'CRIACAO_AUTOMATICA',
+    `OP criada a partir da confirmação de estoque do pedido ${pedido_numero} — ${itens.length} item(ns) não confirmados`);
+  return ordem;
 }
 
 /**
  * Chamada quando a produção de uma OP vinculada a um pedido é concluída.
- * Preenche a Separação de Produção (irmã) com os itens produzidos e a libera
- * para seguir seu próprio caminho ("Aguardando Separação"). Não mescla com a
- * irmã expressa aqui — a fusão acontece na coluna "Separado" (ver avancoSeparacao.js).
- * Retorna true se encontrou e liberou a separação.
+ * Preenche a Separação de Produção (irmã, ou a própria caso não tenha
+ * irmã) com os itens produzidos e a libera para seguir seu próprio
+ * caminho ("Aguardando Separação").
  */
 export async function concluirProducaoParaSeparacao(ordem) {
   if (!ordem.pedido_id) return false;
