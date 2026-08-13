@@ -430,7 +430,7 @@ export default function Kanban() {
             <div>
               <p className="text-xs text-muted-foreground mb-1.5">Origem</p>
               <div className="flex gap-1.5 flex-wrap">
-                {[{ k: 'todas', l: 'Todas' }, { k: 'pedido', l: 'Pedido' }, { k: 'estoque_minimo', l: 'Reposição' }, { k: 'manual', l: 'Manual' }].map((f) =>
+                {[{ k: 'todas', l: 'Todas' }, { k: 'pedido', l: 'Pedido' }, { k: 'bling', l: 'Bling' }, { k: 'portal', l: 'Portal' }, { k: 'estoque_minimo', l: 'Reposição' }, { k: 'manual', l: 'Manual' }].map((f) =>
               <button key={f.k} onClick={() => setFiltroOrigem(f.k)}
               className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${filtroOrigem === f.k ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'}`}>
                     {f.l}
