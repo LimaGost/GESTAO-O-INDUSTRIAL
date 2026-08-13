@@ -110,6 +110,16 @@ export default function KanbanSeparacao() {
     }
   };
 
+  const confirmarEstoque = async (sep, produtoIdsConfirmados) => {
+    try {
+      await confirmarEstoqueSeparacao(sep, produtoIdsConfirmados);
+      await load();
+    } catch (e) {
+      console.error('[KanbanSeparacao] erro ao confirmar estoque:', e);
+      alert('Erro ao confirmar estoque: ' + e.message);
+    }
+  };
+
   const criarFromPedido = async (pedido) => {
     setCriando(true);
     try {
