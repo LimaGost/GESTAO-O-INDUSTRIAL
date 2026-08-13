@@ -402,6 +402,13 @@ export default function Pedidos() {
               className={`p-2.5 border rounded-xl hover:bg-muted transition-colors ${showFiltros ? 'border-primary/30 bg-primary/10' : 'border-border'}`}>
               <Eye size={15} className={showFiltros ? 'text-primary' : 'text-muted-foreground'} />
             </button>
+            <select value={filtroOrigem} onChange={e => setFiltroOrigem(e.target.value)}
+              className="border border-border rounded-xl px-2.5 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
+              <option value="todas">Origem: Todas</option>
+              <option value="pedido">Pedido</option>
+              <option value="bling">Bling</option>
+              <option value="portal">Portal</option>
+            </select>
             <button onClick={() => setFiltroWL(v => !v)}
               className={`flex items-center gap-1.5 border px-3 py-2 rounded-xl text-sm font-medium transition-colors ${filtroWL ? 'border-purple-400 bg-purple-50 text-purple-700' : 'border-border text-muted-foreground hover:bg-muted'}`}>
               <Tag size={14} /> WL
