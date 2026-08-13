@@ -41,6 +41,7 @@ export default function Pedidos() {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [busca, setBusca] = useState('');
+  const [filtroOrigem, setFiltroOrigem] = useState('todas');
   const [colunasVisiveis, setColunasVisiveis] = useState(['pendente', 'expedido', 'entregue']);
   const [pedidoDetalhes, setPedidoDetalhes] = useState(null);
   const [pedidoBlingProcessar, setPedidoBlingProcessar] = useState(null);
