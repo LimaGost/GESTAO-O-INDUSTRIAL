@@ -3,7 +3,7 @@ import BadgeMovimentoEstoque from '@/components/common/BadgeMovimentoEstoque';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { ArrowRight, User, Tag, Package, Truck, MapPin, Calendar, Flag, CheckCircle, Hash, ClipboardList, Home, Clock, ExternalLink, Lock, X, Link2 } from 'lucide-react';
+import { ArrowRight, User, Tag, Package, Truck, MapPin, Calendar, Flag, CheckCircle, Hash, ClipboardList, Home, Clock, ExternalLink, Lock, X, Link2, CheckSquare, Square } from 'lucide-react';
 
 const STATUS_ACCENT = {
   aguardando_producao: '#F59E0B',
@@ -85,8 +85,11 @@ function LiberarSemIrmaModal({ separacao, onClose, onSucesso }) {
   );
 }
 
-export default function SeparacaoCard({ separacao, onAvancar, loading, labelBotao, readonly, onOpenModal, movimentoEstoque, onLiberadoSemIrma }) {
+export default function SeparacaoCard({ separacao, onAvancar, loading, labelBotao, readonly, onOpenModal, movimentoEstoque, onLiberadoSemIrma, onConfirmarEstoque }) {
   const [showLiberarModal, setShowLiberarModal] = useState(false);
+  const precisaConfirmarEstoque = separacao.status === 'aguardando_separacao' && !separacao.estoque_confirmado;
+  const [itensChecados, setItensChecados] = useState(() => new Set());
+  const [confirmando, setConfirmando] = useState(false);
   const accent = STATUS_ACCENT[separacao.status] || '#64748B';
   const origem = ORIGEM_CONFIG[separacao.origem] || ORIGEM_CONFIG.ordem_producao;
   const atrasada = separacao.data_prevista && separacao.status !== 'liberado_expedicao' &&
