@@ -13,7 +13,7 @@ function exportarCSV(logs) {
   const linhas = logs.map(l => {
     const d = new Date(l.created_date);
     return [
-      d.toLocaleDateString('pt-BR'), d.toLocaleTimeString('pt-BR'),
+      d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }), d.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
       l.usuario || '—', l.entidade || '—', l.acao || '—',
       (l.descricao || '').replace(/;/g, ','),
     ].join(';');
@@ -99,7 +99,7 @@ export default function DiretorAuditoria({ logs }) {
               {filtrados.slice(0, limite).map(l => (
                 <tr key={l.id} className="border-t border-border hover:bg-muted/20">
                   <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">
-                    {new Date(l.created_date).toLocaleDateString('pt-BR')} {new Date(l.created_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(l.created_date).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })} {new Date(l.created_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}
                   </td>
                   <td className="px-3 py-2 text-xs font-semibold text-foreground whitespace-nowrap">{l.usuario || '—'}</td>
                   <td className="px-3 py-2 text-xs whitespace-nowrap">{ENTIDADE_LABEL[l.entidade] || l.entidade}</td>
