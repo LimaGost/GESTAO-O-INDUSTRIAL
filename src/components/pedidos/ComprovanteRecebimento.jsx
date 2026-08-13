@@ -17,7 +17,7 @@ export default function ComprovanteRecebimento({ expedicao }) {
         )}
         {expedicao.cpf_recebedor && <p>CPF: <strong>{expedicao.cpf_recebedor}</strong></p>}
         {data && (
-          <p>📅 {new Date(data).toLocaleDateString('pt-BR')} às {new Date(data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
+          <p>📅 {new Date(data).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })} às {new Date(data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}</p>
         )}
         {expedicao.observacoes_cliente && <p>📝 {expedicao.observacoes_cliente}</p>}
       </div>
