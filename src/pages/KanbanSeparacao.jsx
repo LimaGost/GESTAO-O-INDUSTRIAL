@@ -194,13 +194,17 @@ export default function KanbanSeparacao() {
             </div>
           </div>
           <div className="flex items-center gap-1.5 md:gap-2 flex-wrap justify-end">
-            <div className="flex items-center gap-2 bg-muted/50 border border-border rounded-xl px-3 py-2">
-              <Search size={14} className="text-muted-foreground flex-shrink-0" />
-              <input value={busca} onChange={e => setBusca(e.target.value)}
-                placeholder="Buscar..."
-                className="bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground w-24 md:w-40" />
-              {busca && <button onClick={() => setBusca('')}><X size={13} className="text-muted-foreground" /></button>}
-            </div>
+            {!isMobile ? (
+              <button onClick={() => setShowFilters(v => !v)}
+                className={`flex items-center gap-2 border px-3 py-2.5 rounded-xl text-xs md:text-sm font-medium transition-colors ${(busca || filtroCategoria !== 'todas' || sortKey !== 'urgencia') ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border hover:bg-muted text-muted-foreground'}`}>
+                <SlidersHorizontal size={15} /> Filtros {(busca || filtroCategoria !== 'todas' || sortKey !== 'urgencia') && <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block" />}
+              </button>
+            ) : (
+              <button onClick={() => setShowFilters(v => !v)}
+                className={`p-2 border rounded-lg ${(busca || filtroCategoria !== 'todas' || sortKey !== 'urgencia') ? 'bg-primary/10 border-primary/30' : 'border-border'}`}>
+                <SlidersHorizontal size={15} className={(busca || filtroCategoria !== 'todas' || sortKey !== 'urgencia') ? 'text-primary' : 'text-muted-foreground'} />
+              </button>
+            )}
             <button onClick={load} className="p-2 border border-border rounded-xl hover:bg-muted transition-colors">
               <RefreshCw size={14} className={`text-muted-foreground ${loading ? 'animate-spin' : ''}`} />
             </button>
@@ -213,17 +217,24 @@ export default function KanbanSeparacao() {
           </div>
         </div>
 
-        {/* Filtro por categoria */}
-        {categorias.length > 0 && (
-          <div className="mb-4">
-            <FiltroCategorias categorias={categorias} valor={filtroCategoria} onChange={setFiltroCategoria} />
+        {/* Painel de filtros — escondido por padrão, principalmente no celular */}
+        {showFilters && (
+          <div className="mb-4 space-y-3">
+            <div className="flex items-center gap-2 bg-muted/50 border border-border rounded-xl px-3 py-2">
+              <Search size={14} className="text-muted-foreground flex-shrink-0" />
+              <input value={busca} onChange={e => setBusca(e.target.value)}
+                placeholder="Buscar por pedido ou cliente..."
+                className="bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground w-full" />
+              {busca && <button onClick={() => setBusca('')}><X size={13} className="text-muted-foreground" /></button>}
+            </div>
+
+            {categorias.length > 0 && (
+              <FiltroCategorias categorias={categorias} valor={filtroCategoria} onChange={setFiltroCategoria} />
+            )}
+
+            <OrdenarPor valor={sortKey} onChange={setSortKey} />
           </div>
         )}
-
-        {/* Ordenação */}
-        <div className="mb-4">
-          <OrdenarPor valor={sortKey} onChange={setSortKey} />
-        </div>
 
         {/* KPIs */}
         {!loading && <SeparacaoKpis separacoes={separacoes} />}
