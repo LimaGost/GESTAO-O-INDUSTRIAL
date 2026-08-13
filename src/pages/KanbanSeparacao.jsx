@@ -42,6 +42,7 @@ export default function KanbanSeparacao() {
   const [produtos, setProdutos] = useState([]);
   const [filtroCategoria, setFiltroCategoria] = useState('todas');
   const [sortKey, setSortKey] = useState('urgencia');
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
