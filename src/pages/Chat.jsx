@@ -470,7 +470,7 @@ export default function Chat() {
                       <p className="text-sm break-words leading-relaxed text-foreground">{msg.conteudo}</p>
                       <div className={`flex items-center gap-1 mt-0.5 ${ehMeu ? 'justify-end' : 'justify-start'}`}>
                         <p className="text-[10px] text-muted-foreground">
-                          {msg.created_date ? new Date(msg.created_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}
+                          {msg.created_date ? new Date(msg.created_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) : ''}
                         </p>
                         {ehMeu && <span className="text-[10px] text-muted-foreground">{msg.lida ? '✓✓' : '✓'}</span>}
                       </div>
