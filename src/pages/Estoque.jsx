@@ -4,7 +4,6 @@ import { AlertTriangle, TrendingUp, Archive, Plus, X, Check, Search, Eye, Packag
 import { registrarLog } from '@/lib/audit';
 import { gerarNumero } from '@/lib/numeracao';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
-import { useAuth } from '@/lib/AuthContext';
 import PullToRefresh from '@/components/PullToRefresh';
 import { listarFracionado, adicionarFracionado, retirarFracionado } from '@/lib/estoqueFracionado';
 import { calcularCaixas, formatarCaixas } from '@/lib/calculoCaixas';
@@ -27,7 +26,6 @@ function BarraEstoque({ pct, zerado, alerta }) {
 
 export default function Estoque() {
   const { somenteLeitura } = usePermissoes();
-  const { user } = useAuth();
   const readonly = somenteLeitura('Estoque');
   const [produtos, setProdutos] = useState([]);
   const [carregando, setCarregando] = useState(true);
