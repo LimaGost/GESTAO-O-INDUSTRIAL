@@ -243,9 +243,9 @@ export default function Pedidos() {
     const numero = pedido.numero;
     await base44.entities.Pedido.update(pedido.id, { itens: itensVinculados });
 
-    // Alocação inteligente: reserva estoque, cria Separação e OP (parcial) se necessário
-    const { status } = await alocarPedido({ pedido: { ...pedido, itens: itensVinculados }, itens: itensVinculados.filter(i => i.produto_id), produtos, origem: 'portal' });
-    await registrarLog('Pedido', pedido.id, 'PROCESSAMENTO_PORTAL', `Pedido Portal ${numero} processado. Status: ${status}`);
+    // Alocação pendente de confirmação — igual ao fluxo manual
+    await criarSeparacaoParaConfirmacao({ pedido: { ...pedido, itens: itensVinculados }, itens: itensVinculados.filter(i => i.produto_id) });
+    await registrarLog('Pedido', pedido.id, 'PROCESSAMENTO_PORTAL', `Pedido Portal ${numero} processado — aguardando confirmação de estoque`);
 
     setProcessandoPortal(false);
     setPedidoPortalProcessar(null);
