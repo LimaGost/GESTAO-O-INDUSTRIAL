@@ -15,7 +15,7 @@ import ModalDetalhesPedido from '@/components/pedidos/ModalDetalhesPedido';
 import ModalSincronizarBling from '@/components/pedidos/ModalSincronizarBling';
 import { gerarNumero, gerarLote } from '@/lib/numeracao';
 import { registrarLog } from '@/lib/audit';
-import { alocarPedido } from '@/lib/alocacaoPedido';
+import { criarSeparacaoParaConfirmacao } from '@/lib/alocacaoPedido';
 import { usePermissoes } from '@/lib/usePermissoes.jsx';
 import PullToRefresh from '@/components/PullToRefresh';
 
@@ -193,18 +193,11 @@ export default function Pedidos() {
       ordens_producao_ids: [],
     });
 
-    let status = 'rascunho';
-    if (form.status_pagamento === 'pago') {
-      // Pagamento antecipado: alocação inteligente automática — reserva estoque,
-      // cria Separação e OP (parcial) se necessário. O vendedor não escolhe isso.
-      const resultado = await alocarPedido({ pedido, itens: itensAgrupados, produtos, origem: 'pedido' });
-      status = resultado.status;
-      await registrarLog('Pedido', pedido.id, 'CRIACAO', `Pedido ${numero} criado com pagamento antecipado — estoque reservado automaticamente. Status: ${status}`);
-    } else {
-      // Sem pagamento antecipado: fica em rascunho — só o estoquista confirma a
-      // reserva depois, pela tela de Estoque.
-      await registrarLog('Pedido', pedido.id, 'CRIACAO', `Pedido ${numero} criado como rascunho — aguardando confirmação de reserva de estoque pelo estoquista (sem pagamento antecipado)`);
-    }
+    // Toda criação de pedido nasce como uma Separação pendente de confirmação
+    // de estoque — o estoquista confere item a item direto no Kanban de
+    // Separação, não existe mais reserva automática por pagamento.
+    await criarSeparacaoParaConfirmacao({ pedido, itens: itensAgrupados });
+    await registrarLog('Pedido', pedido.id, 'CRIACAO', `Pedido ${numero} criado — aguardando confirmação de estoque na Separação Indústria`);
     setShowForm(false);
     await load();
     setLoading(false);
@@ -232,9 +225,9 @@ export default function Pedidos() {
     const numero = pedido.numero || gerarNumero('PED');
     await base44.entities.Pedido.update(pedido.id, { itens: itensVinculados, numero });
 
-    // Alocação inteligente: reserva estoque, cria Separação e OP (parcial) se necessário
-    const { status } = await alocarPedido({ pedido: { ...pedido, numero, itens: itensVinculados }, itens: itensAgrupados, produtos, origem: 'bling' });
-    await registrarLog('Pedido', pedido.id, 'PROCESSAMENTO_BLING', `Pedido Bling ${numero} processado. Status: ${status}`);
+    // Alocação pendente de confirmação — igual ao fluxo manual
+    await criarSeparacaoParaConfirmacao({ pedido: { ...pedido, numero, itens: itensVinculados }, itens: itensAgrupados });
+    await registrarLog('Pedido', pedido.id, 'PROCESSAMENTO_BLING', `Pedido Bling ${numero} processado — aguardando confirmação de estoque`);
 
     setProcessandoBling(false);
     setPedidoBlingProcessar(null);
