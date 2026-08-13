@@ -155,10 +155,10 @@ export default function Auditoria() {
                 <div className="px-4 py-3 flex items-start gap-3">
                   <div className="flex-shrink-0 text-center min-w-[56px]">
                     <p className="text-xs font-mono text-muted-foreground leading-tight">
-                      {log.created_date ? new Date(log.created_date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '—'}
+                      {log.created_date ? new Date(log.created_date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo' }) : '—'}
                     </p>
                     <p className="text-xs font-mono text-muted-foreground leading-tight">
-                      {log.created_date ? new Date(log.created_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}
+                      {log.created_date ? new Date(log.created_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) : ''}
                     </p>
                   </div>
                   <div className="flex-1 min-w-0">
