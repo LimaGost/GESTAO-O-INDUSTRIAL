@@ -177,7 +177,7 @@ export default function KanbanSeparacao() {
   });
 
   const colWidth = isMobile ? 'w-80 sm:w-96' : 'w-72';
-  const colHeight = isMobile ? 'calc(100vh - 420px)' : 'calc(100vh - 300px)';
+  const colHeight = isMobile ? 'calc(100vh - 320px)' : 'calc(100vh - 300px)';
 
   return (
     <div className="flex flex-col h-full space-y-4">
