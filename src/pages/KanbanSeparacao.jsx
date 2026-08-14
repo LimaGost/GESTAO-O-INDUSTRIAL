@@ -322,6 +322,7 @@ export default function KanbanSeparacao() {
           loading={loadingId === sepSelecionada.id}
           labelBotao={colunas.find(c => c.key === sepSelecionada.status)?.proximoLabel || null}
           onClose={() => setSepSelecionada(null)}
+          onConfirmarEstoque={confirmarEstoque}
         />
       )}
 
