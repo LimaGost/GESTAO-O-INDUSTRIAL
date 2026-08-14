@@ -308,7 +308,6 @@ export default function Pedidos() {
     return pedido.status;
   };
 
-  const pedidosFiltrados = useMemo(() => {
   const mapaCategorias = useMemo(() => buildMapaCategorias(produtos), [produtos]);
   const categorias = useMemo(() => listarCategorias(produtos), [produtos]);
 
