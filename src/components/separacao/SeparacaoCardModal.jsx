@@ -1,4 +1,5 @@
-import { X, ArrowRight, User, Tag, Package, Truck, MapPin, Calendar, Flag, CheckCircle, Hash, ClipboardList, Home, Clock, Factory } from 'lucide-react';
+import { useState } from 'react';
+import { X, ArrowRight, User, Tag, Package, Truck, MapPin, Calendar, Flag, CheckCircle, Hash, ClipboardList, Home, Clock, Factory, CheckSquare, Square } from 'lucide-react';
 import AlertaFracionado from '@/components/fracionado/AlertaFracionado';
 
 const STATUS_ACCENT = {
@@ -27,7 +28,10 @@ function fmtData(iso) {
   return new Date(iso.includes('T') ? iso : iso + 'T12:00:00').toLocaleDateString('pt-BR');
 }
 
-export default function SeparacaoCardModal({ separacao, colunas = [], onAvancar, loading, labelBotao, onClose }) {
+export default function SeparacaoCardModal({ separacao, colunas = [], onAvancar, loading, labelBotao, onClose, onConfirmarEstoque }) {
+  const [itensChecados, setItensChecados] = useState(() => new Set());
+  const [confirmando, setConfirmando] = useState(false);
+  const precisaConfirmarEstoque = separacao.status === 'aguardando_separacao' && !separacao.estoque_confirmado;
   const accent = STATUS_ACCENT[separacao.status] || '#64748B';
   const colunaAtual = colunas.find(c => c.key === separacao.status);
   const statusLabel = separacao.status === 'aguardando_producao' ? 'Aguardando Produção' : (colunaAtual?.label || separacao.status);
