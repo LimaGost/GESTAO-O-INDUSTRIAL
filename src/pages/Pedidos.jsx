@@ -309,9 +309,14 @@ export default function Pedidos() {
   };
 
   const pedidosFiltrados = useMemo(() => {
+  const mapaCategorias = useMemo(() => buildMapaCategorias(produtos), [produtos]);
+  const categorias = useMemo(() => listarCategorias(produtos), [produtos]);
+
+  const pedidosFiltrados = useMemo(() => {
     return pedidos.filter(p => {
       if (filtroWL && !p.white_label) return false;
       if (filtroOrigem !== 'todas' && p.origem !== filtroOrigem) return false;
+      if (!registroTemCategoria(p, mapaCategorias, filtroLinha)) return false;
       if (!busca.trim()) return true;
       const b = busca.toLowerCase();
       return (
@@ -320,8 +325,8 @@ export default function Pedidos() {
         (p.white_label_marca || '').toLowerCase().includes(b) ||
         (p.itens || []).some(i => (i.produto_nome || '').toLowerCase().includes(b))
       );
-    });
-  }, [pedidos, busca, filtroWL, filtroOrigem]);
+    }).sort((a, b) => (b.created_date || '').localeCompare(a.created_date || ''));
+  }, [pedidos, busca, filtroWL, filtroOrigem, filtroLinha, mapaCategorias]);
 
   // Mapa pedido_id → grupo ativo (para consolidar cards agrupados no Kanban)
   const grupoPorPedido = useMemo(() => {
