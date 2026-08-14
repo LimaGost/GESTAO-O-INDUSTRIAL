@@ -304,7 +304,6 @@ export default function KanbanSeparacao() {
                       onOpenModal={() => setSepSelecionada(sep)}
                       movimentoEstoque={movimento}
                       onLiberadoSemIrma={load}
-                      onConfirmarEstoque={confirmarEstoque}
                     />
                   ))
                 )}
