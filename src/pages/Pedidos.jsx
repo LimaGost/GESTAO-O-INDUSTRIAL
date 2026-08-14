@@ -49,7 +49,9 @@ export default function Pedidos() {
   const [pedidoPortalProcessar, setPedidoPortalProcessar] = useState(null);
   const [processandoPortal, setProcessandoPortal] = useState(false);
   const [user, setUser] = useState(null);
-  const [showFiltros, setShowFiltros] = useState(false);
+  const [showColunas, setShowColunas] = useState(false);
+  const [showFiltrosPanel, setShowFiltrosPanel] = useState(false);
+  const [filtroLinha, setFiltroLinha] = useState('todas');
   const [filtroWL, setFiltroWL] = useState(false);
   const [sincronizandoBling, setSincronizandoBling] = useState(false);
   const [showModalBling, setShowModalBling] = useState(false);
