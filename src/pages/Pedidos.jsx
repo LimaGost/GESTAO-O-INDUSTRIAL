@@ -373,18 +373,6 @@ export default function Pedidos() {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Busca */}
-            <div className="relative">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input value={busca} onChange={e => setBusca(e.target.value)}
-                placeholder="Buscar pedido..."
-                className="border border-border rounded-xl pl-8 pr-8 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary w-44" />
-              {busca && (
-                <button onClick={() => setBusca('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                  <X size={13} />
-                </button>
-              )}
-            </div>
             <button onClick={load} className="p-2.5 border border-border rounded-xl hover:bg-muted transition-colors">
               <RefreshCw size={15} className="text-muted-foreground" />
             </button>
@@ -399,20 +387,14 @@ export default function Pedidos() {
                 <Layers size={14} /> Agrupar{grupos.length > 0 ? ` (${grupos.length})` : ''}
               </button>
             )}
-            <button onClick={() => setShowFiltros(v => !v)}
-              className={`p-2.5 border rounded-xl hover:bg-muted transition-colors ${showFiltros ? 'border-primary/30 bg-primary/10' : 'border-border'}`}>
-              <Eye size={15} className={showFiltros ? 'text-primary' : 'text-muted-foreground'} />
+            <button onClick={() => setShowFiltrosPanel(v => !v)}
+              className={`flex items-center gap-1.5 border px-3 py-2 rounded-xl text-sm font-medium transition-colors ${(busca || filtroOrigem !== 'todas' || filtroLinha !== 'todas' || filtroWL) ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:bg-muted'}`}>
+              <SlidersHorizontal size={14} /> Filtros {(busca || filtroOrigem !== 'todas' || filtroLinha !== 'todas' || filtroWL) && <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block" />}
             </button>
-            <select value={filtroOrigem} onChange={e => setFiltroOrigem(e.target.value)}
-              className="border border-border rounded-xl px-2.5 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
-              <option value="todas">Origem: Todas</option>
-              <option value="pedido">Pedido</option>
-              <option value="bling">Bling</option>
-              <option value="portal">Portal</option>
-            </select>
-            <button onClick={() => setFiltroWL(v => !v)}
-              className={`flex items-center gap-1.5 border px-3 py-2 rounded-xl text-sm font-medium transition-colors ${filtroWL ? 'border-purple-400 bg-purple-50 text-purple-700' : 'border-border text-muted-foreground hover:bg-muted'}`}>
-              <Tag size={14} /> WL
+            <button onClick={() => setShowColunas(v => !v)}
+              className={`p-2.5 border rounded-xl hover:bg-muted transition-colors ${showColunas ? 'border-primary/30 bg-primary/10' : 'border-border'}`}
+              title="Colunas visíveis">
+              <Eye size={15} className={showColunas ? 'text-primary' : 'text-muted-foreground'} />
             </button>
             {!readonly ? (
               <button onClick={() => setShowForm(true)}
@@ -426,6 +408,49 @@ export default function Pedidos() {
             )}
           </div>
         </div>
+
+        {/* Painel de filtros — escondido por padrão */}
+        {showFiltrosPanel && (
+          <div className="mt-4 space-y-3 border-t border-border pt-4">
+            <div className="relative">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input value={busca} onChange={e => setBusca(e.target.value)}
+                placeholder="Buscar por número, cliente, produto..."
+                className="border border-border rounded-xl pl-8 pr-8 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary w-full" />
+              {busca && (
+                <button onClick={() => setBusca('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-4">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1.5">Origem</p>
+                <div className="flex gap-1.5 flex-wrap">
+                  {[{ k: 'todas', l: 'Todas' }, { k: 'pedido', l: 'Pedido' }, { k: 'bling', l: 'Bling' }, { k: 'portal', l: 'Portal' }].map(f => (
+                    <button key={f.k} onClick={() => setFiltroOrigem(f.k)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${filtroOrigem === f.k ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'}`}>
+                      {f.l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {categorias.length > 0 && (
+                <FiltroCategorias categorias={categorias} valor={filtroLinha} onChange={setFiltroLinha} label="Linha" />
+              )}
+
+              <div>
+                <p className="text-xs text-muted-foreground mb-1.5">White Label</p>
+                <button onClick={() => setFiltroWL(v => !v)}
+                  className={`flex items-center gap-1.5 border px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filtroWL ? 'border-purple-400 bg-purple-50 text-purple-700' : 'border-border text-muted-foreground hover:bg-muted'}`}>
+                  <Tag size={13} /> Só WL
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Stats rápidas */}
         <div className="mt-4 grid grid-cols-4 gap-2">
