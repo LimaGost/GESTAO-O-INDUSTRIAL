@@ -2,8 +2,10 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import {
   ShoppingCart, Search, X, Plus, RefreshCw,
-  CheckCircle, Clock, Package, Truck, Ban, FileText, Eye, Zap, Tag, Layers
+  CheckCircle, Clock, Package, Truck, Ban, FileText, Eye, Zap, Tag, Layers, SlidersHorizontal
 } from 'lucide-react';
+import { buildMapaCategorias, listarCategorias, registroTemCategoria } from '@/lib/categoriaFiltro';
+import FiltroCategorias from '@/components/common/FiltroCategorias';
 import ModalGrupamento from '@/components/pedidos/ModalGrupamento';
 import ModalProcessarBling from '@/components/pedidos/ModalProcessarBling';
 import ModalProcessarPortal from '@/components/pedidos/ModalProcessarPortal';
