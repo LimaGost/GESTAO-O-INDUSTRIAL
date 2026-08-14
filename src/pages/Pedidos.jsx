@@ -474,7 +474,7 @@ export default function Pedidos() {
       </div>
 
       {/* ── Filtro colunas visíveis ── */}
-      {showFiltros && (
+      {showColunas && (
         <div className="bg-card border border-border rounded-2xl px-5 py-3 flex-shrink-0">
           <p className="text-xs font-semibold text-muted-foreground mb-2">Colunas visíveis no Kanban:</p>
           <div className="flex gap-2 flex-wrap">
