@@ -243,6 +243,17 @@ export default function SeparacaoCardModal({ separacao, colunas = [], onAvancar,
             <div className="flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-amber-600 bg-amber-50 rounded-xl">
               <Clock size={13} /> Aguardando Produção
             </div>
+          ) : precisaConfirmarEstoque ? (
+            <button
+              onClick={async () => {
+                setConfirmando(true);
+                try { await onConfirmarEstoque?.(separacao, Array.from(itensChecados)); onClose?.(); }
+                finally { setConfirmando(false); }
+              }}
+              disabled={confirmando}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 bg-amber-500 hover:bg-amber-600">
+              {confirmando ? 'Confirmando...' : <><CheckSquare size={13} /> Confirmar Estoque{itensChecados.size > 0 && itensChecados.size < (separacao.itens?.length || 0) ? ` (${itensChecados.size}/${separacao.itens.length})` : ''}</>}
+            </button>
           ) : separacao.status === 'liberado_expedicao' ? (
             <div className="flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-teal-600 bg-teal-50 rounded-xl">
               <CheckCircle size={13} /> Liberado p/ Expedição
