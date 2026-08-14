@@ -134,22 +134,65 @@ export default function SeparacaoCardModal({ separacao, colunas = [], onAvancar,
             )}
           </div>
 
-          {/* Itens — lista completa */}
+          {/* Itens — checklist de confirmação, ou lista completa normal */}
           <div>
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
-              <Package size={11} /> Itens ({separacao.quantidade_itens || (separacao.itens || []).length} distintos · {totalUn} un)
-            </p>
-            {(separacao.itens || []).length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-3 bg-muted/30 rounded-xl">Sem itens registrados</p>
-            ) : (
-              <div className="border border-border rounded-xl divide-y divide-border/60 overflow-hidden">
-                {separacao.itens.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between gap-2 px-3 py-2 bg-white">
-                    <span className="text-xs text-foreground truncate flex-1">{item.produto_nome}</span>
-                    <span className="text-xs font-bold text-foreground bg-muted px-2 py-0.5 rounded-lg flex-shrink-0">{item.quantidade} un</span>
+            {precisaConfirmarEstoque ? (
+              <>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-bold text-amber-700 uppercase tracking-wide flex items-center gap-1.5">
+                    <ClipboardList size={12} /> Confirme o que tem em estoque
+                  </p>
+                  {(separacao.itens || []).length > 0 && (
+                    <button
+                      onClick={() => setItensChecados(prev => prev.size === separacao.itens.length ? new Set() : new Set(separacao.itens.map(i => i.produto_id)))}
+                      className="text-xs font-semibold text-primary hover:underline">
+                      {itensChecados.size === separacao.itens.length ? 'Desmarcar tudo' : 'Marcar tudo'}
+                    </button>
+                  )}
+                </div>
+                {(separacao.itens || []).length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-3 bg-muted/30 rounded-xl">Sem itens registrados</p>
+                ) : (
+                  <div className="border border-amber-200 rounded-xl divide-y divide-amber-100 overflow-hidden bg-amber-50/30">
+                    {separacao.itens.map((item, idx) => {
+                      const checado = itensChecados.has(item.produto_id);
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => setItensChecados(prev => {
+                            const next = new Set(prev);
+                            if (next.has(item.produto_id)) next.delete(item.produto_id); else next.add(item.produto_id);
+                            return next;
+                          })}
+                          className={`w-full flex items-center gap-2 px-3 py-2.5 text-left transition-colors ${checado ? 'bg-emerald-50' : 'hover:bg-amber-100/50 bg-white'}`}
+                        >
+                          {checado ? <CheckSquare size={16} className="text-emerald-600 flex-shrink-0" /> : <Square size={16} className="text-muted-foreground flex-shrink-0" />}
+                          <span className="text-xs text-foreground truncate flex-1">{item.produto_nome}</span>
+                          <span className="text-xs font-bold text-foreground bg-muted px-2 py-0.5 rounded-lg flex-shrink-0">{item.quantidade} un</span>
+                        </button>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                  <Package size={11} /> Itens ({separacao.quantidade_itens || (separacao.itens || []).length} distintos · {totalUn} un)
+                </p>
+                {(separacao.itens || []).length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-3 bg-muted/30 rounded-xl">Sem itens registrados</p>
+                ) : (
+                  <div className="border border-border rounded-xl divide-y divide-border/60 overflow-hidden">
+                    {separacao.itens.map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between gap-2 px-3 py-2 bg-white">
+                        <span className="text-xs text-foreground truncate flex-1">{item.produto_nome}</span>
+                        <span className="text-xs font-bold text-foreground bg-muted px-2 py-0.5 rounded-lg flex-shrink-0">{item.quantidade} un</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
 
