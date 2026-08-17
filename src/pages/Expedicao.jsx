@@ -730,19 +730,8 @@ export default function Expedicao() {
 
       {/* Header */}
       <div className="bg-card border border-border rounded-2xl px-4 md:px-5 py-3 md:py-4 flex-shrink-0">
-        {/* Toggle mobile: mostrar/esconder busca e filtros */}
-        <button onClick={() => setHeaderAberto(v => !v)}
-          className="md:hidden w-full flex items-center justify-between py-1">
-          <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <SlidersHorizontal size={14} className="text-primary" /> Busca e filtros
-            {(busca || filtroDestino !== 'todos' || filtroOrigem !== 'todos') && <span className="w-2 h-2 rounded-full bg-primary inline-block" />}
-          </span>
-          <ChevronDown size={16} className={`text-muted-foreground transition-transform ${headerAberto ? 'rotate-180' : ''}`} />
-        </button>
-
-        <div className={`${headerAberto ? 'block mt-3' : 'hidden'} md:block md:mt-0`}>
         <div className="flex items-center justify-between flex-wrap gap-2 md:gap-3">
-          <div className="hidden md:flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-2xl bg-purple-100 flex items-center justify-center flex-shrink-0">
               <Truck size={19} className="text-purple-600" />
             </div>
@@ -753,18 +742,13 @@ export default function Expedicao() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            <div className="relative flex-1 md:flex-none">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input value={busca} onChange={e => setBusca(e.target.value)}
-                placeholder="Buscar NF, OP, cliente..."
-                className="border border-border rounded-xl pl-8 pr-8 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary w-full md:w-52" />
-              {busca && (
-                <button onClick={() => setBusca('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                  <X size={13} />
-                </button>
-              )}
-            </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setHeaderAberto(v => !v)}
+              className={`flex items-center gap-1.5 border px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${(busca || filtroDestino !== 'todos' || filtroOrigem !== 'todos') ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:bg-muted'}`}>
+              <SlidersHorizontal size={14} /> <span className="hidden sm:inline">Filtros</span>
+              {(busca || filtroDestino !== 'todos' || filtroOrigem !== 'todos') && <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block" />}
+              <ChevronDown size={14} className={`transition-transform ${headerAberto ? 'rotate-180' : ''}`} />
+            </button>
             <button onClick={load} className="p-2.5 border border-border rounded-xl hover:bg-muted transition-colors flex-shrink-0">
               <RefreshCw size={15} className="text-muted-foreground" />
             </button>
@@ -775,6 +759,21 @@ export default function Expedicao() {
               </button>
             )}
           </div>
+        </div>
+
+        {/* Painel de filtros — escondido por padrão */}
+        <div className={headerAberto ? 'block mt-3' : 'hidden'}>
+
+        <div className="relative">
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input value={busca} onChange={e => setBusca(e.target.value)}
+            placeholder="Buscar NF, OP, cliente..."
+            className="border border-border rounded-xl pl-8 pr-8 py-2.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary w-full" />
+          {busca && (
+            <button onClick={() => setBusca('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+              <X size={13} />
+            </button>
+          )}
         </div>
 
         {/* Filtro por fluxo de origem */}
